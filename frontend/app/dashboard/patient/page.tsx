@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react"
 import { useAuth } from "@/lib/auth"
 import { Triage } from "@/components/shared/Triage"
+import { DoctorChatbot } from "@/components/shared/DoctorChatbot"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -537,8 +538,8 @@ export default function PatientDashboard() {
                                         className={`flex ${msg.senderRole === 'patient' ? 'justify-end' : 'justify-start'}`}
                                     >
                                         <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${msg.senderRole === 'patient'
-                                                ? 'bg-primary text-white'
-                                                : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700'
+                                            ? 'bg-primary text-white'
+                                            : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700'
                                             }`}>
                                             <p className="text-sm">{msg.content}</p>
                                             <p className={`text-xs mt-1 ${msg.senderRole === 'patient' ? 'text-white/70' : 'text-slate-500 dark:text-slate-400'
@@ -569,6 +570,9 @@ export default function PatientDashboard() {
                     </Card>
                 </div>
             )}
+
+            {/* AI Doctor Chatbot */}
+            <DoctorChatbot />
         </div>
     )
 }
