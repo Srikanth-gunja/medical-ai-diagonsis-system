@@ -35,69 +35,77 @@
 
 @layer base {
   :root {
-    /* Beautiful Medical Theme - Light Mode */
+    /* Premium Medical Theme - Light Mode (Slate & Cyan) */
     --background: 210 40% 98%;
-    --foreground: 222.2 84% 4.9%;
+    /* Slate 50-ish */
+    --foreground: 222.2 47.4% 11.2%;
+    /* Slate 900 */
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 222.2 47.4% 11.2%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 222.2 47.4% 11.2%;
 
-    /* Vibrant Teal/Cyan Primary - Medical feel */
-    --primary: 173 80% 40%;
+    /* Trustworthy Deep Cyan */
+    --primary: 189 94% 33%;
+    /* ~#057A9D */
     --primary-foreground: 0 0% 100%;
 
-    /* Soft purple secondary */
-    --secondary: 250 60% 96%;
-    --secondary-foreground: 250 30% 30%;
+    /* Soft Slate Secondary */
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
     --muted: 210 40% 96.1%;
     --muted-foreground: 215.4 16.3% 46.9%;
 
-    /* Accent - warm coral */
-    --accent: 350 80% 95%;
-    --accent-foreground: 350 80% 40%;
+    /* Warm Rose Accent - distinctive but professional */
+    --accent: 350 100% 98%;
+    --accent-foreground: 345 80% 45%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 173 80% 40%;
+    --ring: 189 94% 33%;
 
     --radius: 0.75rem;
   }
 
   .dark {
+    /* Premium Dark Mode (Deep Slate) */
     --background: 222.2 84% 4.9%;
+    /* Slate 950 */
     --foreground: 210 40% 98%;
 
     --card: 222.2 84% 8%;
+    /* Slightly lighter slate */
     --card-foreground: 210 40% 98%;
 
     --popover: 222.2 84% 8%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 173 70% 50%;
-    --primary-foreground: 222.2 84% 4.9%;
+    /* Bright Vibrant Cyan for Dark Mode */
+    --primary: 189 80% 50%;
+    /* ~#19D5FF */
+    --primary-foreground: 222.2 47.4% 11.2%;
 
-    --secondary: 250 30% 20%;
-    --secondary-foreground: 250 60% 90%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
 
     --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
 
-    --accent: 350 60% 20%;
-    --accent-foreground: 350 80% 80%;
+    --accent: 345 30% 20%;
+    --accent-foreground: 345 80% 80%;
 
-    --destructive: 0 62.8% 50%;
+    --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 173 70% 50%;
+    --ring: 189 80% 50%;
   }
 }
 
@@ -179,25 +187,27 @@
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, hsl(173 80% 40%) 0%, hsl(200 80% 50%) 100%);
+  background: linear-gradient(135deg, hsl(189 94% 33%) 0%, hsl(200 80% 50%) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 /* Status badges */
+/* Status badges */
+/* Status badges */
 .badge-success {
-  @apply bg-emerald-100 text-emerald-800;
+  @apply bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400;
 }
 
 .badge-warning {
-  @apply bg-amber-100 text-amber-800;
+  @apply bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400;
 }
 
 .badge-error {
-  @apply bg-red-100 text-red-800;
+  @apply bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400;
 }
 
 .badge-info {
-  @apply bg-sky-100 text-sky-800;
+  @apply bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400;
 }

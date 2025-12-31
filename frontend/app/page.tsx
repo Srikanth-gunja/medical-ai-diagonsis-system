@@ -1,9 +1,23 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Navbar } from "@/components/shared/Navbar";
-import { ArrowRight, CheckCircle2, ShieldCheck, Zap, Heart, Stethoscope, Calendar } from "lucide-react";
+import { ArrowRight, CheckCircle2, ShieldCheck, Zap, Heart, Stethoscope, Calendar, LayoutDashboard } from "lucide-react";
+import { useAuth } from "@/lib/auth";
+import { useEffect, useState } from "react";
 
 export default function Home() {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isDoctor = user?.role === 'doctor';
+  const dashboardPath = isDoctor ? '/dashboard/doctor' : '/dashboard/patient';
+
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
@@ -28,14 +42,26 @@ export default function Home() {
               Experience the future of healthcare. Instant AI triage, seamless appointment booking, and secure doctor-patient communication — all in one platform.
             </p>
             <div className="flex flex-wrap justify-center gap-4 mt-4">
-              <Button size="lg" className="text-lg px-8 py-6 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all" asChild>
-                <Link href="/auth/register">
-                  Get Started Free <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" className="text-lg px-8 py-6" asChild>
-                <Link href="/auth/login">Sign In</Link>
-              </Button>
+              {!mounted || isLoading ? (
+                <div className="h-14 w-48 animate-pulse bg-muted rounded-lg" />
+              ) : isAuthenticated ? (
+                <Button size="lg" className="text-lg px-8 py-6 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all" asChild>
+                  <Link href={dashboardPath}>
+                    <LayoutDashboard className="mr-2 h-5 w-5" /> Go to Dashboard
+                  </Link>
+                </Button>
+              ) : (
+                <>
+                  <Button size="lg" className="text-lg px-8 py-6 shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all" asChild>
+                    <Link href="/auth/register">
+                      Get Started Free <ArrowRight className="ml-2 h-5 w-5" />
+                    </Link>
+                  </Button>
+                  <Button size="lg" variant="outline" className="text-lg px-8 py-6" asChild>
+                    <Link href="/auth/login">Sign In</Link>
+                  </Button>
+                </>
+              )}
             </div>
 
             {/* Trust badges */}
@@ -118,19 +144,31 @@ export default function Home() {
         </section>
 
         {/* CTA Section */}
-        <section className="bg-gradient-to-r from-primary to-primary/80 py-16 md:py-24">
+        <section className="bg-gradient-to-r from-primary to-primary/80 dark:from-primary/20 dark:to-primary/5 py-16 md:py-24">
           <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
-              Ready to take control of your health?
+            <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground dark:text-foreground mb-4">
+              {isAuthenticated ? 'Your health journey continues!' : 'Ready to take control of your health?'}
             </h2>
-            <p className="text-primary-foreground/80 text-lg mb-8 max-w-2xl mx-auto">
-              Join thousands of patients who are already experiencing better healthcare.
+            <p className="text-primary-foreground/80 dark:text-muted-foreground text-lg mb-8 max-w-2xl mx-auto">
+              {isAuthenticated
+                ? 'Access your dashboard to manage appointments and connect with doctors.'
+                : 'Join thousands of patients who are already experiencing better healthcare.'}
             </p>
-            <Button size="lg" variant="secondary" className="text-lg px-8 py-6" asChild>
-              <Link href="/auth/register">
-                Create Free Account <ArrowRight className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
+            {mounted && !isLoading && (
+              isAuthenticated ? (
+                <Button size="lg" variant="secondary" className="text-lg px-8 py-6 dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90" asChild>
+                  <Link href={dashboardPath}>
+                    <LayoutDashboard className="mr-2 h-5 w-5" /> Go to Dashboard
+                  </Link>
+                </Button>
+              ) : (
+                <Button size="lg" variant="secondary" className="text-lg px-8 py-6 dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90" asChild>
+                  <Link href="/auth/register">
+                    Create Free Account <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
+                </Button>
+              )
+            )}
           </div>
         </section>
       </main>
@@ -139,10 +177,10 @@ export default function Home() {
         <div className="container mx-auto px-4 flex flex-col items-center justify-between gap-4 md:flex-row">
           <div className="flex items-center gap-2">
             <Heart className="h-5 w-5 text-primary" />
-            <span className="font-semibold">Vibe Code Medical</span>
+            <span className="font-semibold">MediCare</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            © 2024 Vibe Code Medical. All rights reserved.
+            © 2024 MediCare. All rights reserved.
           </p>
           <div className="flex gap-4 text-sm text-muted-foreground">
             <Link href="/about" className="hover:text-foreground transition-colors">About</Link>

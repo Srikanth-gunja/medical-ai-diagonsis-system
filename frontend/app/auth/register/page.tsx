@@ -134,7 +134,7 @@ export default function RegisterPage() {
                         </div>
 
                         {error && (
-                            <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm">
+                            <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm border border-destructive/20">
                                 {error}
                             </div>
                         )}
@@ -145,11 +145,17 @@ export default function RegisterPage() {
                         </Button>
                     </form>
                 </CardContent>
-                <CardFooter className="flex justify-center border-t pt-6">
+                <CardFooter className="flex flex-col gap-3 border-t pt-6">
                     <p className="text-sm text-muted-foreground">
                         Already have an account?{" "}
                         <Link href="/auth/login" className="font-semibold text-primary hover:underline">
                             Sign in
+                        </Link>
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                        Are you a doctor?{" "}
+                        <Link href="/auth/register/doctor" className="font-semibold text-primary hover:underline">
+                            Register as doctor
                         </Link>
                     </p>
                 </CardFooter>

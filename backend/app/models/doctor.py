@@ -15,6 +15,7 @@ class Doctor:
             'location': location,
             'availability': availability,
             'rating': rating,
+            'rating_count': 0,
             'image': image
         }
         result = db[DOCTORS_COLLECTION].insert_one(doctor_data)
@@ -73,6 +74,7 @@ class Doctor:
             'specialty': doctor['specialty'],
             'location': doctor['location'],
             'availability': doctor['availability'],
-            'rating': doctor['rating'],
+            'rating': doctor.get('rating', 0),
+            'rating_count': doctor.get('rating_count', 0),
             'image': doctor['image']
         }

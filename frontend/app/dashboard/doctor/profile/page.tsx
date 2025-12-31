@@ -122,20 +122,20 @@ export default function DoctorProfilePage() {
     return (
         <div className="max-w-2xl mx-auto">
             <div className="mb-4">
-                <Link href="/dashboard/doctor" className="inline-flex items-center text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+                <Link href="/dashboard/doctor" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
                     <ArrowLeft className="h-4 w-4 mr-1" />
                     Back to Dashboard
                 </Link>
             </div>
-            <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+            <Card className="bg-card border-border">
                 <CardHeader>
                     <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-primary/10">
                             <Stethoscope className="h-6 w-6 text-primary" />
                         </div>
                         <div>
-                            <CardTitle className="text-slate-900 dark:text-white">Doctor Profile</CardTitle>
-                            <CardDescription className="text-slate-600 dark:text-slate-400">Update your professional information.</CardDescription>
+                            <CardTitle className="text-foreground">Doctor Profile</CardTitle>
+                            <CardDescription className="text-muted-foreground">Update your professional information.</CardDescription>
                         </div>
                     </div>
                 </CardHeader>
@@ -143,56 +143,56 @@ export default function DoctorProfilePage() {
                     <form onSubmit={handleSubmit}>
                         <div className="grid gap-4">
                             <div className="grid gap-2">
-                                <Label htmlFor="name" className="text-slate-900 dark:text-white">Full Name</Label>
+                                <Label htmlFor="name" className="text-foreground">Full Name</Label>
                                 <Input
                                     id="name"
                                     value={formData.name}
                                     onChange={handleChange}
                                     placeholder="Dr. John Doe"
-                                    className="border-slate-300 dark:border-slate-600"
+                                    className="border-input"
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="specialty" className="text-slate-900 dark:text-white">Specialty</Label>
+                                    <Label htmlFor="specialty" className="text-foreground">Specialty</Label>
                                     <Input
                                         id="specialty"
                                         value={formData.specialty}
                                         onChange={handleChange}
                                         placeholder="Cardiology"
-                                        className="border-slate-300 dark:border-slate-600"
+                                        className="border-input"
                                     />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="location" className="text-slate-900 dark:text-white">Location</Label>
+                                    <Label htmlFor="location" className="text-foreground">Location</Label>
                                     <Input
                                         id="location"
                                         value={formData.location}
                                         onChange={handleChange}
                                         placeholder="New York, NY"
-                                        className="border-slate-300 dark:border-slate-600"
+                                        className="border-input"
                                     />
                                 </div>
                             </div>
                             <div className="grid gap-2">
-                                <Label htmlFor="availability" className="text-slate-900 dark:text-white">Availability (comma-separated)</Label>
+                                <Label htmlFor="availability" className="text-foreground">Availability (comma-separated)</Label>
                                 <Input
                                     id="availability"
                                     value={formData.availability}
                                     onChange={handleChange}
                                     placeholder="Mon 9am-5pm, Wed 9am-12pm"
-                                    className="border-slate-300 dark:border-slate-600"
+                                    className="border-input"
                                 />
                             </div>
                         </div>
 
                         {message && (
-                            <div className="mt-4 p-3 rounded-lg bg-emerald-50 text-emerald-700 text-sm border border-emerald-200">
+                            <div className="mt-4 p-3 rounded-lg bg-success/10 border border-success text-success">
                                 {message}
                             </div>
                         )}
                         {error && (
-                            <div className="mt-4 p-3 rounded-lg bg-red-50 text-red-700 text-sm border border-red-200">
+                            <div className="mt-4 p-3 rounded-lg badge-error bg-opacity-20 border border-destructive/20">
                                 {error}
                             </div>
                         )}

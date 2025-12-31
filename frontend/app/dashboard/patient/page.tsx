@@ -2,13 +2,13 @@
 
 import { useEffect, useState, useRef } from "react"
 import { useAuth } from "@/lib/auth"
-import { Triage } from "@/components/shared/Triage"
+import { DoctorChatbot } from "@/components/shared/DoctorChatbot"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
-import { Calendar, MapPin, Star, X, Loader2, Clock, CheckCircle, FileText, User, MessageSquare, Send } from "lucide-react"
+import { Calendar, MapPin, Star, X, Loader2, Clock, CheckCircle, FileText, User, MessageSquare, Send, Search, Filter } from "lucide-react"
 import Link from "next/link"
 
 interface Doctor {
@@ -19,6 +19,7 @@ interface Doctor {
     availability: string[];
     image: string;
     rating: number;
+    rating_count: number;
 }
 
 interface Appointment {
@@ -29,6 +30,7 @@ interface Appointment {
     time: string;
     status: string;
     symptoms: string;
+    rated?: boolean;
 }
 
 interface ChatMessage {
@@ -50,8 +52,6 @@ const TIME_SLOTS = [
 export default function PatientDashboard() {
     const { user, token, isLoading: authLoading } = useAuth()
     const [doctors, setDoctors] = useState<Doctor[]>([])
-    const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([])
-    const [suggestedSpecialties, setSuggestedSpecialties] = useState<string[]>([])
     const [appointments, setAppointments] = useState<Appointment[]>([])
     const [loading, setLoading] = useState(true)
 
@@ -74,13 +74,26 @@ export default function PatientDashboard() {
     const chatPollInterval = useRef<NodeJS.Timeout | null>(null)
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
+    // Rating state
+    const [showRatingModal, setShowRatingModal] = useState(false)
+    const [ratingAppointment, setRatingAppointment] = useState<Appointment | null>(null)
+    const [ratingScore, setRatingScore] = useState(0)
+    const [ratingHover, setRatingHover] = useState(0)
+    const [ratingComment, setRatingComment] = useState("")
+    const [ratingLoading, setRatingLoading] = useState(false)
+
+    // Search and filter state
+    const [searchQuery, setSearchQuery] = useState('')
+    const [selectedSpecialty, setSelectedSpecialty] = useState('')
+    const [minRating, setMinRating] = useState(0)
+    const [sortBy, setSortBy] = useState<'name' | 'rating'>('rating')
+
     useEffect(() => {
         fetch('http://localhost:5000/api/doctors/')
             .then(res => res.json())
             .then(data => {
                 if (Array.isArray(data)) {
                     setDoctors(data)
-                    setFilteredDoctors(data)
                 }
                 setLoading(false)
             })
@@ -109,15 +122,6 @@ export default function PatientDashboard() {
             fetchAppointments()
         }
     }, [token, authLoading])
-
-    useEffect(() => {
-        if (suggestedSpecialties.length > 0) {
-            const filtered = doctors.filter(doc => suggestedSpecialties.includes(doc.specialty));
-            setFilteredDoctors(filtered.length > 0 ? filtered : doctors);
-        } else {
-            setFilteredDoctors(doctors);
-        }
-    }, [suggestedSpecialties, doctors])
 
     // Scroll to bottom of chat
     useEffect(() => {
@@ -247,13 +251,60 @@ export default function PatientDashboard() {
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'confirmed':
-                return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300'
+                return 'badge-success'
             case 'cancelled':
-                return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                return 'badge-error'
             case 'completed':
-                return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
+                return 'badge-info'
             default:
-                return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300'
+                return 'badge-warning'
+        }
+    }
+
+    const openRatingModal = (appointment: Appointment) => {
+        setRatingAppointment(appointment)
+        setRatingScore(0)
+        setRatingHover(0)
+        setRatingComment("")
+        setShowRatingModal(true)
+    }
+
+    const submitRating = async () => {
+        if (!ratingAppointment || !token || ratingScore === 0) return
+
+        setRatingLoading(true)
+        try {
+            const res = await fetch('http://localhost:5000/api/ratings/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    appointmentId: ratingAppointment.id,
+                    score: ratingScore,
+                    comment: ratingComment
+                })
+            })
+
+            if (res.ok) {
+                // Update appointment to mark as rated in local state
+                setAppointments(prev => prev.map(appt =>
+                    appt.id === ratingAppointment.id ? { ...appt, rated: true } : appt
+                ))
+                setShowRatingModal(false)
+                // Refresh doctors to update ratings
+                fetch('http://localhost:5000/api/doctors/')
+                    .then(r => r.json())
+                    .then(data => { if (Array.isArray(data)) setDoctors(data) })
+            } else {
+                const data = await res.json()
+                alert(data.error || 'Failed to submit rating')
+            }
+        } catch (err) {
+            console.error("Failed to submit rating", err)
+        } finally {
+            setRatingLoading(false)
         }
     }
 
@@ -265,22 +316,40 @@ export default function PatientDashboard() {
         )
     }
 
+    // Get unique specialties from doctors
+    const specialties = [...new Set(doctors.map(d => d.specialty))].sort()
+
+    // Filter and sort doctors
+    const filteredDoctors = doctors
+        .filter(doctor => {
+            const matchesSearch = doctor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                doctor.specialty.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                doctor.location.toLowerCase().includes(searchQuery.toLowerCase())
+            const matchesSpecialty = !selectedSpecialty || doctor.specialty === selectedSpecialty
+            const matchesRating = doctor.rating >= minRating
+            return matchesSearch && matchesSpecialty && matchesRating
+        })
+        .sort((a, b) => {
+            if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0)
+            return a.name.localeCompare(b.name)
+        })
+
     return (
         <div className="space-y-8">
             {/* Header */}
             <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Patient Dashboard</h1>
-                    <p className="text-slate-600 dark:text-slate-400 mt-1">Manage your health and appointments</p>
+                    <h1 className="text-3xl font-bold tracking-tight text-foreground">Patient Dashboard</h1>
+                    <p className="text-muted-foreground mt-1">Manage your health and appointments</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" className="gap-2 border-slate-300 dark:border-slate-600" asChild>
+                    <Button variant="outline" className="gap-2 border-border" asChild>
                         <Link href="/dashboard/patient/history">
                             <FileText className="h-4 w-4" />
                             Medical History
                         </Link>
                     </Button>
-                    <Button variant="outline" className="gap-2 border-slate-300 dark:border-slate-600" asChild>
+                    <Button variant="outline" className="gap-2 border-border" asChild>
                         <Link href="/dashboard/patient/profile">
                             <User className="h-4 w-4" />
                             My Profile
@@ -291,27 +360,27 @@ export default function PatientDashboard() {
 
             {/* My Appointments Section */}
             {appointments.length > 0 && (
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-6">
-                    <h2 className="text-xl font-semibold mb-4 text-slate-900 dark:text-white">My Appointments</h2>
+                <div className="bg-card rounded-xl border border-border p-6">
+                    <h2 className="text-xl font-semibold mb-4 text-foreground">My Appointments</h2>
                     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                         {appointments.map((appt) => (
-                            <Card key={appt.id} className={`border-l-4 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 ${appt.status === 'completed' ? 'border-l-blue-500' : 'border-l-primary'
+                            <Card key={appt.id} className={`border-l-4 bg-muted/30 border-border ${appt.status === 'completed' ? 'border-l-blue-500' : 'border-l-primary'
                                 }`}>
                                 <CardContent className="pt-4">
                                     <div className="flex items-center justify-between mb-2">
-                                        <span className="font-semibold text-slate-900 dark:text-white">{appt.doctorName}</span>
+                                        <span className="font-semibold text-foreground">{appt.doctorName}</span>
                                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${getStatusBadge(appt.status)}`}>
                                             {appt.status.charAt(0).toUpperCase() + appt.status.slice(1)}
                                         </span>
                                     </div>
-                                    <div className="text-sm text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                                    <div className="text-sm text-muted-foreground flex items-center gap-2">
                                         <Calendar className="h-4 w-4" />
                                         {appt.date} at {appt.time}
                                     </div>
                                     {appt.symptoms && (
                                         <p className="text-sm mt-2">
-                                            <span className="text-slate-500 dark:text-slate-400">Symptoms:</span>{" "}
-                                            <span className="text-slate-700 dark:text-slate-300">{appt.symptoms}</span>
+                                            <span className="text-muted-foreground">Symptoms:</span>{" "}
+                                            <span className="text-foreground">{appt.symptoms}</span>
                                         </p>
                                     )}
                                     {appt.status !== 'cancelled' && appt.status !== 'completed' && (
@@ -325,11 +394,28 @@ export default function PatientDashboard() {
                                         </Button>
                                     )}
                                     {appt.status === 'completed' && (
-                                        <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-center">
-                                            <span className="text-sm text-blue-700 dark:text-blue-300 flex items-center justify-center gap-1">
-                                                <CheckCircle className="h-4 w-4" />
-                                                Consultation completed - Check Medical History
-                                            </span>
+                                        <div className="mt-3 space-y-2">
+                                            <div className="p-2 bg-secondary/50 rounded-lg text-center">
+                                                <span className="text-sm text-secondary-foreground flex items-center justify-center gap-1">
+                                                    <CheckCircle className="h-4 w-4" />
+                                                    Consultation completed - Check Medical History
+                                                </span>
+                                            </div>
+                                            {!appt.rated && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="w-full gap-1 border-primary/20 text-primary hover:bg-primary/10 hover:text-primary"
+                                                    onClick={() => openRatingModal(appt)}
+                                                >
+                                                    <Star className="h-4 w-4" /> Rate Doctor
+                                                </Button>
+                                            )}
+                                            {appt.rated && (
+                                                <div className="text-center text-sm text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1">
+                                                    <CheckCircle className="h-4 w-4" /> Rated
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </CardContent>
@@ -339,59 +425,102 @@ export default function PatientDashboard() {
                 </div>
             )}
 
-            {/* AI Triage */}
-            <div>
-                <Triage onTriageComplete={setSuggestedSpecialties} />
-                {suggestedSpecialties.length > 0 && (
-                    <div className="mt-4 p-4 bg-primary/10 border border-primary/20 rounded-lg text-sm">
-                        <strong className="text-slate-900 dark:text-white">AI Suggestion:</strong>{" "}
-                        <span className="text-slate-700 dark:text-slate-300">Based on your symptoms, we recommend seeing a specialist in: {suggestedSpecialties.join(", ")}.</span>
-                        <Button variant="link" onClick={() => setSuggestedSpecialties([])} className="h-auto p-0 ml-2 text-primary">
-                            Clear filter
-                        </Button>
-                    </div>
-                )}
-            </div>
-
             {/* Available Doctors */}
             <div>
-                <h2 className="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Available Doctors</h2>
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
+                    <h2 className="text-xl font-semibold text-foreground">Available Doctors</h2>
+                    <span className="text-sm text-muted-foreground">{filteredDoctors.length} of {doctors.length} doctors</span>
+                </div>
+
+                {/* Search and Filter Bar */}
+                <div className="bg-card rounded-xl border border-border p-4 mb-6">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        {/* Search */}
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Input
+                                placeholder="Search doctors..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-10 border-input"
+                            />
+                        </div>
+
+                        {/* Specialty Filter */}
+                        <Select
+                            value={selectedSpecialty}
+                            onChange={(e) => setSelectedSpecialty(e.target.value)}
+                            className="border-input"
+                        >
+                            <option value="">All Specialties</option>
+                            {specialties.map(spec => (
+                                <option key={spec} value={spec}>{spec}</option>
+                            ))}
+                        </Select>
+
+                        {/* Rating Filter */}
+                        <Select
+                            value={minRating.toString()}
+                            onChange={(e) => setMinRating(Number(e.target.value))}
+                            className="border-input"
+                        >
+                            <option value="0">Any Rating</option>
+                            <option value="3">3+ Stars</option>
+                            <option value="4">4+ Stars</option>
+                            <option value="4.5">4.5+ Stars</option>
+                        </Select>
+
+                        {/* Sort */}
+                        <Select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value as 'name' | 'rating')}
+                            className="border-input"
+                        >
+                            <option value="rating">Sort by Rating</option>
+                            <option value="name">Sort by Name</option>
+                        </Select>
+                    </div>
+                </div>
+
                 {filteredDoctors.length === 0 ? (
-                    <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
-                        <CardContent className="py-8 text-center text-slate-500 dark:text-slate-400">
-                            No doctors available at the moment.
+                    <Card className="bg-card border-border">
+                        <CardContent className="py-8 text-center text-muted-foreground">
+                            {doctors.length === 0 ? 'No doctors available at the moment.' : 'No doctors match your search criteria.'}
                         </CardContent>
                     </Card>
                 ) : (
                     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                        {filteredDoctors.map((doctor) => (
-                            <Card key={doctor.id} className="hover:shadow-lg transition-all hover:-translate-y-1 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                        {filteredDoctors.map((doctor: Doctor) => (
+                            <Card key={doctor.id} className="hover:shadow-lg transition-all hover:-translate-y-1 bg-card border-border">
                                 <CardHeader className="flex flex-row items-center gap-4">
-                                    <div className="h-14 w-14 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden flex-shrink-0 ring-2 ring-primary/20">
+                                    <div className="h-14 w-14 rounded-full bg-muted overflow-hidden flex-shrink-0 ring-2 ring-ring/20">
                                         <img src={doctor.image} alt={doctor.name} className="h-full w-full object-cover" />
                                     </div>
                                     <div className="grid gap-1 min-w-0">
-                                        <CardTitle className="text-lg truncate text-slate-900 dark:text-white">{doctor.name}</CardTitle>
-                                        <CardDescription className="flex items-center gap-1">
+                                        <CardTitle className="text-lg truncate text-foreground">{doctor.name}</CardTitle>
+                                        <CardDescription className="flex items-center gap-1 flex-wrap">
                                             <span className="text-primary font-medium">{doctor.specialty}</span>
-                                            {doctor.rating && (
+                                            {doctor.rating > 0 && (
                                                 <span className="flex items-center ml-2 text-amber-500">
                                                     <Star className="h-3 w-3 fill-current" />
                                                     <span className="ml-0.5 text-xs">{doctor.rating}</span>
+                                                    {doctor.rating_count > 0 && (
+                                                        <span className="ml-1 text-xs text-muted-foreground">({doctor.rating_count} {doctor.rating_count === 1 ? 'review' : 'reviews'})</span>
+                                                    )}
                                                 </span>
                                             )}
                                         </CardDescription>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="space-y-2">
-                                    <div className="flex items-center text-sm text-slate-600 dark:text-slate-400">
+                                    <div className="flex items-center text-sm text-muted-foreground">
                                         <MapPin className="mr-2 h-4 w-4 flex-shrink-0 text-primary/60" />
                                         <span className="truncate">{doctor.location}</span>
                                     </div>
-                                    <div className="flex items-start text-sm text-slate-600 dark:text-slate-400">
+                                    <div className="flex items-start text-sm text-muted-foreground">
                                         <Clock className="mr-2 h-4 w-4 mt-0.5 flex-shrink-0 text-primary/60" />
                                         <div>
-                                            {doctor.availability.slice(0, 2).map((slot, i) => (
+                                            {doctor.availability.slice(0, 2).map((slot: string, i: number) => (
                                                 <div key={i}>{slot}</div>
                                             ))}
                                             {doctor.availability.length > 2 && (
@@ -413,11 +542,11 @@ export default function PatientDashboard() {
 
             {/* Booking Modal */}
             {showBookingModal && selectedDoctor && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <Card className="w-full max-w-md bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                <div className="fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <Card className="w-full max-w-md bg-card border-border">
                         <CardHeader>
                             <div className="flex items-center justify-between">
-                                <CardTitle className="text-slate-900 dark:text-white">Book Appointment</CardTitle>
+                                <CardTitle className="text-foreground">Book Appointment</CardTitle>
                                 <Button variant="ghost" size="sm" onClick={() => setShowBookingModal(false)}>
                                     <X className="h-4 w-4" />
                                 </Button>
@@ -435,35 +564,35 @@ export default function PatientDashboard() {
                                 </div>
                             ) : (
                                 <div className="space-y-4">
-                                    <div className="flex items-center gap-3 p-3 bg-slate-100 dark:bg-slate-900 rounded-lg">
-                                        <div className="h-10 w-10 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                                        <div className="h-10 w-10 rounded-full bg-muted overflow-hidden">
                                             <img src={selectedDoctor.image} alt={selectedDoctor.name} className="h-full w-full object-cover" />
                                         </div>
                                         <div>
-                                            <p className="font-medium text-slate-900 dark:text-white">{selectedDoctor.name}</p>
-                                            <p className="text-sm text-slate-500 dark:text-slate-400">{selectedDoctor.specialty}</p>
+                                            <p className="font-medium text-foreground">{selectedDoctor.name}</p>
+                                            <p className="text-sm text-muted-foreground">{selectedDoctor.specialty}</p>
                                         </div>
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="date" className="text-slate-900 dark:text-white">Date *</Label>
+                                        <Label htmlFor="date" className="text-foreground">Date *</Label>
                                         <Input
                                             id="date"
                                             type="date"
                                             value={bookingDate}
                                             onChange={(e) => setBookingDate(e.target.value)}
                                             min={getMinDate()}
-                                            className="border-slate-300 dark:border-slate-600"
+                                            className="border-input"
                                         />
                                     </div>
 
                                     <div className="grid gap-2">
-                                        <Label htmlFor="time" className="text-slate-900 dark:text-white">Time *</Label>
+                                        <Label htmlFor="time" className="text-foreground">Time *</Label>
                                         <Select
                                             id="time"
                                             value={bookingTime}
                                             onChange={(e) => setBookingTime(e.target.value)}
-                                            className="border-slate-300 dark:border-slate-600"
+                                            className="border-input"
                                         >
                                             <option value="">Select a time slot</option>
                                             {TIME_SLOTS.map(slot => (
@@ -537,8 +666,8 @@ export default function PatientDashboard() {
                                         className={`flex ${msg.senderRole === 'patient' ? 'justify-end' : 'justify-start'}`}
                                     >
                                         <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${msg.senderRole === 'patient'
-                                                ? 'bg-primary text-white'
-                                                : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700'
+                                            ? 'bg-primary text-white'
+                                            : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700'
                                             }`}>
                                             <p className="text-sm">{msg.content}</p>
                                             <p className={`text-xs mt-1 ${msg.senderRole === 'patient' ? 'text-white/70' : 'text-slate-500 dark:text-slate-400'
@@ -569,6 +698,88 @@ export default function PatientDashboard() {
                     </Card>
                 </div>
             )}
+
+            {/* Rating Modal */}
+            {showRatingModal && ratingAppointment && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <Card className="w-full max-w-md bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                        <CardHeader className="border-b border-slate-200 dark:border-slate-700">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle className="text-slate-900 dark:text-white">Rate Your Visit</CardTitle>
+                                    <CardDescription className="text-slate-500 dark:text-slate-400">
+                                        How was your experience with {ratingAppointment.doctorName}?
+                                    </CardDescription>
+                                </div>
+                                <Button variant="ghost" size="sm" onClick={() => setShowRatingModal(false)}>
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pt-6 space-y-6">
+                            {/* Star Rating */}
+                            <div className="flex flex-col items-center gap-2">
+                                <div className="flex gap-1">
+                                    {[1, 2, 3, 4, 5].map((star) => (
+                                        <button
+                                            key={star}
+                                            type="button"
+                                            onClick={() => setRatingScore(star)}
+                                            onMouseEnter={() => setRatingHover(star)}
+                                            onMouseLeave={() => setRatingHover(0)}
+                                            className="p-1 transition-transform hover:scale-110"
+                                        >
+                                            <Star
+                                                className={`h-10 w-10 transition-colors ${star <= (ratingHover || ratingScore)
+                                                    ? 'fill-amber-400 text-amber-400'
+                                                    : 'text-slate-300 dark:text-slate-600'
+                                                    }`}
+                                            />
+                                        </button>
+                                    ))}
+                                </div>
+                                <span className="text-sm text-slate-500 dark:text-slate-400">
+                                    {ratingScore > 0 ? ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][ratingScore] : 'Select a rating'}
+                                </span>
+                            </div>
+
+                            {/* Comment */}
+                            <div className="space-y-2">
+                                <Label htmlFor="ratingComment" className="text-slate-900 dark:text-white">Comment (optional)</Label>
+                                <textarea
+                                    id="ratingComment"
+                                    value={ratingComment}
+                                    onChange={(e) => setRatingComment(e.target.value)}
+                                    placeholder="Share your experience..."
+                                    className="w-full h-24 px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary"
+                                />
+                            </div>
+
+                            {/* Submit Button */}
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    className="flex-1"
+                                    onClick={() => setShowRatingModal(false)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    className="flex-1 bg-amber-500 hover:bg-amber-600"
+                                    onClick={submitRating}
+                                    disabled={ratingLoading || ratingScore === 0}
+                                >
+                                    {ratingLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Submit Rating
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {/* AI Doctor Chatbot */}
+            <DoctorChatbot />
         </div>
     )
 }

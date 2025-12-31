@@ -60,6 +60,18 @@ class Appointment:
         return Appointment.find_by_id(appointment_id)
     
     @staticmethod
+    def update(appointment_id, updates):
+        """Update appointment with given fields."""
+        db = get_db()
+        if isinstance(appointment_id, str):
+            appointment_id = ObjectId(appointment_id)
+        db[APPOINTMENTS_COLLECTION].update_one(
+            {'_id': appointment_id},
+            {'$set': updates}
+        )
+        return Appointment.find_by_id(appointment_id)
+    
+    @staticmethod
     def delete(appointment_id):
         """Delete an appointment."""
         db = get_db()
@@ -79,5 +91,6 @@ class Appointment:
             'time': appointment['time'],
             'status': appointment['status'],
             'symptoms': appointment.get('symptoms', ''),
+            'rated': appointment.get('rated', False),
             'created_at': appointment.get('created_at', '').isoformat() if appointment.get('created_at') else None
         }

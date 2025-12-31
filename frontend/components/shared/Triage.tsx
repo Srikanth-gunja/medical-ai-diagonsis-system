@@ -42,8 +42,8 @@ export function Triage({ onTriageComplete }: TriageProps) {
                         <Brain className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                        <CardTitle className="text-slate-900 dark:text-white">AI Symptom Triage</CardTitle>
-                        <CardDescription className="text-slate-600 dark:text-slate-400">Describe your symptoms to get a specialist recommendation.</CardDescription>
+                        <CardTitle className="text-foreground">AI Symptom Triage</CardTitle>
+                        <CardDescription className="text-muted-foreground">Describe your symptoms to get a specialist recommendation.</CardDescription>
                     </div>
                 </div>
             </CardHeader>
@@ -54,7 +54,7 @@ export function Triage({ onTriageComplete }: TriageProps) {
                         value={symptoms}
                         onChange={(e) => setSymptoms(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && handleTriage()}
-                        className="flex-1 bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white placeholder:text-slate-500"
+                        className="flex-1"
                     />
                     <Button onClick={handleTriage} disabled={loading || !symptoms} className="gap-2">
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}

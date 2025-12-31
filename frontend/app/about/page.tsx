@@ -5,7 +5,7 @@ export default function AboutPage() {
         <div className="flex min-h-screen flex-col">
             <Navbar />
             <main className="flex-1 container py-12 max-w-4xl">
-                <h1 className="text-4xl font-bold tracking-tight mb-6">About Vibe Code Medical</h1>
+                <h1 className="text-4xl font-bold tracking-tight mb-6">About MediCare</h1>
                 <div className="prose dark:prose-invert max-w-none">
                     <p className="text-xl text-muted-foreground mb-8">
                         Revolutionizing healthcare access with AI-powered diagnostics and seamless patient-doctor connection.
