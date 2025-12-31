@@ -71,6 +71,9 @@ def create_rating():
             comment=comment
         )
         
+        # Mark appointment as rated
+        Appointment.update(appointment_id, {'rated': True})
+        
         # Update doctor's average rating
         rating_stats = Rating.calculate_average(appointment['doctor_id'])
         Doctor.update(appointment['doctor_id'], {

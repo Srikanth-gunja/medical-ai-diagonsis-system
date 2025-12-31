@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
-import { Calendar, MapPin, Star, X, Loader2, Clock, CheckCircle, FileText, User, MessageSquare, Send } from "lucide-react"
+import { Calendar, MapPin, Star, X, Loader2, Clock, CheckCircle, FileText, User, MessageSquare, Send, Search, Filter } from "lucide-react"
 import Link from "next/link"
 
 interface Doctor {
@@ -81,7 +81,12 @@ export default function PatientDashboard() {
     const [ratingHover, setRatingHover] = useState(0)
     const [ratingComment, setRatingComment] = useState("")
     const [ratingLoading, setRatingLoading] = useState(false)
-    const [ratedAppointments, setRatedAppointments] = useState<Set<string>>(new Set())
+
+    // Search and filter state
+    const [searchQuery, setSearchQuery] = useState('')
+    const [selectedSpecialty, setSelectedSpecialty] = useState('')
+    const [minRating, setMinRating] = useState(0)
+    const [sortBy, setSortBy] = useState<'name' | 'rating'>('rating')
 
     useEffect(() => {
         fetch('http://localhost:5000/api/doctors/')
@@ -283,7 +288,10 @@ export default function PatientDashboard() {
             })
 
             if (res.ok) {
-                setRatedAppointments(prev => new Set(prev).add(ratingAppointment.id))
+                // Update appointment to mark as rated in local state
+                setAppointments(prev => prev.map(appt =>
+                    appt.id === ratingAppointment.id ? { ...appt, rated: true } : appt
+                ))
                 setShowRatingModal(false)
                 // Refresh doctors to update ratings
                 fetch('http://localhost:5000/api/doctors/')
@@ -291,7 +299,7 @@ export default function PatientDashboard() {
                     .then(data => { if (Array.isArray(data)) setDoctors(data) })
             } else {
                 const data = await res.json()
-                console.error("Failed to submit rating:", data.error)
+                alert(data.error || 'Failed to submit rating')
             }
         } catch (err) {
             console.error("Failed to submit rating", err)
@@ -307,6 +315,24 @@ export default function PatientDashboard() {
             </div>
         )
     }
+
+    // Get unique specialties from doctors
+    const specialties = [...new Set(doctors.map(d => d.specialty))].sort()
+
+    // Filter and sort doctors
+    const filteredDoctors = doctors
+        .filter(doctor => {
+            const matchesSearch = doctor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                doctor.specialty.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                doctor.location.toLowerCase().includes(searchQuery.toLowerCase())
+            const matchesSpecialty = !selectedSpecialty || doctor.specialty === selectedSpecialty
+            const matchesRating = doctor.rating >= minRating
+            return matchesSearch && matchesSpecialty && matchesRating
+        })
+        .sort((a, b) => {
+            if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0)
+            return a.name.localeCompare(b.name)
+        })
 
     return (
         <div className="space-y-8">
@@ -375,7 +401,7 @@ export default function PatientDashboard() {
                                                     Consultation completed - Check Medical History
                                                 </span>
                                             </div>
-                                            {!appt.rated && !ratedAppointments.has(appt.id) && (
+                                            {!appt.rated && (
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
@@ -385,7 +411,7 @@ export default function PatientDashboard() {
                                                     <Star className="h-4 w-4" /> Rate Doctor
                                                 </Button>
                                             )}
-                                            {(appt.rated || ratedAppointments.has(appt.id)) && (
+                                            {appt.rated && (
                                                 <div className="text-center text-sm text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1">
                                                     <CheckCircle className="h-4 w-4" /> Rated
                                                 </div>
@@ -401,16 +427,70 @@ export default function PatientDashboard() {
 
             {/* Available Doctors */}
             <div>
-                <h2 className="text-xl font-semibold mb-4 text-slate-900 dark:text-white">Available Doctors</h2>
-                {doctors.length === 0 ? (
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
+                    <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Available Doctors</h2>
+                    <span className="text-sm text-slate-500">{filteredDoctors.length} of {doctors.length} doctors</span>
+                </div>
+
+                {/* Search and Filter Bar */}
+                <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 mb-6">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        {/* Search */}
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Input
+                                placeholder="Search doctors..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-10 border-slate-300 dark:border-slate-600"
+                            />
+                        </div>
+
+                        {/* Specialty Filter */}
+                        <Select
+                            value={selectedSpecialty}
+                            onChange={(e) => setSelectedSpecialty(e.target.value)}
+                            className="border-slate-300 dark:border-slate-600"
+                        >
+                            <option value="">All Specialties</option>
+                            {specialties.map(spec => (
+                                <option key={spec} value={spec}>{spec}</option>
+                            ))}
+                        </Select>
+
+                        {/* Rating Filter */}
+                        <Select
+                            value={minRating.toString()}
+                            onChange={(e) => setMinRating(Number(e.target.value))}
+                            className="border-slate-300 dark:border-slate-600"
+                        >
+                            <option value="0">Any Rating</option>
+                            <option value="3">3+ Stars</option>
+                            <option value="4">4+ Stars</option>
+                            <option value="4.5">4.5+ Stars</option>
+                        </Select>
+
+                        {/* Sort */}
+                        <Select
+                            value={sortBy}
+                            onChange={(e) => setSortBy(e.target.value as 'name' | 'rating')}
+                            className="border-slate-300 dark:border-slate-600"
+                        >
+                            <option value="rating">Sort by Rating</option>
+                            <option value="name">Sort by Name</option>
+                        </Select>
+                    </div>
+                </div>
+
+                {filteredDoctors.length === 0 ? (
                     <Card className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
                         <CardContent className="py-8 text-center text-slate-500 dark:text-slate-400">
-                            No doctors available at the moment.
+                            {doctors.length === 0 ? 'No doctors available at the moment.' : 'No doctors match your search criteria.'}
                         </CardContent>
                     </Card>
                 ) : (
                     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                        {doctors.map((doctor: Doctor) => (
+                        {filteredDoctors.map((doctor: Doctor) => (
                             <Card key={doctor.id} className="hover:shadow-lg transition-all hover:-translate-y-1 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
                                 <CardHeader className="flex flex-row items-center gap-4">
                                     <div className="h-14 w-14 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden flex-shrink-0 ring-2 ring-primary/20">

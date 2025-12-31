@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Check, X, MessageSquare, Loader2, User, Calendar, Users, Clock, Send, Mail, Phone, MapPin, Eye, CheckCircle, FileText } from "lucide-react"
+import { Check, X, MessageSquare, Loader2, User, Calendar, Users, Clock, Send, Mail, Phone, MapPin, Eye, CheckCircle, FileText, Pill, BarChart3, ClipboardList } from "lucide-react"
 import Link from "next/link"
 
 interface PatientDetails {
@@ -39,6 +39,25 @@ interface ChatMessage {
     read: boolean;
 }
 
+interface Medication {
+    name: string;
+    dosage: string;
+    frequency: string;
+    duration: string;
+    instructions: string;
+}
+
+interface Analytics {
+    totalAppointments: number;
+    appointmentsByStatus: { pending: number; confirmed: number; completed: number; cancelled: number };
+    uniquePatients: number;
+    thisMonthAppointments: number;
+    todayAppointments: number;
+    rating: number;
+    ratingCount: number;
+    prescriptionsWritten: number;
+}
+
 export default function DoctorDashboard() {
     const { user, token, isLoading: authLoading } = useAuth()
     const [appointments, setAppointments] = useState<Appointment[]>([])
@@ -63,6 +82,17 @@ export default function DoctorDashboard() {
     const [showCompleteModal, setShowCompleteModal] = useState(false)
     const [completeForm, setCompleteForm] = useState({ type: 'Consultation', description: '', result: '', notes: '' })
     const [completing, setCompleting] = useState(false)
+
+    // Prescription modal
+    const [showPrescriptionModal, setShowPrescriptionModal] = useState(false)
+    const [prescriptionAppointment, setPrescriptionAppointment] = useState<Appointment | null>(null)
+    const [prescriptionDiagnosis, setPrescriptionDiagnosis] = useState('')
+    const [prescriptionNotes, setPrescriptionNotes] = useState('')
+    const [medications, setMedications] = useState<Medication[]>([{ name: '', dosage: '', frequency: '', duration: '', instructions: '' }])
+    const [savingPrescription, setSavingPrescription] = useState(false)
+
+    // Analytics
+    const [analytics, setAnalytics] = useState<Analytics | null>(null)
 
     useEffect(() => {
         const fetchAppointments = async () => {
@@ -103,6 +133,27 @@ export default function DoctorDashboard() {
 
         if (!authLoading && token) {
             fetchAppointments()
+        }
+    }, [token, authLoading])
+
+    // Fetch analytics
+    useEffect(() => {
+        const fetchAnalytics = async () => {
+            if (!token) return
+            try {
+                const res = await fetch('http://localhost:5000/api/analytics/doctor', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                if (res.ok) {
+                    const data = await res.json()
+                    setAnalytics(data)
+                }
+            } catch (err) {
+                console.error("Failed to fetch analytics", err)
+            }
+        }
+        if (!authLoading && token) {
+            fetchAnalytics()
         }
     }, [token, authLoading])
 
@@ -258,6 +309,71 @@ export default function DoctorDashboard() {
         }
     }
 
+    const openPrescriptionModal = (appointment: Appointment) => {
+        setPrescriptionAppointment(appointment)
+        setPrescriptionDiagnosis('')
+        setPrescriptionNotes('')
+        setMedications([{ name: '', dosage: '', frequency: '', duration: '', instructions: '' }])
+        setShowPrescriptionModal(true)
+    }
+
+    const addMedication = () => {
+        setMedications([...medications, { name: '', dosage: '', frequency: '', duration: '', instructions: '' }])
+    }
+
+    const removeMedication = (index: number) => {
+        if (medications.length > 1) {
+            setMedications(medications.filter((_, i) => i !== index))
+        }
+    }
+
+    const updateMedication = (index: number, field: keyof Medication, value: string) => {
+        const updated = [...medications]
+        updated[index] = { ...updated[index], [field]: value }
+        setMedications(updated)
+    }
+
+    const handleSavePrescription = async () => {
+        if (!prescriptionAppointment || !token) return
+
+        // Validate at least one medication with name and dosage
+        const validMeds = medications.filter(m => m.name && m.dosage)
+        if (validMeds.length === 0) {
+            alert('Please add at least one medication with name and dosage')
+            return
+        }
+
+        setSavingPrescription(true)
+        try {
+            const res = await fetch('http://localhost:5000/api/prescriptions/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    appointmentId: prescriptionAppointment.id,
+                    medications: validMeds,
+                    diagnosis: prescriptionDiagnosis,
+                    notes: prescriptionNotes
+                })
+            })
+
+            if (res.ok) {
+                setShowPrescriptionModal(false)
+                alert('Prescription saved successfully!')
+            } else {
+                const data = await res.json()
+                alert(data.error || 'Failed to save prescription')
+            }
+        } catch (err) {
+            console.error("Failed to save prescription", err)
+            alert('Failed to save prescription')
+        } finally {
+            setSavingPrescription(false)
+        }
+    }
+
     const getPatientName = (patientId: string) => {
         const patient = patientCache[patientId]
         return patient ? `${patient.firstName} ${patient.lastName}` : 'Loading...'
@@ -288,12 +404,18 @@ export default function DoctorDashboard() {
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Doctor Dashboard</h1>
                     <p className="text-slate-600 dark:text-slate-400 mt-1">Manage your appointments and patients</p>
                 </div>
-                <Button variant="outline" className="gap-2 border-slate-300 dark:border-slate-600" asChild>
-                    <Link href="/dashboard/doctor/profile">
-                        <User className="h-4 w-4" />
-                        My Profile
-                    </Link>
-                </Button>
+                <div className="flex gap-2">
+                    <Button variant="outline" className="gap-2 border-slate-300 dark:border-slate-600" asChild>
+                        <Link href="/dashboard/doctor/schedule">
+                            <Clock className="h-4 w-4" /> Schedule
+                        </Link>
+                    </Button>
+                    <Button variant="outline" className="gap-2 border-slate-300 dark:border-slate-600" asChild>
+                        <Link href="/dashboard/doctor/profile">
+                            <User className="h-4 w-4" /> Profile
+                        </Link>
+                    </Button>
+                </div>
             </div>
 
             {/* Stats Cards */}
@@ -375,9 +497,9 @@ export default function DoctorDashboard() {
                                                 )}
                                                 <div className="pt-1">
                                                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${appt.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-300' :
-                                                            appt.status === 'cancelled' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' :
-                                                                appt.status === 'completed' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' :
-                                                                    'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300'
+                                                        appt.status === 'cancelled' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' :
+                                                            appt.status === 'completed' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' :
+                                                                'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300'
                                                         }`}>
                                                         {appt.status.charAt(0).toUpperCase() + appt.status.slice(1)}
                                                     </span>
@@ -431,6 +553,16 @@ export default function DoctorDashboard() {
                                                     onClick={() => openChat(appt)}
                                                 >
                                                     <MessageSquare className="w-4 h-4" /> Chat
+                                                </Button>
+                                            )}
+                                            {appt.status === 'completed' && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="gap-1 border-purple-300 text-purple-600 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400"
+                                                    onClick={() => openPrescriptionModal(appt)}
+                                                >
+                                                    <Pill className="w-4 h-4" /> Prescription
                                                 </Button>
                                             )}
                                         </div>
@@ -598,8 +730,8 @@ export default function DoctorDashboard() {
                                         className={`flex ${msg.senderRole === 'doctor' ? 'justify-end' : 'justify-start'}`}
                                     >
                                         <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${msg.senderRole === 'doctor'
-                                                ? 'bg-primary text-white'
-                                                : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700'
+                                            ? 'bg-primary text-white'
+                                            : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700'
                                             }`}>
                                             <p className="text-sm">{msg.content}</p>
                                             <p className={`text-xs mt-1 ${msg.senderRole === 'doctor' ? 'text-white/70' : 'text-slate-500 dark:text-slate-400'
@@ -626,6 +758,120 @@ export default function DoctorDashboard() {
                                     {sendingMessage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                                 </Button>
                             </div>
+                        </div>
+                    </Card>
+                </div>
+            )}
+
+            {/* Prescription Modal */}
+            {showPrescriptionModal && prescriptionAppointment && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+                    <Card className="w-full max-w-2xl bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 my-8">
+                        <CardHeader className="border-b border-slate-200 dark:border-slate-700">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle className="text-slate-900 dark:text-white flex items-center gap-2">
+                                        <Pill className="h-5 w-5 text-purple-600" /> Write Prescription
+                                    </CardTitle>
+                                    <CardDescription className="text-slate-500 dark:text-slate-400">
+                                        For patient: {getPatientName(prescriptionAppointment.patientId)}
+                                    </CardDescription>
+                                </div>
+                                <Button variant="ghost" size="sm" onClick={() => setShowPrescriptionModal(false)}>
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pt-6 space-y-6 max-h-[60vh] overflow-y-auto">
+                            {/* Diagnosis */}
+                            <div className="space-y-2">
+                                <Label className="text-slate-900 dark:text-white">Diagnosis</Label>
+                                <Input
+                                    value={prescriptionDiagnosis}
+                                    onChange={(e) => setPrescriptionDiagnosis(e.target.value)}
+                                    placeholder="Enter diagnosis..."
+                                    className="border-slate-300 dark:border-slate-600"
+                                />
+                            </div>
+
+                            {/* Medications */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <Label className="text-slate-900 dark:text-white">Medications</Label>
+                                    <Button size="sm" variant="outline" onClick={addMedication}>
+                                        + Add Medication
+                                    </Button>
+                                </div>
+
+                                {medications.map((med, index) => (
+                                    <div key={index} className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg space-y-3 bg-slate-50 dark:bg-slate-900">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Medication {index + 1}</span>
+                                            {medications.length > 1 && (
+                                                <Button size="sm" variant="ghost" onClick={() => removeMedication(index)} className="text-red-500 hover:text-red-700">
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <Input
+                                                placeholder="Medication name *"
+                                                value={med.name}
+                                                onChange={(e) => updateMedication(index, 'name', e.target.value)}
+                                                className="border-slate-300 dark:border-slate-600"
+                                            />
+                                            <Input
+                                                placeholder="Dosage (e.g., 500mg) *"
+                                                value={med.dosage}
+                                                onChange={(e) => updateMedication(index, 'dosage', e.target.value)}
+                                                className="border-slate-300 dark:border-slate-600"
+                                            />
+                                            <Input
+                                                placeholder="Frequency (e.g., twice daily)"
+                                                value={med.frequency}
+                                                onChange={(e) => updateMedication(index, 'frequency', e.target.value)}
+                                                className="border-slate-300 dark:border-slate-600"
+                                            />
+                                            <Input
+                                                placeholder="Duration (e.g., 7 days)"
+                                                value={med.duration}
+                                                onChange={(e) => updateMedication(index, 'duration', e.target.value)}
+                                                className="border-slate-300 dark:border-slate-600"
+                                            />
+                                        </div>
+                                        <Input
+                                            placeholder="Special instructions..."
+                                            value={med.instructions}
+                                            onChange={(e) => updateMedication(index, 'instructions', e.target.value)}
+                                            className="border-slate-300 dark:border-slate-600"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Notes */}
+                            <div className="space-y-2">
+                                <Label className="text-slate-900 dark:text-white">Additional Notes</Label>
+                                <textarea
+                                    value={prescriptionNotes}
+                                    onChange={(e) => setPrescriptionNotes(e.target.value)}
+                                    placeholder="Any additional notes or instructions..."
+                                    className="w-full h-20 px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary"
+                                />
+                            </div>
+                        </CardContent>
+                        <div className="border-t border-slate-200 dark:border-slate-700 p-4 flex gap-2">
+                            <Button variant="outline" className="flex-1" onClick={() => setShowPrescriptionModal(false)}>
+                                Cancel
+                            </Button>
+                            <Button
+                                className="flex-1 bg-purple-600 hover:bg-purple-700"
+                                onClick={handleSavePrescription}
+                                disabled={savingPrescription}
+                            >
+                                {savingPrescription && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Save Prescription
+                            </Button>
                         </div>
                     </Card>
                 </div>

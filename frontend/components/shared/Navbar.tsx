@@ -2,14 +2,20 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Heart, LogOut, User, Stethoscope, LayoutDashboard } from "lucide-react"
+import { Heart, LogOut, Stethoscope, LayoutDashboard } from "lucide-react"
 import { useAuth } from "@/lib/auth"
+import { useEffect, useState } from "react"
 
 export function Navbar() {
-    const { user, token, logout, isLoading, isAuthenticated } = useAuth()
+    const { user, logout, isLoading, isAuthenticated } = useAuth()
+    const [mounted, setMounted] = useState(false)
+
+    // Prevent hydration mismatch
+    useEffect(() => {
+        setMounted(true)
+    }, [])
 
     const isDoctor = user?.role === 'doctor'
-    const isPatient = user?.role === 'patient'
 
     return (
         <nav className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60">
@@ -19,14 +25,14 @@ export function Navbar() {
                         <Heart className="h-5 w-5 text-primary" />
                     </div>
                     <span className="hidden font-bold text-lg sm:inline-block">
-                        Vibe<span className="text-primary">Code</span> Medical
+                        Medi<span className="text-primary">Care</span>
                     </span>
                 </Link>
 
                 <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
                     <nav className="flex items-center space-x-6 text-sm font-medium">
                         {/* Only show Find Doctors for patients or non-logged in users */}
-                        {!isDoctor && (
+                        {(!mounted || !isDoctor) && (
                             <Link
                                 href="/dashboard/patient"
                                 className="hidden md:flex items-center gap-1.5 transition-colors hover:text-primary text-foreground/70"
@@ -44,7 +50,7 @@ export function Navbar() {
                     </nav>
 
                     <div className="flex items-center space-x-3 ml-6">
-                        {isLoading ? (
+                        {!mounted || isLoading ? (
                             <div className="h-10 w-24 animate-pulse bg-muted rounded-lg" />
                         ) : isAuthenticated ? (
                             <>
@@ -79,3 +85,4 @@ export function Navbar() {
         </nav>
     )
 }
+

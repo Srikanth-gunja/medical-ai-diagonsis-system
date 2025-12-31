@@ -139,10 +139,10 @@ export default function Home() {
         <div className="container mx-auto px-4 flex flex-col items-center justify-between gap-4 md:flex-row">
           <div className="flex items-center gap-2">
             <Heart className="h-5 w-5 text-primary" />
-            <span className="font-semibold">Vibe Code Medical</span>
+            <span className="font-semibold">MediCare</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            © 2024 Vibe Code Medical. All rights reserved.
+            © 2024 MediCare. All rights reserved.
           </p>
           <div className="flex gap-4 text-sm text-muted-foreground">
             <Link href="/about" className="hover:text-foreground transition-colors">About</Link>

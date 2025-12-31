@@ -24,6 +24,9 @@ def create_app(config_class=Config):
     from .routes.messages import messages_bp
     from .routes.chatbot import chatbot_bp
     from .routes.ratings import ratings_bp
+    from .routes.prescriptions import prescriptions_bp
+    from .routes.schedules import schedules_bp
+    from .routes.analytics import analytics_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(doctors_bp, url_prefix='/api/doctors')
@@ -33,6 +36,9 @@ def create_app(config_class=Config):
     app.register_blueprint(messages_bp, url_prefix='/api/messages')
     app.register_blueprint(chatbot_bp, url_prefix='/api/chatbot')
     app.register_blueprint(ratings_bp, url_prefix='/api/ratings')
+    app.register_blueprint(prescriptions_bp, url_prefix='/api/prescriptions')
+    app.register_blueprint(schedules_bp, url_prefix='/api/schedules')
+    app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
 
     return app
 
