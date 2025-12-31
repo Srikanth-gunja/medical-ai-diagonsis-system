@@ -84,12 +84,10 @@ def get_patient_prescriptions():
     if current_user['role'] != 'patient':
         return jsonify({'error': 'Only patients can access this endpoint'}), 403
     
-    # Get patient profile
-    patient = Patient.find_by_user_id(current_user['id'])
-    if not patient:
-        return jsonify({'error': 'Patient profile not found'}), 404
-    
-    prescriptions = Prescription.find_by_patient_id(patient['_id'])
+    # Prescriptions are stored with user_id as patient_id (from appointment)
+    # So we query directly by user_id, not patient profile's _id
+    user_id = current_user['id']
+    prescriptions = Prescription.find_by_patient_id(user_id)
     
     # Add doctor names
     result = []

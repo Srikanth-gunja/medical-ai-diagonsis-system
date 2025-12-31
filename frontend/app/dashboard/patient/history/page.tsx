@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react"
 import { useAuth } from "@/lib/auth"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Loader2, ArrowLeft, FileText, Calendar, Stethoscope, CheckCircle, Pill } from "lucide-react"
+import { Loader2, ArrowLeft, FileText, Calendar, Stethoscope, CheckCircle, Pill, Download } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import Link from "next/link"
 
 interface MedicalRecord {
@@ -40,6 +41,7 @@ export default function HistoryPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState("")
     const [activeTab, setActiveTab] = useState<'records' | 'prescriptions'>('records')
+    const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
     useEffect(() => {
         const fetchRecords = async () => {
@@ -97,6 +99,37 @@ export default function HistoryPage() {
             }
         }
     }, [token, authLoading])
+
+    const handleDownloadReport = async (prescriptionId: string) => {
+        if (!token) return
+
+        setDownloadingId(prescriptionId)
+        try {
+            const res = await fetch(`http://localhost:5000/api/reports/prescription/${prescriptionId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+
+            if (!res.ok) {
+                const error = await res.json()
+                throw new Error(error.error || 'Failed to generate report')
+            }
+
+            const blob = await res.blob()
+            const url = window.URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `prescription_report_${new Date().toISOString().split('T')[0]}.pdf`
+            document.body.appendChild(a)
+            a.click()
+            window.URL.revokeObjectURL(url)
+            document.body.removeChild(a)
+        } catch (err) {
+            console.error('Failed to download report:', err)
+            alert(err instanceof Error ? err.message : 'Failed to download report')
+        } finally {
+            setDownloadingId(null)
+        }
+    }
 
     const getResultColor = (result: string) => {
         const lower = result.toLowerCase()
@@ -280,6 +313,29 @@ export default function HistoryPage() {
                                                     <span className="font-medium">Notes:</span> {prescription.notes}
                                                 </div>
                                             )}
+
+                                            {/* Download Report Button */}
+                                            <div className="mt-4 pt-3 border-t border-border">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="w-full gap-2"
+                                                    onClick={() => handleDownloadReport(prescription.id)}
+                                                    disabled={downloadingId === prescription.id}
+                                                >
+                                                    {downloadingId === prescription.id ? (
+                                                        <>
+                                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                                            Generating Report...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Download className="h-4 w-4" />
+                                                            Download Report PDF
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            </div>
                                         </div>
                                     </CardContent>
                                 </Card>

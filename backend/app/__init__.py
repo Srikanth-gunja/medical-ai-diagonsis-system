@@ -27,6 +27,7 @@ def create_app(config_class=Config):
     from .routes.prescriptions import prescriptions_bp
     from .routes.schedules import schedules_bp
     from .routes.analytics import analytics_bp
+    from .routes.reports import reports_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(doctors_bp, url_prefix='/api/doctors')
@@ -39,6 +40,7 @@ def create_app(config_class=Config):
     app.register_blueprint(prescriptions_bp, url_prefix='/api/prescriptions')
     app.register_blueprint(schedules_bp, url_prefix='/api/schedules')
     app.register_blueprint(analytics_bp, url_prefix='/api/analytics')
+    app.register_blueprint(reports_bp, url_prefix='/api/reports')
 
     return app
 

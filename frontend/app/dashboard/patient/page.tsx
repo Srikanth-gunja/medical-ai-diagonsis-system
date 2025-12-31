@@ -640,12 +640,12 @@ export default function PatientDashboard() {
             {/* Chat Modal */}
             {showChatModal && selectedAppointment && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <Card className="w-full max-w-lg h-[500px] flex flex-col bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
-                        <CardHeader className="border-b border-slate-200 dark:border-slate-700">
+                    <Card className="w-full max-w-lg h-[500px] flex flex-col bg-card border-border">
+                        <CardHeader className="border-b border-border">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <CardTitle className="text-slate-900 dark:text-white">Chat with {selectedAppointment.doctorName}</CardTitle>
-                                    <CardDescription className="text-slate-500 dark:text-slate-400">
+                                    <CardTitle className="text-foreground">Chat with {selectedAppointment.doctorName}</CardTitle>
+                                    <CardDescription className="text-muted-foreground">
                                         Messages are synced in real-time
                                     </CardDescription>
                                 </div>
@@ -654,9 +654,9 @@ export default function PatientDashboard() {
                                 </Button>
                             </div>
                         </CardHeader>
-                        <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50 dark:bg-slate-900">
+                        <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/30">
                             {chatMessages.length === 0 ? (
-                                <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
+                                <div className="flex items-center justify-center h-full text-muted-foreground">
                                     No messages yet. Start the conversation!
                                 </div>
                             ) : (
@@ -666,11 +666,11 @@ export default function PatientDashboard() {
                                         className={`flex ${msg.senderRole === 'patient' ? 'justify-end' : 'justify-start'}`}
                                     >
                                         <div className={`max-w-[80%] rounded-2xl px-4 py-2 ${msg.senderRole === 'patient'
-                                            ? 'bg-primary text-white'
-                                            : 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-700'
+                                            ? 'bg-primary text-primary-foreground'
+                                            : 'bg-card text-foreground border border-border'
                                             }`}>
                                             <p className="text-sm">{msg.content}</p>
-                                            <p className={`text-xs mt-1 ${msg.senderRole === 'patient' ? 'text-white/70' : 'text-slate-500 dark:text-slate-400'
+                                            <p className={`text-xs mt-1 ${msg.senderRole === 'patient' ? 'text-primary-foreground/70' : 'text-muted-foreground'
                                                 }`}>
                                                 {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </p>
@@ -680,14 +680,14 @@ export default function PatientDashboard() {
                             )}
                             <div ref={messagesEndRef} />
                         </CardContent>
-                        <div className="border-t border-slate-200 dark:border-slate-700 p-4 bg-white dark:bg-slate-800">
+                        <div className="border-t border-border p-4 bg-card">
                             <div className="flex gap-2">
                                 <Input
                                     placeholder="Type a message..."
                                     value={newMessage}
                                     onChange={(e) => setNewMessage(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && !sendingMessage && sendMessage()}
-                                    className="flex-1 border-slate-300 dark:border-slate-600"
+                                    className="flex-1 border-input"
                                     disabled={sendingMessage}
                                 />
                                 <Button onClick={sendMessage} disabled={sendingMessage || !newMessage.trim()}>
@@ -702,12 +702,12 @@ export default function PatientDashboard() {
             {/* Rating Modal */}
             {showRatingModal && ratingAppointment && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <Card className="w-full max-w-md bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
-                        <CardHeader className="border-b border-slate-200 dark:border-slate-700">
+                    <Card className="w-full max-w-md bg-card border-border">
+                        <CardHeader className="border-b border-border">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <CardTitle className="text-slate-900 dark:text-white">Rate Your Visit</CardTitle>
-                                    <CardDescription className="text-slate-500 dark:text-slate-400">
+                                    <CardTitle className="text-foreground">Rate Your Visit</CardTitle>
+                                    <CardDescription className="text-muted-foreground">
                                         How was your experience with {ratingAppointment.doctorName}?
                                     </CardDescription>
                                 </div>
@@ -732,26 +732,26 @@ export default function PatientDashboard() {
                                             <Star
                                                 className={`h-10 w-10 transition-colors ${star <= (ratingHover || ratingScore)
                                                     ? 'fill-amber-400 text-amber-400'
-                                                    : 'text-slate-300 dark:text-slate-600'
+                                                    : 'text-muted'
                                                     }`}
                                             />
                                         </button>
                                     ))}
                                 </div>
-                                <span className="text-sm text-slate-500 dark:text-slate-400">
+                                <span className="text-sm text-muted-foreground">
                                     {ratingScore > 0 ? ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][ratingScore] : 'Select a rating'}
                                 </span>
                             </div>
 
                             {/* Comment */}
                             <div className="space-y-2">
-                                <Label htmlFor="ratingComment" className="text-slate-900 dark:text-white">Comment (optional)</Label>
+                                <Label htmlFor="ratingComment" className="text-foreground">Comment (optional)</Label>
                                 <textarea
                                     id="ratingComment"
                                     value={ratingComment}
                                     onChange={(e) => setRatingComment(e.target.value)}
                                     placeholder="Share your experience..."
-                                    className="w-full h-24 px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="w-full h-24 px-3 py-2 text-sm rounded-lg border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                                 />
                             </div>
 
