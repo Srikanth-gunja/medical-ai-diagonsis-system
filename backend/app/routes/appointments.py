@@ -72,6 +72,31 @@ def delete_appointment(appt_id):
         return jsonify({'message': 'Appointment deleted successfully'})
     return jsonify({'error': 'Appointment not found'}), 404
 
+@appointments_bp.route('/<appt_id>/revoke', methods=['PATCH'])
+@jwt_required()
+def revoke_appointment(appt_id):
+    """Allow patient to revoke their pending appointment."""
+    current_user = get_current_user()
+    
+    # Only patients can revoke
+    if current_user['role'] != 'patient':
+        return jsonify({'error': 'Only patients can revoke appointments'}), 403
+    
+    appointment = Appointment.find_by_id(appt_id)
+    if not appointment:
+        return jsonify({'error': 'Appointment not found'}), 404
+    
+    # Verify ownership
+    if str(appointment['patient_id']) != current_user['id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Only pending appointments can be revoked
+    if appointment['status'] != 'pending':
+        return jsonify({'error': 'Only pending appointments can be revoked'}), 400
+    
+    updated = Appointment.update_status(appt_id, 'cancelled')
+    return jsonify(Appointment.to_dict(updated))
+
 @appointments_bp.route('/<appt_id>/complete', methods=['POST'])
 @jwt_required()
 def complete_appointment(appt_id):

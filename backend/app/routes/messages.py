@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from bson import ObjectId
+from datetime import datetime, timedelta
 from ..models.message import Message
 from ..models.appointment import Appointment
 import json
@@ -13,6 +14,36 @@ def get_current_user():
     if isinstance(identity, str):
         return json.loads(identity)
     return identity
+
+def is_during_appointment_time(appointment):
+    """Check if current time is within the appointment time window.
+    
+    Returns:
+        tuple: (is_valid: bool, error_message: str)
+    """
+    appt_date = appointment['date']  # Format: "YYYY-MM-DD"
+    appt_time = appointment['time']  # Format: "HH:MM AM/PM" or "H:MM AM/PM"
+    
+    # Parse appointment datetime
+    try:
+        time_str = appt_time.upper().strip()
+        appt_datetime = datetime.strptime(f"{appt_date} {time_str}", "%Y-%m-%d %I:%M %p")
+    except ValueError:
+        try:
+            # Fallback: try 24-hour format
+            appt_datetime = datetime.strptime(f"{appt_date} {appt_time}", "%Y-%m-%d %H:%M")
+        except ValueError:
+            return False, "Invalid appointment time format"
+    
+    now = datetime.now()
+    end_time = appt_datetime + timedelta(minutes=30)  # 30-min appointment window
+    
+    if now < appt_datetime:
+        return False, f"Chat available from {appt_datetime.strftime('%Y-%m-%d %I:%M %p')}"
+    elif now > end_time:
+        return False, "Appointment time has ended"
+    
+    return True, ""
 
 @messages_bp.route('/<appointment_id>', methods=['GET'])
 @jwt_required()
@@ -53,6 +84,15 @@ def send_message(appointment_id):
     appointment = Appointment.find_by_id(appointment_id)
     if not appointment:
         return jsonify({'error': 'Appointment not found'}), 404
+    
+    # Check appointment status - only confirmed appointments allow chat
+    if appointment['status'] != 'confirmed':
+        return jsonify({'error': 'Chat is only available for confirmed appointments'}), 403
+    
+    # Check if current time is within appointment window
+    is_valid, error_msg = is_during_appointment_time(appointment)
+    if not is_valid:
+        return jsonify({'error': error_msg}), 403
     
     message = Message.create(
         appointment_id=appointment_id,

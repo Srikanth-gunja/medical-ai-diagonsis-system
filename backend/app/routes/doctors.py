@@ -1,6 +1,8 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from datetime import datetime
 from ..models.doctor import Doctor
+from ..models.schedule import Schedule
 import json
 
 doctors_bp = Blueprint('doctors', __name__)
@@ -12,10 +14,59 @@ def get_current_user():
         return json.loads(identity)
     return identity
 
+def check_doctor_availability(doctor_id):
+    """Check if doctor is available now based on their schedule."""
+    schedule = Schedule.find_by_doctor_id(doctor_id)
+    now = datetime.now()
+    today_str = now.strftime('%Y-%m-%d')
+    day_name = now.strftime('%A').lower()
+    
+    if not schedule:
+        # No schedule set - assume available during business hours (9 AM - 5 PM)
+        current_hour = now.hour
+        if 9 <= current_hour < 17:
+            return True, "Available"
+        return False, "Outside business hours"
+    
+    # Check if today is blocked
+    if today_str in schedule.get('blocked_dates', []):
+        return False, "Not available today"
+    
+    weekly = schedule.get('weekly_schedule', {})
+    day_schedule = weekly.get(day_name, {})
+    
+    if not day_schedule.get('enabled', False):
+        return False, "Not available today"
+    
+    # Check if current time is within working hours
+    start_time = day_schedule.get('start', '09:00')
+    end_time = day_schedule.get('end', '17:00')
+    
+    try:
+        start = datetime.strptime(start_time, '%H:%M').time()
+        end = datetime.strptime(end_time, '%H:%M').time()
+        current_time = now.time()
+        
+        if start <= current_time <= end:
+            return True, "Available now"
+        elif current_time < start:
+            return False, f"Available from {datetime.strptime(start_time, '%H:%M').strftime('%I:%M %p')}"
+        else:
+            return False, "Closed for today"
+    except ValueError:
+        return True, "Available"
+
 @doctors_bp.route('/', methods=['GET'])
 def get_doctors():
     doctors = Doctor.find_all()
-    return jsonify([Doctor.to_dict(doc) for doc in doctors])
+    result = []
+    for doc in doctors:
+        doc_dict = Doctor.to_dict(doc)
+        is_available, status_message = check_doctor_availability(doc['_id'])
+        doc_dict['isAvailable'] = is_available
+        doc_dict['availabilityStatus'] = status_message
+        result.append(doc_dict)
+    return jsonify(result)
 
 @doctors_bp.route('/profile', methods=['GET'])
 @jwt_required()

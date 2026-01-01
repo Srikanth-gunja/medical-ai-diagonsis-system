@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
-import { Calendar, MapPin, Star, X, Loader2, Clock, CheckCircle, FileText, User, MessageSquare, Send, Search, Filter } from "lucide-react"
+import { Calendar, MapPin, Star, X, Loader2, Clock, CheckCircle, FileText, User, MessageSquare, Send, Search, Filter, XCircle } from "lucide-react"
 import Link from "next/link"
 
 interface Doctor {
@@ -20,6 +20,8 @@ interface Doctor {
     image: string;
     rating: number;
     rating_count: number;
+    isAvailable?: boolean;
+    availabilityStatus?: string;
 }
 
 interface Appointment {
@@ -81,6 +83,9 @@ export default function PatientDashboard() {
     const [ratingHover, setRatingHover] = useState(0)
     const [ratingComment, setRatingComment] = useState("")
     const [ratingLoading, setRatingLoading] = useState(false)
+
+    // Revoke state
+    const [revokingId, setRevokingId] = useState<string | null>(null)
 
     // Search and filter state
     const [searchQuery, setSearchQuery] = useState('')
@@ -261,6 +266,73 @@ export default function PatientDashboard() {
         }
     }
 
+    const isChatAvailable = (appt: Appointment): { available: boolean; message: string } => {
+        // Chat only available for confirmed appointments during appointment time
+        if (appt.status !== 'confirmed') {
+            return { available: false, message: 'Chat only available for confirmed appointments' }
+        }
+
+        const now = new Date()
+        const apptDate = appt.date // Format: "YYYY-MM-DD"
+        const apptTime = appt.time // Format: "H:MM AM/PM"
+
+        // Parse appointment datetime
+        const [time, period] = apptTime.split(' ')
+        const [hourStr, minuteStr] = time.split(':')
+        let hour = parseInt(hourStr)
+        const minute = parseInt(minuteStr)
+
+        if (period?.toUpperCase() === 'PM' && hour !== 12) {
+            hour += 12
+        } else if (period?.toUpperCase() === 'AM' && hour === 12) {
+            hour = 0
+        }
+
+        const apptDateTime = new Date(`${apptDate}T${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}:00`)
+        const endTime = new Date(apptDateTime.getTime() + 30 * 60 * 1000) // 30-minute window
+
+        if (now < apptDateTime) {
+            return {
+                available: false,
+                message: `Chat available from ${apptDateTime.toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' })}`
+            }
+        } else if (now > endTime) {
+            return { available: false, message: 'Appointment time has ended' }
+        }
+
+        return { available: true, message: '' }
+    }
+
+    const handleRevokeAppointment = async (apptId: string) => {
+        if (!token) return
+
+        setRevokingId(apptId)
+        try {
+            const res = await fetch(`http://localhost:5000/api/appointments/${apptId}/revoke`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+
+            if (res.ok) {
+                setAppointments(prev =>
+                    prev.map(appt =>
+                        appt.id === apptId ? { ...appt, status: 'cancelled' } : appt
+                    )
+                )
+            } else {
+                const data = await res.json()
+                alert(data.error || 'Failed to revoke appointment')
+            }
+        } catch (err) {
+            console.error("Failed to revoke appointment", err)
+            alert('Failed to revoke appointment')
+        } finally {
+            setRevokingId(null)
+        }
+    }
+
     const openRatingModal = (appointment: Appointment) => {
         setRatingAppointment(appointment)
         setRatingScore(0)
@@ -383,16 +455,44 @@ export default function PatientDashboard() {
                                             <span className="text-foreground">{appt.symptoms}</span>
                                         </p>
                                     )}
-                                    {appt.status !== 'cancelled' && appt.status !== 'completed' && (
+                                    {/* Pending: Show Revoke button */}
+                                    {appt.status === 'pending' && (
                                         <Button
                                             size="sm"
                                             variant="outline"
-                                            className="mt-3 gap-1 w-full border-slate-300 dark:border-slate-600"
-                                            onClick={() => openChat(appt)}
+                                            className="mt-3 gap-1 w-full border-destructive/30 text-destructive hover:bg-destructive/10"
+                                            onClick={() => handleRevokeAppointment(appt.id)}
+                                            disabled={revokingId === appt.id}
                                         >
-                                            <MessageSquare className="h-4 w-4" /> Chat with Doctor
+                                            {revokingId === appt.id ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <XCircle className="h-4 w-4" />
+                                            )}
+                                            Revoke Appointment
                                         </Button>
                                     )}
+                                    {/* Confirmed: Show Chat button with time-based availability */}
+                                    {appt.status === 'confirmed' && (() => {
+                                        const chatStatus = isChatAvailable(appt)
+                                        return chatStatus.available ? (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="mt-3 gap-1 w-full border-slate-300 dark:border-slate-600"
+                                                onClick={() => openChat(appt)}
+                                            >
+                                                <MessageSquare className="h-4 w-4" /> Chat with Doctor
+                                            </Button>
+                                        ) : (
+                                            <div className="mt-3 p-2 bg-muted/50 rounded-lg text-center">
+                                                <span className="text-sm text-muted-foreground flex items-center justify-center gap-1">
+                                                    <Clock className="h-4 w-4" />
+                                                    {chatStatus.message}
+                                                </span>
+                                            </div>
+                                        )
+                                    })()}
                                     {appt.status === 'completed' && (
                                         <div className="mt-3 space-y-2">
                                             <div className="p-2 bg-secondary/50 rounded-lg text-center">
@@ -516,6 +616,11 @@ export default function PatientDashboard() {
                                     <div className="flex items-center text-sm text-muted-foreground">
                                         <MapPin className="mr-2 h-4 w-4 flex-shrink-0 text-primary/60" />
                                         <span className="truncate">{doctor.location}</span>
+                                    </div>
+                                    {/* Availability Status */}
+                                    <div className={`flex items-center text-sm ${doctor.isAvailable ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                                        <span className={`mr-2 h-2 w-2 rounded-full ${doctor.isAvailable ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
+                                        <span>{doctor.availabilityStatus || (doctor.isAvailable ? 'Available' : 'Not available')}</span>
                                     </div>
                                     <div className="flex items-start text-sm text-muted-foreground">
                                         <Clock className="mr-2 h-4 w-4 mt-0.5 flex-shrink-0 text-primary/60" />
