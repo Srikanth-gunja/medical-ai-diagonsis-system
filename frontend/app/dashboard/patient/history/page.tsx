@@ -48,7 +48,7 @@ export default function HistoryPage() {
             if (!token) return
 
             try {
-                const res = await fetch('http://localhost:5000/api/patients/records', {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/patients/records`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
 
@@ -75,7 +75,7 @@ export default function HistoryPage() {
             if (!token) return
 
             try {
-                const res = await fetch('http://localhost:5000/api/prescriptions/patient', {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/prescriptions/patient`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
 
@@ -105,7 +105,7 @@ export default function HistoryPage() {
 
         setDownloadingId(prescriptionId)
         try {
-            const res = await fetch(`http://localhost:5000/api/reports/prescription/${prescriptionId}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reports/prescription/${prescriptionId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
 

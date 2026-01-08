@@ -98,7 +98,7 @@ export default function DoctorDashboard() {
         const fetchAppointments = async () => {
             if (!token) return
             try {
-                const res = await fetch('http://localhost:5000/api/appointments/', {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/appointments/`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
                 if (res.ok) {
@@ -111,7 +111,7 @@ export default function DoctorDashboard() {
 
                     for (const patientId of uniquePatientIds) {
                         try {
-                            const patientRes = await fetch(`http://localhost:5000/api/patients/${patientId}`, {
+                            const patientRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/patients/${patientId}`, {
                                 headers: { 'Authorization': `Bearer ${token}` }
                             })
                             if (patientRes.ok) {
@@ -141,7 +141,7 @@ export default function DoctorDashboard() {
         const fetchAnalytics = async () => {
             if (!token) return
             try {
-                const res = await fetch('http://localhost:5000/api/analytics/doctor', {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/analytics/doctor`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
                 if (res.ok) {
@@ -167,7 +167,7 @@ export default function DoctorDashboard() {
         if (showChatModal && selectedAppointment && token) {
             const pollMessages = async () => {
                 try {
-                    const res = await fetch(`http://localhost:5000/api/messages/${selectedAppointment.id}`, {
+                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/messages/${selectedAppointment.id}`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     })
                     if (res.ok) {
@@ -192,7 +192,7 @@ export default function DoctorDashboard() {
 
     const updateAppointmentStatus = async (appointmentId: string, status: string) => {
         try {
-            const res = await fetch(`http://localhost:5000/api/appointments/${appointmentId}/status`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/appointments/${appointmentId}/status`, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -221,7 +221,7 @@ export default function DoctorDashboard() {
 
         setLoadingPatient(true)
         try {
-            const res = await fetch(`http://localhost:5000/api/patients/${patientId}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/patients/${patientId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
             if (res.ok) {
@@ -248,7 +248,7 @@ export default function DoctorDashboard() {
 
         setSendingMessage(true)
         try {
-            const res = await fetch(`http://localhost:5000/api/messages/${selectedAppointment.id}`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/messages/${selectedAppointment.id}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -285,7 +285,7 @@ export default function DoctorDashboard() {
 
         setCompleting(true)
         try {
-            const res = await fetch(`http://localhost:5000/api/appointments/${selectedAppointment.id}/complete`, {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/appointments/${selectedAppointment.id}/complete`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -345,7 +345,7 @@ export default function DoctorDashboard() {
 
         setSavingPrescription(true)
         try {
-            const res = await fetch('http://localhost:5000/api/prescriptions/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/prescriptions/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

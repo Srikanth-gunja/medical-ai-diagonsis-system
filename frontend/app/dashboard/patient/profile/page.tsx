@@ -28,7 +28,7 @@ export default function ProfilePage() {
             if (!token) return
 
             try {
-                const res = await fetch('http://localhost:5000/api/patients/profile', {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/patients/profile`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
                 if (res.ok) {
@@ -68,7 +68,7 @@ export default function ProfilePage() {
         setError("")
 
         try {
-            const res = await fetch('http://localhost:5000/api/patients/profile', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/patients/profile`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

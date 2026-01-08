@@ -38,7 +38,7 @@ export default function DoctorProfilePage() {
             if (!token) return
 
             try {
-                const res = await fetch('http://localhost:5000/api/doctors/profile', {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/doctors/profile`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
                 if (res.ok) {
@@ -79,7 +79,7 @@ export default function DoctorProfilePage() {
         setError("")
 
         try {
-            const res = await fetch('http://localhost:5000/api/doctors/profile', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/doctors/profile`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

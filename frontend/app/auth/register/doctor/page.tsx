@@ -30,7 +30,7 @@ export default function DoctorRegisterPage() {
 
     useEffect(() => {
         // Fetch specialties from API
-        fetch('http://localhost:5000/api/auth/specialties')
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/specialties`)
             .then(res => res.json())
             .then(data => {
                 if (data.specialties) {
@@ -78,7 +78,7 @@ export default function DoctorRegisterPage() {
         }
 
         try {
-            const res = await fetch('http://localhost:5000/api/auth/register', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -222,8 +222,8 @@ export default function DoctorRegisterPage() {
                                         type="button"
                                         onClick={() => toggleDay(day)}
                                         className={`px-3 py-1.5 text-sm rounded-full border transition-all ${availability.includes(day)
-                                                ? 'bg-primary text-white border-primary'
-                                                : 'bg-slate-100 text-slate-700 border-slate-200 hover:border-primary/50 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+                                            ? 'bg-primary text-white border-primary'
+                                            : 'bg-slate-100 text-slate-700 border-slate-200 hover:border-primary/50 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
                                             }`}
                                     >
                                         {day.slice(0, 3)}

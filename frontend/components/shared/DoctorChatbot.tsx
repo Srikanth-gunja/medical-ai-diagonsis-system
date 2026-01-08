@@ -41,7 +41,7 @@ export function DoctorChatbot() {
 
         setIsLoadingHistory(true)
         try {
-            const res = await fetch('http://localhost:5000/api/chatbot/history', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chatbot/history`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             })
 
@@ -70,7 +70,7 @@ export function DoctorChatbot() {
         setIsLoading(true)
 
         try {
-            const res = await fetch('http://localhost:5000/api/chatbot/message', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chatbot/message`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -102,7 +102,7 @@ export function DoctorChatbot() {
         if (!token) return
 
         try {
-            const res = await fetch('http://localhost:5000/api/chatbot/history', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chatbot/history`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             })

@@ -57,7 +57,7 @@ export default function ScheduleManagementPage() {
         const fetchSchedule = async () => {
             if (!token) return
             try {
-                const res = await fetch('http://localhost:5000/api/schedules/', {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/schedules/`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
                 if (res.ok) {
@@ -119,7 +119,7 @@ export default function ScheduleManagementPage() {
         setSaveSuccess(false)
 
         try {
-            const res = await fetch('http://localhost:5000/api/schedules/', {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/schedules/`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
