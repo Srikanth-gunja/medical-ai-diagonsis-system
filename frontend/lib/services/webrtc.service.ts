@@ -23,8 +23,15 @@ const getIceServers = (): RTCIceServer[] => {
     const turnCredential = process.env.NEXT_PUBLIC_TURN_CREDENTIAL;
 
     if (turnServer && turnUsername && turnCredential) {
+        // Ensure URL has proper scheme
+        let turnUrl = turnServer;
+        if (!turnUrl.startsWith('turn:') && !turnUrl.startsWith('turns:')) {
+            // Default to turn: with standard port if no scheme provided
+            turnUrl = `turn:${turnUrl}`;
+        }
+
         servers.push({
-            urls: turnServer,
+            urls: turnUrl,
             username: turnUsername,
             credential: turnCredential,
         });
