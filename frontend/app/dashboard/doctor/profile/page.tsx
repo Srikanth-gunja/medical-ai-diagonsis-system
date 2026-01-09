@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2, ArrowLeft, Stethoscope } from "lucide-react"
+import { Loader2, ArrowLeft, Stethoscope, Calendar, Clock, ExternalLink } from "lucide-react"
 import Link from "next/link"
 
 interface DoctorProfile {
@@ -19,40 +19,71 @@ interface DoctorProfile {
     image: string;
 }
 
+interface DaySchedule {
+    start: string;
+    end: string;
+    enabled: boolean;
+}
+
+interface Schedule {
+    weeklySchedule: { [key: string]: DaySchedule };
+    blockedDates: string[];
+    slotDuration: number;
+}
+
+const DAY_LABELS: { [key: string]: string } = {
+    monday: 'Monday',
+    tuesday: 'Tuesday',
+    wednesday: 'Wednesday',
+    thursday: 'Thursday',
+    friday: 'Friday',
+    saturday: 'Saturday',
+    sunday: 'Sunday'
+}
+
 export default function DoctorProfilePage() {
     const { token, isLoading: authLoading } = useAuth()
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [profile, setProfile] = useState<DoctorProfile | null>(null)
+    const [schedule, setSchedule] = useState<Schedule | null>(null)
     const [formData, setFormData] = useState({
         name: "",
         specialty: "",
-        location: "",
-        availability: ""
+        location: ""
     })
     const [message, setMessage] = useState("")
     const [error, setError] = useState("")
 
     useEffect(() => {
-        const fetchProfile = async () => {
+        const fetchData = async () => {
             if (!token) return
 
             try {
-                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/doctors/profile`, {
+                // Fetch profile
+                const profileRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/doctors/profile`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 })
-                if (res.ok) {
-                    const data = await res.json()
+                if (profileRes.ok) {
+                    const data = await profileRes.json()
                     setProfile(data)
                     setFormData({
                         name: data.name || "",
                         specialty: data.specialty || "",
-                        location: data.location || "",
-                        availability: Array.isArray(data.availability) ? data.availability.join(", ") : ""
+                        location: data.location || ""
                     })
                 }
+
+                // Fetch schedule
+                const scheduleRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/schedules/`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                if (scheduleRes.ok) {
+                    const scheduleData = await scheduleRes.json()
+                    setSchedule(scheduleData)
+                }
             } catch (err) {
-                console.error("Failed to fetch profile", err)
+                console.error("Failed to fetch data", err)
                 setError("Failed to load profile")
             } finally {
                 setLoading(false)
@@ -61,7 +92,7 @@ export default function DoctorProfilePage() {
 
         if (!authLoading) {
             if (token) {
-                fetchProfile()
+                fetchData()
             } else {
                 setLoading(false)
             }
@@ -88,8 +119,7 @@ export default function DoctorProfilePage() {
                 body: JSON.stringify({
                     name: formData.name,
                     specialty: formData.specialty,
-                    location: formData.location,
-                    availability: formData.availability.split(',').map(s => s.trim()).filter(s => s)
+                    location: formData.location
                 })
             })
 
@@ -111,6 +141,19 @@ export default function DoctorProfilePage() {
         }
     }
 
+    // Format time from 24h to 12h
+    const formatTime = (time: string) => {
+        try {
+            const [hours, minutes] = time.split(':')
+            const h = parseInt(hours)
+            const ampm = h >= 12 ? 'PM' : 'AM'
+            const hour12 = h % 12 || 12
+            return `${hour12}:${minutes} ${ampm}`
+        } catch {
+            return time
+        }
+    }
+
     if (loading || authLoading) {
         return (
             <div className="flex items-center justify-center h-64">
@@ -120,13 +163,15 @@ export default function DoctorProfilePage() {
     }
 
     return (
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto space-y-6">
             <div className="mb-4">
                 <Link href="/dashboard/doctor" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors">
                     <ArrowLeft className="h-4 w-4 mr-1" />
                     Back to Dashboard
                 </Link>
             </div>
+
+            {/* Profile Information Card */}
             <Card className="bg-card border-border">
                 <CardHeader>
                     <div className="flex items-center gap-3">
@@ -174,16 +219,6 @@ export default function DoctorProfilePage() {
                                     />
                                 </div>
                             </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="availability" className="text-foreground">Availability (comma-separated)</Label>
-                                <Input
-                                    id="availability"
-                                    value={formData.availability}
-                                    onChange={handleChange}
-                                    placeholder="Mon 9am-5pm, Wed 9am-12pm"
-                                    className="border-input"
-                                />
-                            </div>
                         </div>
 
                         {message && (
@@ -204,6 +239,65 @@ export default function DoctorProfilePage() {
                     </form>
                 </CardContent>
             </Card>
+
+            {/* Schedule/Availability Card */}
+            <Card className="bg-card border-border">
+                <CardHeader>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 rounded-lg bg-primary/10">
+                                <Calendar className="h-6 w-6 text-primary" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-foreground">Availability Schedule</CardTitle>
+                                <CardDescription className="text-muted-foreground">Your working hours as shown to patients</CardDescription>
+                            </div>
+                        </div>
+                        <Button variant="outline" size="sm" asChild>
+                            <Link href="/dashboard/doctor/schedule" className="gap-2">
+                                Edit Schedule <ExternalLink className="h-4 w-4" />
+                            </Link>
+                        </Button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {schedule?.weeklySchedule ? (
+                        <div className="space-y-2">
+                            {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => {
+                                const daySchedule = schedule.weeklySchedule[day]
+                                if (!daySchedule?.enabled) return null
+                                return (
+                                    <div key={day} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                                        <span className="font-medium text-foreground">{DAY_LABELS[day]}</span>
+                                        <div className="flex items-center gap-2 text-muted-foreground">
+                                            <Clock className="h-4 w-4" />
+                                            <span>{formatTime(daySchedule.start)} - {formatTime(daySchedule.end)}</span>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                            {Object.values(schedule.weeklySchedule).every(d => !d.enabled) && (
+                                <p className="text-muted-foreground text-center py-4">No working days set</p>
+                            )}
+                            {schedule.slotDuration && (
+                                <div className="mt-4 pt-4 border-t border-border">
+                                    <p className="text-sm text-muted-foreground">
+                                        Appointment Duration: <span className="font-medium text-foreground">{schedule.slotDuration} minutes</span>
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="text-center py-4">
+                            <p className="text-muted-foreground mb-4">No schedule configured yet</p>
+                            <Button variant="outline" asChild>
+                                <Link href="/dashboard/doctor/schedule">Configure Schedule</Link>
+                            </Button>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     )
 }
+

@@ -56,6 +56,40 @@ def check_doctor_availability(doctor_id):
     except ValueError:
         return True, "Available"
 
+def get_formatted_availability(doctor_id):
+    """Generate formatted availability strings from Schedule data."""
+    schedule = Schedule.find_by_doctor_id(doctor_id)
+    
+    if not schedule:
+        # Return default if no schedule set
+        return ["Mon 9:00 AM - 5:00 PM", "Tue 9:00 AM - 5:00 PM", 
+                "Wed 9:00 AM - 5:00 PM", "Thu 9:00 AM - 5:00 PM", 
+                "Fri 9:00 AM - 5:00 PM"]
+    
+    weekly = schedule.get('weekly_schedule', {})
+    day_abbrev = {
+        'monday': 'Mon', 'tuesday': 'Tue', 'wednesday': 'Wed',
+        'thursday': 'Thu', 'friday': 'Fri', 'saturday': 'Sat', 'sunday': 'Sun'
+    }
+    
+    availability = []
+    for day in ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']:
+        day_schedule = weekly.get(day, {})
+        if day_schedule.get('enabled', False):
+            start = day_schedule.get('start', '09:00')
+            end = day_schedule.get('end', '17:00')
+            
+            # Convert 24h to 12h format
+            try:
+                start_formatted = datetime.strptime(start, '%H:%M').strftime('%I:%M %p').lstrip('0')
+                end_formatted = datetime.strptime(end, '%H:%M').strftime('%I:%M %p').lstrip('0')
+                availability.append(f"{day_abbrev[day]} {start_formatted} - {end_formatted}")
+            except ValueError:
+                availability.append(f"{day_abbrev[day]} {start} - {end}")
+    
+    return availability if availability else ["No availability set"]
+
+
 @doctors_bp.route('/', methods=['GET'])
 def get_doctors():
     doctors = Doctor.find_all()
@@ -65,6 +99,8 @@ def get_doctors():
         is_available, status_message = check_doctor_availability(doc['_id'])
         doc_dict['isAvailable'] = is_available
         doc_dict['availabilityStatus'] = status_message
+        # Use schedule-based availability instead of old static field
+        doc_dict['availability'] = get_formatted_availability(doc['_id'])
         result.append(doc_dict)
     return jsonify(result)
 
