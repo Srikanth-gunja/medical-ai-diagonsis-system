@@ -228,3 +228,69 @@ class VideoCallService:
     def get_participant_count(room_id: str) -> int:
         """Get the number of participants in a room."""
         return len(VideoCallService.get_room_participants(room_id))
+    
+    # ========== Pending Invites Management ==========
+    # Stores incoming call invites: { appointment_id: { user_id, role, sid, timestamp } }
+    
+    @staticmethod
+    def add_pending_invite(appointment_id: str, user_id: str, role: str, sid: str) -> None:
+        """
+        Store a pending call invite.
+        
+        Args:
+            appointment_id: The appointment ID
+            user_id: Caller's user ID
+            role: Caller's role ('doctor' or 'patient')
+            sid: Caller's socket session ID
+        """
+        import time
+        _pending_invites[appointment_id] = {
+            'user_id': user_id,
+            'role': role,
+            'sid': sid,
+            'timestamp': time.time()
+        }
+        logger.info(f"Pending invite added for appointment {appointment_id} by {role}")
+    
+    @staticmethod
+    def get_pending_invite(appointment_id: str) -> Optional[dict]:
+        """Get a pending invite for an appointment."""
+        return _pending_invites.get(appointment_id)
+    
+    @staticmethod
+    def remove_pending_invite(appointment_id: str) -> Optional[dict]:
+        """Remove and return a pending invite."""
+        invite = _pending_invites.pop(appointment_id, None)
+        if invite:
+            logger.info(f"Pending invite removed for appointment {appointment_id}")
+        return invite
+    
+    @staticmethod
+    def get_user_display_name(user_id: str, role: str) -> str:
+        """
+        Get a display name for a user based on their role.
+        
+        Args:
+            user_id: User's ID
+            role: 'doctor' or 'patient'
+            
+        Returns:
+            Display name string
+        """
+        try:
+            if role == 'doctor':
+                doctor = Doctor.find_by_user_id(user_id)
+                if doctor:
+                    return f"Dr. {doctor.get('firstName', '')} {doctor.get('lastName', '')}".strip()
+            elif role == 'patient':
+                patient = Patient.find_by_user_id(user_id)
+                if patient:
+                    return f"{patient.get('firstName', '')} {patient.get('lastName', '')}".strip()
+        except Exception as e:
+            logger.error(f"Error getting display name: {e}")
+        
+        return role.capitalize()
+
+
+# Pending invites storage
+_pending_invites: dict[str, dict] = {}

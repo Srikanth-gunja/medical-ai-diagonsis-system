@@ -27,6 +27,19 @@ export interface SignalingEventHandlers {
     onIceCandidate?: (data: { candidate: RTCIceCandidateInit }) => void;
     onCallEnded?: (data: { endedBy: string }) => void;
     onError?: (data: { message: string }) => void;
+    // Incoming call notification events
+    onIncomingCall?: (data: IncomingCallData) => void;
+    onInviteSent?: (data: { appointmentId: string; status: string }) => void;
+    onCallAccepted?: (data: { appointmentId: string; acceptedBy: string }) => void;
+    onCallDeclined?: (data: { appointmentId: string; declinedBy: string }) => void;
+    onInviteCancelled?: (data: { appointmentId: string }) => void;
+}
+
+export interface IncomingCallData {
+    appointmentId: string;
+    callerRole: 'doctor' | 'patient';
+    callerName: string;
+    callerId: string;
 }
 
 /**
@@ -142,6 +155,32 @@ class SignalingService {
             console.error('[Signaling] Error:', data.message);
             this.handlers.onError?.(data);
         });
+
+        // Incoming call notification events
+        this.socket.on('incoming_call', (data) => {
+            console.log('[Signaling] Incoming call from:', data.callerName);
+            this.handlers.onIncomingCall?.(data);
+        });
+
+        this.socket.on('invite_sent', (data) => {
+            console.log('[Signaling] Invite sent, waiting for response');
+            this.handlers.onInviteSent?.(data);
+        });
+
+        this.socket.on('call_accepted', (data) => {
+            console.log('[Signaling] Call accepted by:', data.acceptedBy);
+            this.handlers.onCallAccepted?.(data);
+        });
+
+        this.socket.on('call_declined', (data) => {
+            console.log('[Signaling] Call declined by:', data.declinedBy);
+            this.handlers.onCallDeclined?.(data);
+        });
+
+        this.socket.on('invite_cancelled', (data) => {
+            console.log('[Signaling] Invite cancelled');
+            this.handlers.onInviteCancelled?.(data);
+        });
     }
 
     /**
@@ -211,6 +250,55 @@ class SignalingService {
         console.log('[Signaling] Ending call');
         this.socket.emit('call_end');
         this.currentRoom = null;
+    }
+
+    /**
+     * Send a call invite to the other party
+     */
+    sendInvite(appointmentId: string): void {
+        if (!this.socket?.connected) {
+            console.error('[Signaling] Not connected');
+            return;
+        }
+
+        console.log('[Signaling] Sending call invite for:', appointmentId);
+        this.socket.emit('call_invite', { appointmentId });
+    }
+
+    /**
+     * Accept an incoming call
+     */
+    acceptCall(appointmentId: string): void {
+        if (!this.socket?.connected) {
+            console.error('[Signaling] Not connected');
+            return;
+        }
+
+        console.log('[Signaling] Accepting call for:', appointmentId);
+        this.socket.emit('call_accept', { appointmentId });
+    }
+
+    /**
+     * Decline an incoming call
+     */
+    declineCall(appointmentId: string): void {
+        if (!this.socket?.connected) {
+            console.error('[Signaling] Not connected');
+            return;
+        }
+
+        console.log('[Signaling] Declining call for:', appointmentId);
+        this.socket.emit('call_decline', { appointmentId });
+    }
+
+    /**
+     * Cancel a pending invite
+     */
+    cancelInvite(appointmentId: string): void {
+        if (!this.socket?.connected) return;
+
+        console.log('[Signaling] Cancelling invite for:', appointmentId);
+        this.socket.emit('cancel_invite', { appointmentId });
     }
 
     /**

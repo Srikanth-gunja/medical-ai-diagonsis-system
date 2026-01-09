@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Check, X, MessageSquare, Loader2, User, Calendar, Users, Clock, Send, Mail, Phone, MapPin, Eye, CheckCircle, FileText, Pill, BarChart3, ClipboardList, Video } from "lucide-react"
 import Link from "next/link"
+import { VideoCallButton } from "@/components/call/VideoCallButton"
 
 interface PatientDetails {
     id: string;
@@ -538,13 +539,7 @@ export default function DoctorDashboard() {
                                             )}
                                             {appt.status === 'confirmed' && (
                                                 <>
-                                                    <Button
-                                                        size="sm"
-                                                        className="gap-1 bg-emerald-600 hover:bg-emerald-500 text-white"
-                                                        onClick={() => window.location.href = `/call/${appt.id}`}
-                                                    >
-                                                        <Video className="w-4 h-4" /> Video Call
-                                                    </Button>
+                                                    <VideoCallButton appointmentId={appt.id} />
                                                     <Button
                                                         size="sm"
                                                         className="gap-1"
@@ -584,129 +579,132 @@ export default function DoctorDashboard() {
             </div>
 
             {/* Patient Details Modal */}
-            {showPatientModal && selectedPatient && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <Card className="w-full max-w-md bg-card border-border">
-                        <CardHeader className="border-b border-border">
-                            <div className="flex items-center justify-between">
-                                <CardTitle className="text-foreground">Patient Profile</CardTitle>
-                                <Button variant="ghost" size="sm" onClick={() => setShowPatientModal(false)}>
-                                    <X className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="pt-6 space-y-4">
-                            <div className="flex items-center gap-4">
-                                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-                                    <User className="h-8 w-8 text-primary" />
+            {
+                showPatientModal && selectedPatient && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <Card className="w-full max-w-md bg-card border-border">
+                            <CardHeader className="border-b border-border">
+                                <div className="flex items-center justify-between">
+                                    <CardTitle className="text-foreground">Patient Profile</CardTitle>
+                                    <Button variant="ghost" size="sm" onClick={() => setShowPatientModal(false)}>
+                                        <X className="h-4 w-4" />
+                                    </Button>
                                 </div>
-                                <div>
-                                    <h3 className="text-xl font-semibold text-foreground">
-                                        {selectedPatient.firstName} {selectedPatient.lastName}
-                                    </h3>
-                                    <p className="text-muted-foreground">Patient</p>
+                            </CardHeader>
+                            <CardContent className="pt-6 space-y-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                                        <User className="h-8 w-8 text-primary" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-semibold text-foreground">
+                                            {selectedPatient.firstName} {selectedPatient.lastName}
+                                        </h3>
+                                        <p className="text-muted-foreground">Patient</p>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div className="space-y-3 pt-4">
-                                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-                                    <Mail className="h-5 w-5 text-primary" />
-                                    <div>
-                                        <p className="text-xs text-muted-foreground">Email</p>
-                                        <p className="text-foreground">{selectedPatient.email}</p>
+                                <div className="space-y-3 pt-4">
+                                    <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                                        <Mail className="h-5 w-5 text-primary" />
+                                        <div>
+                                            <p className="text-xs text-muted-foreground">Email</p>
+                                            <p className="text-foreground">{selectedPatient.email}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                                        <Phone className="h-5 w-5 text-primary" />
+                                        <div>
+                                            <p className="text-xs text-muted-foreground">Phone</p>
+                                            <p className="text-foreground">{selectedPatient.phone || 'Not provided'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+                                        <MapPin className="h-5 w-5 text-primary" />
+                                        <div>
+                                            <p className="text-xs text-muted-foreground">Address</p>
+                                            <p className="text-foreground">{selectedPatient.address || 'Not provided'}</p>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-                                    <Phone className="h-5 w-5 text-primary" />
-                                    <div>
-                                        <p className="text-xs text-muted-foreground">Phone</p>
-                                        <p className="text-foreground">{selectedPatient.phone || 'Not provided'}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-                                    <MapPin className="h-5 w-5 text-primary" />
-                                    <div>
-                                        <p className="text-xs text-muted-foreground">Address</p>
-                                        <p className="text-foreground">{selectedPatient.address || 'Not provided'}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
+                            </CardContent>
+                        </Card>
+                    </div>
+                )
+            }
 
             {/* Complete Appointment Modal */}
-            {showCompleteModal && selectedAppointment && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <Card className="w-full max-w-md bg-card border-border">
-                        <CardHeader className="border-b border-border">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle className="text-foreground">Complete Appointment</CardTitle>
-                                    <CardDescription className="text-muted-foreground">
-                                        This will create a medical record for the patient
-                                    </CardDescription>
+            {
+                showCompleteModal && selectedAppointment && (
+                    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                        <Card className="w-full max-w-md bg-card border-border">
+                            <CardHeader className="border-b border-border">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle className="text-foreground">Complete Appointment</CardTitle>
+                                        <CardDescription className="text-muted-foreground">
+                                            This will create a medical record for the patient
+                                        </CardDescription>
+                                    </div>
+                                    <Button variant="ghost" size="sm" onClick={() => setShowCompleteModal(false)}>
+                                        <X className="h-4 w-4" />
+                                    </Button>
                                 </div>
-                                <Button variant="ghost" size="sm" onClick={() => setShowCompleteModal(false)}>
-                                    <X className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="pt-6 space-y-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="type" className="text-foreground">Record Type</Label>
-                                <Input
-                                    id="type"
-                                    value={completeForm.type}
-                                    onChange={(e) => setCompleteForm({ ...completeForm, type: e.target.value })}
-                                    placeholder="Consultation"
-                                    className="border-input"
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="description" className="text-foreground">Description</Label>
-                                <Input
-                                    id="description"
-                                    value={completeForm.description}
-                                    onChange={(e) => setCompleteForm({ ...completeForm, description: e.target.value })}
-                                    placeholder="Brief description of the consultation"
-                                    className="border-input"
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="result" className="text-foreground">Result/Diagnosis</Label>
-                                <Input
-                                    id="result"
-                                    value={completeForm.result}
-                                    onChange={(e) => setCompleteForm({ ...completeForm, result: e.target.value })}
-                                    placeholder="Completed, Normal, etc."
-                                    className="border-input"
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="notes" className="text-foreground">Notes</Label>
-                                <Input
-                                    id="notes"
-                                    value={completeForm.notes}
-                                    onChange={(e) => setCompleteForm({ ...completeForm, notes: e.target.value })}
-                                    placeholder="Prescriptions, follow-up instructions, etc."
-                                    className="border-input"
-                                />
-                            </div>
-                            <div className="flex gap-2 pt-4">
-                                <Button variant="outline" className="flex-1" onClick={() => setShowCompleteModal(false)}>
-                                    Cancel
-                                </Button>
-                                <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={handleCompleteAppointment} disabled={completing}>
-                                    {completing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Complete & Create Record
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            )
+                            </CardHeader>
+                            <CardContent className="pt-6 space-y-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="type" className="text-foreground">Record Type</Label>
+                                    <Input
+                                        id="type"
+                                        value={completeForm.type}
+                                        onChange={(e) => setCompleteForm({ ...completeForm, type: e.target.value })}
+                                        placeholder="Consultation"
+                                        className="border-input"
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="description" className="text-foreground">Description</Label>
+                                    <Input
+                                        id="description"
+                                        value={completeForm.description}
+                                        onChange={(e) => setCompleteForm({ ...completeForm, description: e.target.value })}
+                                        placeholder="Brief description of the consultation"
+                                        className="border-input"
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="result" className="text-foreground">Result/Diagnosis</Label>
+                                    <Input
+                                        id="result"
+                                        value={completeForm.result}
+                                        onChange={(e) => setCompleteForm({ ...completeForm, result: e.target.value })}
+                                        placeholder="Completed, Normal, etc."
+                                        className="border-input"
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="notes" className="text-foreground">Notes</Label>
+                                    <Input
+                                        id="notes"
+                                        value={completeForm.notes}
+                                        onChange={(e) => setCompleteForm({ ...completeForm, notes: e.target.value })}
+                                        placeholder="Prescriptions, follow-up instructions, etc."
+                                        className="border-input"
+                                    />
+                                </div>
+                                <div className="flex gap-2 pt-4">
+                                    <Button variant="outline" className="flex-1" onClick={() => setShowCompleteModal(false)}>
+                                        Cancel
+                                    </Button>
+                                    <Button className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={handleCompleteAppointment} disabled={completing}>
+                                        {completing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Complete & Create Record
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )
             }
 
             {/* Chat Modal */}
@@ -891,7 +889,7 @@ export default function DoctorDashboard() {
                     </div >
                 )
             }
-        </div>
+        </div >
     )
 }
 

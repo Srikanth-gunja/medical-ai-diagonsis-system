@@ -290,3 +290,182 @@ def register_events():
         
         emit('call_ended', {'endedBy': 'self'})
         logger.info(f"Call lifecycle: {role} ended call in room {room_id}")
+    
+    @socketio.on('call_invite')
+    def handle_call_invite(data):
+        """
+        Handle call invite - notify the other party of incoming call.
+        
+        Expected data: { 'appointmentId': string }
+        
+        Flow:
+        1. Caller clicks "Video Call" button
+        2. Server sends 'incoming_call' to the other party
+        3. Other party sees accept/decline popup
+        4. If accepted, both join the room
+        """
+        sid = request.sid
+        session = _socket_sessions.get(sid)
+        
+        if not session:
+            emit('error', {'message': 'Not authenticated'})
+            return
+        
+        appointment_id = data.get('appointmentId')
+        if not appointment_id:
+            emit('error', {'message': 'Appointment ID required'})
+            return
+        
+        user_id = session['user_id']
+        role = session['role']
+        
+        # Validate appointment access
+        is_valid, error = VideoCallService.validate_appointment_access(
+            user_id, role, appointment_id
+        )
+        if not is_valid:
+            emit('error', {'message': error})
+            return
+        
+        # Store pending invite
+        VideoCallService.add_pending_invite(appointment_id, user_id, role, sid)
+        
+        # Get caller name for the notification
+        caller_name = VideoCallService.get_user_display_name(user_id, role)
+        
+        # Notify the other party (broadcast to appointment room)
+        # The other party needs to be connected to receive this
+        emit('incoming_call', {
+            'appointmentId': appointment_id,
+            'callerRole': role,
+            'callerName': caller_name,
+            'callerId': user_id
+        }, broadcast=True, include_self=False)
+        
+        # Confirm to caller that invite was sent
+        emit('invite_sent', {
+            'appointmentId': appointment_id,
+            'status': 'waiting'
+        })
+        
+        logger.info(f"Call invite: {role} initiated call for appointment {appointment_id}")
+    
+    @socketio.on('call_accept')
+    def handle_call_accept(data):
+        """
+        Handle call accept - both parties join the room.
+        
+        Expected data: { 'appointmentId': string }
+        """
+        sid = request.sid
+        session = _socket_sessions.get(sid)
+        
+        if not session:
+            emit('error', {'message': 'Not authenticated'})
+            return
+        
+        appointment_id = data.get('appointmentId')
+        if not appointment_id:
+            emit('error', {'message': 'Appointment ID required'})
+            return
+        
+        user_id = session['user_id']
+        role = session['role']
+        
+        # Get pending invite
+        invite = VideoCallService.get_pending_invite(appointment_id)
+        if not invite:
+            emit('error', {'message': 'No pending invite for this appointment'})
+            return
+        
+        # Notify the caller that call was accepted
+        caller_sid = invite.get('sid')
+        if caller_sid and caller_sid in _socket_sessions:
+            emit('call_accepted', {
+                'appointmentId': appointment_id,
+                'acceptedBy': role
+            }, room=caller_sid)
+        
+        # Clear pending invite
+        VideoCallService.remove_pending_invite(appointment_id)
+        
+        # Confirm to acceptor
+        emit('call_accepted', {
+            'appointmentId': appointment_id,
+            'acceptedBy': 'self'
+        })
+        
+        logger.info(f"Call accepted: {role} accepted call for appointment {appointment_id}")
+    
+    @socketio.on('call_decline')
+    def handle_call_decline(data):
+        """
+        Handle call decline - notify caller that call was declined.
+        
+        Expected data: { 'appointmentId': string }
+        """
+        sid = request.sid
+        session = _socket_sessions.get(sid)
+        
+        if not session:
+            emit('error', {'message': 'Not authenticated'})
+            return
+        
+        appointment_id = data.get('appointmentId')
+        if not appointment_id:
+            emit('error', {'message': 'Appointment ID required'})
+            return
+        
+        role = session['role']
+        
+        # Get pending invite
+        invite = VideoCallService.get_pending_invite(appointment_id)
+        if not invite:
+            emit('error', {'message': 'No pending invite for this appointment'})
+            return
+        
+        # Notify the caller that call was declined
+        caller_sid = invite.get('sid')
+        if caller_sid and caller_sid in _socket_sessions:
+            emit('call_declined', {
+                'appointmentId': appointment_id,
+                'declinedBy': role
+            }, room=caller_sid)
+        
+        # Clear pending invite
+        VideoCallService.remove_pending_invite(appointment_id)
+        
+        # Confirm to decliner
+        emit('call_declined', {
+            'appointmentId': appointment_id,
+            'declinedBy': 'self'
+        })
+        
+        logger.info(f"Call declined: {role} declined call for appointment {appointment_id}")
+    
+    @socketio.on('cancel_invite')
+    def handle_cancel_invite(data):
+        """
+        Handle invite cancellation - caller cancelled before answer.
+        
+        Expected data: { 'appointmentId': string }
+        """
+        sid = request.sid
+        session = _socket_sessions.get(sid)
+        
+        if not session:
+            return
+        
+        appointment_id = data.get('appointmentId')
+        if not appointment_id:
+            return
+        
+        # Clear pending invite
+        VideoCallService.remove_pending_invite(appointment_id)
+        
+        # Notify everyone that invite was cancelled
+        emit('invite_cancelled', {
+            'appointmentId': appointment_id
+        }, broadcast=True, include_self=False)
+        
+        logger.info(f"Call invite cancelled for appointment {appointment_id}")

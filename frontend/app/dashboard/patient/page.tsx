@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select } from "@/components/ui/select"
-import { Calendar, MapPin, Star, X, Loader2, Clock, CheckCircle, FileText, User, MessageSquare, Send, Search, Filter, XCircle, ChevronDown, ChevronUp, Video } from "lucide-react"
+import { Calendar, MapPin, Star, X, Loader2, Clock, CheckCircle, FileText, User, MessageSquare, Send, Search, Filter, XCircle, ChevronDown, ChevronUp, Video, Phone } from "lucide-react"
 import Link from "next/link"
+import { useCallNotificationContext } from "@/components/call/CallNotificationProvider"
+import { VideoCallButton } from "@/components/call/VideoCallButton"
 
 interface Doctor {
     id: string;
@@ -45,11 +47,7 @@ interface ChatMessage {
     read: boolean;
 }
 
-const TIME_SLOTS = [
-    "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
-    "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM",
-    "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", "5:00 PM"
-]
+// TIME_SLOTS are now fetched dynamically from the API based on doctor's schedule
 
 export default function PatientDashboard() {
     const { user, token, isLoading: authLoading } = useAuth()
@@ -66,6 +64,11 @@ export default function PatientDashboard() {
     const [bookingLoading, setBookingLoading] = useState(false)
     const [bookingSuccess, setBookingSuccess] = useState(false)
     const [bookingError, setBookingError] = useState("")
+
+    // Dynamic time slots state
+    const [availableSlots, setAvailableSlots] = useState<string[]>([])
+    const [slotsLoading, setSlotsLoading] = useState(false)
+    const [slotsError, setSlotsError] = useState("")
 
     // Chat state
     const [showChatModal, setShowChatModal] = useState(false)
@@ -133,6 +136,48 @@ export default function PatientDashboard() {
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [chatMessages])
+
+    // Fetch available time slots when date or doctor changes
+    useEffect(() => {
+        const fetchAvailableSlots = async () => {
+            if (!bookingDate || !selectedDoctor) {
+                setAvailableSlots([])
+                setSlotsError("")
+                return
+            }
+
+            setSlotsLoading(true)
+            setSlotsError("")
+            setBookingTime("") // Reset selected time when date changes
+
+            try {
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/api/schedules/doctor/${selectedDoctor.id}/slots?date=${bookingDate}`
+                )
+
+                if (res.ok) {
+                    const data = await res.json()
+                    if (data.slots && data.slots.length > 0) {
+                        setAvailableSlots(data.slots)
+                    } else {
+                        setAvailableSlots([])
+                        // Get day name for better message
+                        const dayName = new Date(bookingDate).toLocaleDateString('en-US', { weekday: 'long' })
+                        setSlotsError(`Doctor is not available on ${dayName}`)
+                    }
+                } else {
+                    setSlotsError("Failed to fetch available slots")
+                }
+            } catch (err) {
+                console.error("Error fetching slots:", err)
+                setSlotsError("Failed to fetch available slots")
+            } finally {
+                setSlotsLoading(false)
+            }
+        }
+
+        fetchAvailableSlots()
+    }, [bookingDate, selectedDoctor])
 
     // Poll for new messages when chat is open
     useEffect(() => {
@@ -473,17 +518,11 @@ export default function PatientDashboard() {
                                             Revoke Appointment
                                         </Button>
                                     )}
-                                    {/* Confirmed: Show Join Call and Chat buttons */}
+                                    {/* Confirmed: Show Call and Chat buttons */}
                                     {appt.status === 'confirmed' && (
                                         <div className="mt-3 space-y-2">
-                                            {/* Join Video Call button - always available for confirmed appointments */}
-                                            <Button
-                                                size="sm"
-                                                className="gap-1 w-full bg-emerald-600 hover:bg-emerald-500 text-white"
-                                                onClick={() => window.location.href = `/call/${appt.id}`}
-                                            >
-                                                <Video className="h-4 w-4" /> Join Video Call
-                                            </Button>
+                                            {/* Video Call button - sends invite to other party */}
+                                            <VideoCallButton appointmentId={appt.id} />
                                             {/* Chat button with time-based availability */}
                                             {(() => {
                                                 const chatStatus = isChatAvailable(appt)
@@ -726,17 +765,36 @@ export default function PatientDashboard() {
 
                                     <div className="grid gap-2">
                                         <Label htmlFor="time" className="text-foreground">Time *</Label>
-                                        <Select
-                                            id="time"
-                                            value={bookingTime}
-                                            onChange={(e) => setBookingTime(e.target.value)}
-                                            className="border-input"
-                                        >
-                                            <option value="">Select a time slot</option>
-                                            {TIME_SLOTS.map(slot => (
-                                                <option key={slot} value={slot}>{slot}</option>
-                                            ))}
-                                        </Select>
+                                        {!bookingDate ? (
+                                            <p className="text-sm text-muted-foreground py-2">
+                                                Please select a date first
+                                            </p>
+                                        ) : slotsLoading ? (
+                                            <div className="flex items-center gap-2 py-2">
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                <span className="text-sm text-muted-foreground">Loading available slots...</span>
+                                            </div>
+                                        ) : slotsError ? (
+                                            <p className="text-sm text-amber-600 dark:text-amber-400 py-2">
+                                                {slotsError}
+                                            </p>
+                                        ) : availableSlots.length === 0 ? (
+                                            <p className="text-sm text-amber-600 dark:text-amber-400 py-2">
+                                                No available slots for this date
+                                            </p>
+                                        ) : (
+                                            <Select
+                                                id="time"
+                                                value={bookingTime}
+                                                onChange={(e) => setBookingTime(e.target.value)}
+                                                className="border-input"
+                                            >
+                                                <option value="">Select a time slot</option>
+                                                {availableSlots.map((slot: string) => (
+                                                    <option key={slot} value={slot}>{slot}</option>
+                                                ))}
+                                            </Select>
+                                        )}
                                     </div>
 
                                     <div className="grid gap-2">
