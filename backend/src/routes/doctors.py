@@ -90,7 +90,7 @@ def get_formatted_availability(doctor_id):
     return availability if availability else ["No availability set"]
 
 
-@doctors_bp.route('/', methods=['GET'])
+@doctors_bp.route('', methods=['GET'])
 def get_doctors():
     doctors = Doctor.find_all()
     result = []
@@ -135,6 +135,51 @@ def update_doctor_profile():
         return jsonify({'message': 'Profile updated', 'profile': Doctor.to_dict(updated)})
     return jsonify({'error': 'Failed to update profile'}), 500
 
+
+@doctors_bp.route('/profile/request-update', methods=['POST'])
+@jwt_required()
+def request_profile_update():
+    """Request a profile update (requires admin approval)."""
+    current_user = get_current_user()
+    if current_user['role'] != 'doctor':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    doctor = Doctor.find_by_user_id(current_user['id'])
+    if not doctor:
+        return jsonify({'error': 'Doctor profile not found'}), 404
+    
+    # Check if already has pending update
+    if doctor.get('pending_profile_update'):
+        return jsonify({'error': 'You already have a pending profile update'}), 400
+    
+    data = request.get_json()
+    Doctor.request_profile_update(str(doctor['_id']), data)
+    
+    # Create notification for admin (we'll notify via admin endpoint polling)
+    return jsonify({'message': 'Profile update request submitted for admin approval'})
+
+
+@doctors_bp.route('/profile/pending', methods=['GET'])
+@jwt_required()
+def get_pending_profile_update():
+    """Get pending profile update status."""
+    current_user = get_current_user()
+    if current_user['role'] != 'doctor':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    doctor = Doctor.find_by_user_id(current_user['id'])
+    if not doctor:
+        return jsonify({'error': 'Doctor profile not found'}), 404
+    
+    pending = doctor.get('pending_profile_update')
+    pending_at = doctor.get('pending_profile_update_at')
+    
+    return jsonify({
+        'hasPendingUpdate': pending is not None,
+        'pendingData': pending,
+        'requestedAt': pending_at.isoformat() if pending_at else None
+    })
+
 @doctors_bp.route('/<doctor_id>', methods=['GET'])
 def get_doctor(doctor_id):
     doctor = Doctor.find_by_id(doctor_id)
@@ -142,7 +187,7 @@ def get_doctor(doctor_id):
         return jsonify(Doctor.to_dict(doctor))
     return jsonify({'error': 'Doctor not found'}), 404
 
-@doctors_bp.route('/', methods=['POST'])
+@doctors_bp.route('', methods=['POST'])
 @jwt_required()
 def create_doctor():
     data = request.get_json()

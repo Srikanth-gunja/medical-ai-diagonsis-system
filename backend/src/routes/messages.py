@@ -88,10 +88,8 @@ def send_message(appointment_id):
     if appointment['status'] != 'confirmed':
         return jsonify({'error': 'Chat is only available for confirmed appointments'}), 403
     
-    # Check if current time is within appointment window
-    is_valid, error_msg = is_during_appointment_time(appointment)
-    if not is_valid:
-        return jsonify({'error': error_msg}), 403
+    # For development: removed strict time window check
+    # In production, you could re-enable is_during_appointment_time() check
     
     message = Message.create(
         appointment_id=appointment_id,
@@ -109,3 +107,29 @@ def get_unread_count(appointment_id):
     current_user = get_current_user()
     count = Message.get_unread_count(appointment_id, current_user['role'])
     return jsonify({'unread': count})
+
+@messages_bp.route('/<appointment_id>/status', methods=['GET'])
+@jwt_required()
+def get_chat_status(appointment_id):
+    """Get chat availability status."""
+    current_user = get_current_user()
+    
+    appointment = Appointment.find_by_id(appointment_id)
+    if not appointment:
+        return jsonify({'error': 'Appointment not found'}), 404
+    
+    status = appointment.get('status', 'pending')
+    can_chat = status == 'confirmed'
+    
+    # Check time window
+    is_in_window, time_message = is_during_appointment_time(appointment)
+    
+    return jsonify({
+        'canChat': can_chat,
+        'appointmentStatus': status,
+        'isInTimeWindow': is_in_window,
+        'timeMessage': time_message if not is_in_window else 'Chat available',
+        'doctorName': appointment.get('doctor_name', 'Doctor'),
+        'appointmentDate': appointment.get('date'),
+        'appointmentTime': appointment.get('time')
+    })

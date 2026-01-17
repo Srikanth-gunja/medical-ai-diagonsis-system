@@ -133,3 +133,95 @@ def get_patient_analytics():
         'doctorsVisited': unique_doctors,
         'nextAppointment': next_appointment
     })
+
+
+@analytics_bp.route('/doctor/chart', methods=['GET'])
+@jwt_required()
+def get_doctor_chart_data():
+    """Get chart data for doctor dashboard."""
+    current_user = get_current_user()
+    
+    if current_user['role'] != 'doctor':
+        return jsonify({'error': 'Only doctors can access this endpoint'}), 403
+    
+    doctor = Doctor.find_by_user_id(current_user['id'])
+    if not doctor:
+        return jsonify({'error': 'Doctor profile not found'}), 404
+    
+    doctor_id = doctor['_id']
+    db = get_db()
+    
+    # Get all appointments for this doctor
+    appointments = list(db[APPOINTMENTS_COLLECTION].find({'doctor_id': doctor_id}))
+    
+    # Calculate appointments for the last 7 days
+    day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    appointments_data = []
+    
+    for i in range(6, -1, -1):
+        day = datetime.utcnow() - timedelta(days=i)
+        day_str = day.strftime('%Y-%m-%d')
+        day_name = day_names[day.weekday()]
+        count = sum(1 for a in appointments if a.get('date') == day_str)
+        appointments_data.append({
+            'day': day_name,
+            'appointments': count
+        })
+    
+    # Calculate status breakdown
+    pending = sum(1 for a in appointments if a['status'] == 'pending')
+    confirmed = sum(1 for a in appointments if a['status'] == 'confirmed')
+    completed = sum(1 for a in appointments if a['status'] == 'completed')
+    total = pending + confirmed + completed
+    
+    if total > 0:
+        status_data = [
+            {'name': 'Confirmed', 'value': round(confirmed / total * 100), 'color': '#3B82F6'},
+            {'name': 'Pending', 'value': round(pending / total * 100), 'color': '#F59E0B'},
+            {'name': 'Completed', 'value': round(completed / total * 100), 'color': '#10B981'},
+        ]
+    else:
+        status_data = [
+            {'name': 'Confirmed', 'value': 0, 'color': '#3B82F6'},
+            {'name': 'Pending', 'value': 0, 'color': '#F59E0B'},
+            {'name': 'Completed', 'value': 0, 'color': '#10B981'},
+        ]
+    
+    return jsonify({
+        'appointmentsData': appointments_data,
+        'statusData': status_data
+    })
+
+
+@analytics_bp.route('/public-stats', methods=['GET'])
+def get_public_stats():
+    """Get public stats for homepage - no auth required."""
+    db = get_db()
+    
+    # Count patients
+    patients_count = db.patients.count_documents({})
+    
+    # Count doctors (only verified ones)
+    doctors_count = db.doctors.count_documents({'verified': True})
+    
+    # Count total completed appointments
+    completed_appointments = db.appointments.count_documents({'status': 'completed'})
+    
+    # Calculate average satisfaction (from ratings)
+    ratings = list(db.ratings.find({}, {'score': 1}))
+    if ratings:
+        avg_rating = sum(r['score'] for r in ratings) / len(ratings)
+        satisfaction_percent = round(avg_rating / 5 * 100)
+        average_rating = round(avg_rating, 1)
+    else:
+        satisfaction_percent = 0
+        average_rating = 0
+    
+    return jsonify({
+        'activePatients': patients_count,
+        'licensedDoctors': doctors_count,
+        'completedConsultations': completed_appointments,
+        'satisfactionRate': satisfaction_percent,
+        'averageRating': average_rating
+    })
+

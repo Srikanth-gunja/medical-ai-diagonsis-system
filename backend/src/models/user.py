@@ -40,6 +40,14 @@ class User:
         return check_password_hash(user['password'], password)
     
     @staticmethod
+    def delete(user_id):
+        """Delete a user."""
+        db = get_db()
+        if isinstance(user_id, str):
+            user_id = ObjectId(user_id)
+        return db[USERS_COLLECTION].delete_one({'_id': user_id})
+    
+    @staticmethod
     def to_dict(user):
         """Convert user to dictionary."""
         return {

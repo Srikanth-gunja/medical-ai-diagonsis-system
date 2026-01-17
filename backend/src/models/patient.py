@@ -5,7 +5,7 @@ class Patient:
     """Patient model."""
     
     @staticmethod
-    def create(user_id, email, first_name, last_name, phone='', address=''):
+    def create(user_id, email, first_name, last_name, phone='', address='', **kwargs):
         """Create a new patient profile."""
         db = get_db()
         patient_data = {
@@ -14,7 +14,21 @@ class Patient:
             'firstName': first_name,
             'lastName': last_name,
             'phone': phone,
-            'address': address
+            'address': address,
+            'dateOfBirth': kwargs.get('date_of_birth', ''),
+            'gender': kwargs.get('gender', ''),
+            'bloodGroup': kwargs.get('blood_group', ''),
+            'city': kwargs.get('city', ''),
+            'state': kwargs.get('state', ''),
+            'zipCode': kwargs.get('zip_code', ''),
+            'emergencyContactName': kwargs.get('emergency_contact_name', ''),
+            'emergencyContactPhone': kwargs.get('emergency_contact_phone', ''),
+            'allergies': kwargs.get('allergies', ''),
+            'currentMedications': kwargs.get('current_medications', ''),
+            'chronicConditions': kwargs.get('chronic_conditions', []),
+            'previousSurgeries': kwargs.get('previous_surgeries', ''),
+            'insuranceProvider': kwargs.get('insurance_provider', ''),
+            'insurancePolicyNumber': kwargs.get('insurance_policy_number', ''),
         }
         result = db[PATIENTS_COLLECTION].insert_one(patient_data)
         patient_data['_id'] = result.inserted_id
@@ -65,10 +79,24 @@ class Patient:
         """Convert patient to dictionary."""
         return {
             'id': str(patient['_id']),
-            'user_id': str(patient.get('user_id', '')),
-            'email': patient['email'],
-            'firstName': patient['firstName'],
-            'lastName': patient['lastName'],
+            'userId': str(patient.get('user_id', '')),
+            'email': patient.get('email', ''),
+            'firstName': patient.get('firstName', ''),
+            'lastName': patient.get('lastName', ''),
             'phone': patient.get('phone', ''),
-            'address': patient.get('address', '')
+            'address': patient.get('address', ''),
+            'dateOfBirth': patient.get('dateOfBirth', ''),
+            'gender': patient.get('gender', ''),
+            'bloodGroup': patient.get('bloodGroup', ''),
+            'city': patient.get('city', ''),
+            'state': patient.get('state', ''),
+            'zipCode': patient.get('zipCode', ''),
+            'emergencyContactName': patient.get('emergencyContactName', ''),
+            'emergencyContactPhone': patient.get('emergencyContactPhone', ''),
+            'allergies': patient.get('allergies', ''),
+            'currentMedications': patient.get('currentMedications', ''),
+            'chronicConditions': patient.get('chronicConditions', []),
+            'previousSurgeries': patient.get('previousSurgeries', ''),
+            'insuranceProvider': patient.get('insuranceProvider', ''),
+            'insurancePolicyNumber': patient.get('insurancePolicyNumber', ''),
         }

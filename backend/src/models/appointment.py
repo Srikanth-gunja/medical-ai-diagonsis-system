@@ -90,7 +90,10 @@ class Appointment:
             'date': appointment['date'],
             'time': appointment['time'],
             'status': appointment['status'],
+            'type': appointment.get('type', 'video'),
             'symptoms': appointment.get('symptoms', ''),
             'rated': appointment.get('rated', False),
+            'rejectionReason': appointment.get('rejection_reason', ''),
             'created_at': appointment.get('created_at', '').isoformat() if appointment.get('created_at') else None
         }
+

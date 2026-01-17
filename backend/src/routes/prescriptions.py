@@ -5,9 +5,29 @@ from ..models.prescription import Prescription
 from ..models.appointment import Appointment
 from ..models.doctor import Doctor
 from ..models.patient import Patient
+from ..models.notification import Notification
+from ..database import get_db
 import json
+from datetime import datetime
 
 prescriptions_bp = Blueprint('prescriptions', __name__)
+
+ACTIVITIES_COLLECTION = 'activities'
+
+
+def create_activity(user_id: str, activity_type: str, title: str, description: str, icon: str = 'BellIcon', color: str = 'bg-primary'):
+    """Create an activity entry for a user."""
+    db = get_db()
+    activity = {
+        'user_id': ObjectId(user_id),
+        'type': activity_type,
+        'title': title,
+        'description': description,
+        'timestamp': datetime.utcnow(),
+        'icon': icon,
+        'color': color,
+    }
+    db[ACTIVITIES_COLLECTION].insert_one(activity)
 
 
 def get_current_user():
@@ -67,6 +87,25 @@ def create_prescription():
         medications=medications,
         diagnosis=diagnosis,
         notes=notes
+    )
+    
+    # Create notification for patient
+    Notification.create(
+        user_id=appointment['patient_id'],
+        title='New Prescription',
+        message=f"Dr. {doctor['name']} has created a new prescription for you.",
+        notification_type='prescription',
+        link='/patient-dashboard/prescriptions'
+    )
+    
+    # Create activity for patient
+    create_activity(
+        user_id=str(appointment['patient_id']),
+        activity_type='prescription',
+        title='New Prescription',
+        description=f"Dr. {doctor['name']} prescribed {len(medications)} medication(s).",
+        icon='ClipboardDocumentListIcon',
+        color='bg-accent'
     )
     
     result = Prescription.to_dict(prescription)
@@ -156,3 +195,101 @@ def get_prescription(prescription_id):
     result['doctorName'] = doctor['name'] if doctor else 'Unknown'
     
     return jsonify(result)
+
+
+@prescriptions_bp.route('/doctor', methods=['GET'])
+@jwt_required()
+def get_doctor_prescriptions():
+    """Get all prescriptions written by the current doctor."""
+    current_user = get_current_user()
+    
+    if current_user['role'] != 'doctor':
+        return jsonify({'error': 'Only doctors can access this endpoint'}), 403
+    
+    doctor = Doctor.find_by_user_id(current_user['id'])
+    if not doctor:
+        return jsonify({'error': 'Doctor profile not found'}), 404
+    
+    prescriptions = Prescription.find_by_doctor_id(doctor['_id'])
+    
+    # Add patient names
+    result = []
+    for p in prescriptions:
+        data = Prescription.to_dict(p)
+        patient = Patient.find_by_user_id(str(p.get('patient_id', '')))
+        if patient:
+            data['patientName'] = f"{patient.get('firstName', '')} {patient.get('lastName', '')}"
+        else:
+            data['patientName'] = 'Unknown'
+        result.append(data)
+    
+    return jsonify(result)
+
+
+@prescriptions_bp.route('/patient/<patient_id>', methods=['POST'])
+@jwt_required()
+def create_prescription_for_patient(patient_id):
+    """Create a prescription directly for a patient (without appointment)."""
+    current_user = get_current_user()
+    
+    if current_user['role'] != 'doctor':
+        return jsonify({'error': 'Only doctors can create prescriptions'}), 403
+    
+    data = request.get_json()
+    medications = data.get('medications', [])
+    diagnosis = data.get('diagnosis', '')
+    notes = data.get('notes', '')
+    
+    if not medications or len(medications) == 0:
+        return jsonify({'error': 'At least one medication is required'}), 400
+    
+    # Validate each medication has required fields
+    for med in medications:
+        if not med.get('name') or not med.get('dosage'):
+            return jsonify({'error': 'Each medication must have name and dosage'}), 400
+    
+    # Verify patient exists
+    patient = Patient.find_by_user_id(patient_id)
+    if not patient:
+        return jsonify({'error': 'Patient not found'}), 404
+    
+    # Get doctor info
+    doctor = Doctor.find_by_user_id(current_user['id'])
+    if not doctor:
+        return jsonify({'error': 'Doctor profile not found'}), 404
+    
+    # Create prescription
+    prescription = Prescription.create(
+        doctor_id=doctor['_id'],
+        patient_id=patient_id,
+        appointment_id=None,  # No appointment linked
+        medications=medications,
+        diagnosis=diagnosis,
+        notes=notes
+    )
+    
+    # Create notification for patient
+    Notification.create(
+        user_id=patient_id,
+        title='New Prescription',
+        message=f"Dr. {doctor['name']} has created a new prescription for you.",
+        notification_type='prescription',
+        link='/patient-dashboard/prescriptions'
+    )
+    
+    # Create activity for patient
+    create_activity(
+        user_id=patient_id,
+        activity_type='prescription',
+        title='New Prescription',
+        description=f"Dr. {doctor['name']} prescribed {len(medications)} medication(s).",
+        icon='ClipboardDocumentListIcon',
+        color='bg-accent'
+    )
+    
+    result = Prescription.to_dict(prescription)
+    result['doctorName'] = doctor['name']
+    result['patientName'] = f"{patient.get('firstName', '')} {patient.get('lastName', '')}"
+    
+    return jsonify(result), 201
+

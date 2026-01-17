@@ -7,7 +7,8 @@ from ..models.prescription import Prescription
 from ..models.patient import Patient
 from ..models.doctor import Doctor
 from ..models.appointment import Appointment
-from ..services.report_service import generate_prescription_pdf
+from ..models.medical_record import MedicalRecord
+from ..services.report_service import generate_prescription_pdf, generate_medical_record_pdf
 
 reports_bp = Blueprint('reports', __name__)
 
@@ -76,6 +77,63 @@ def generate_prescription_report(prescription_id):
         from datetime import datetime
         date_str = datetime.now().strftime('%Y%m%d')
         filename = f"prescription_report_{date_str}.pdf"
+        
+        return send_file(
+            pdf_buffer,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=filename
+        )
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to generate report: {str(e)}'}), 500
+
+
+@reports_bp.route('/medical-record/<record_id>', methods=['GET'])
+@jwt_required()
+def generate_medical_record_report(record_id):
+    """Generate and download a PDF report for a medical record."""
+    current_user = get_current_user()
+    
+    # Only patients can generate reports
+    if current_user['role'] != 'patient':
+        return jsonify({'error': 'Only patients can generate medical records'}), 403
+    
+    user_id = current_user['id']
+    
+    # Get patient profile first
+    patient = Patient.find_by_user_id(user_id)
+    if not patient:
+        return jsonify({'error': 'Patient profile not found'}), 404
+    
+    # Get medical record
+    record = MedicalRecord.find_by_id(record_id)
+    if not record:
+        return jsonify({'error': 'Medical record not found'}), 404
+    
+    # Verify ownership - compare patient ObjectId
+    if str(record.get('patient_id')) != str(patient['_id']):
+        return jsonify({'error': 'Access denied'}), 403
+    
+    # Patient info
+    patient_name = patient.get('name', 'Patient')
+    patient_email = patient.get('email', 'N/A')
+    doctor_name = record.get('doctor', 'Unknown Doctor').replace('Dr. ', '')
+    
+    try:
+        # Generate PDF
+        pdf_buffer = generate_medical_record_pdf(
+            record=MedicalRecord.to_dict(record),
+            patient_name=patient_name,
+            patient_email=patient_email,
+            doctor_name=doctor_name
+        )
+        
+        # Create filename
+        from datetime import datetime
+        date_str = datetime.now().strftime('%Y%m%d')
+        record_type = record.get('type', 'record').replace(' ', '_').lower()
+        filename = f"medical_record_{record_type}_{date_str}.pdf"
         
         return send_file(
             pdf_buffer,

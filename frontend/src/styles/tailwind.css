@@ -1,0 +1,244 @@
+@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --color-background: #FAFBFC;
+        /*gray-50*/
+        --color-foreground: #1A2332;
+        /*slate-900*/
+        --color-card: #FFFFFF;
+        /*white*/
+        --color-card-foreground: #1A2332;
+        /*slate-900*/
+        --color-popover: #FFFFFF;
+        /*white*/
+        --color-popover-foreground: #1A2332;
+        /*slate-900*/
+        --color-primary: #0B4F6C;
+        /*cyan-900*/
+        --color-primary-foreground: #FFFFFF;
+        /*white*/
+        --color-secondary: #2C5F7A;
+        /*cyan-800*/
+        --color-secondary-foreground: #FFFFFF;
+        /*white*/
+        --color-muted: #F1F5F9;
+        /*slate-100*/
+        --color-muted-foreground: #4A5568;
+        /*slate-600*/
+        --color-accent: #00A8CC;
+        /*cyan-500*/
+        --color-accent-foreground: #FFFFFF;
+        /*white*/
+        --color-destructive: #DC2626;
+        /*red-600*/
+        --color-destructive-foreground: #FFFFFF;
+        /*white*/
+        --color-border: rgba(148, 163, 184, 0.2);
+        /*slate-400/20*/
+        --color-input: rgba(148, 163, 184, 0.2);
+        /*slate-400/20*/
+        --color-ring: #0B4F6C;
+        /*cyan-900*/
+        --color-success: #059669;
+        /*emerald-600*/
+        --color-success-foreground: #FFFFFF;
+        /*white*/
+        --color-warning: #D97706;
+        /*amber-600*/
+        --color-warning-foreground: #FFFFFF;
+        /*white*/
+        --color-error: #DC2626;
+        /*red-600*/
+        --color-error-foreground: #FFFFFF;
+        /*white*/
+        --color-surface: #FFFFFF;
+        /*white*/
+        --color-text-primary: #1A2332;
+        /*slate-900*/
+        --color-text-secondary: #4A5568;
+        /*slate-600*/
+
+        --radius: 10px;
+    }
+
+    .dark {
+        --color-background: #0F172A;
+        /*slate-900*/
+        --color-foreground: rgba(255, 255, 255, 0.92);
+        /*white/92*/
+        --color-card: #1E293B;
+        /*slate-800*/
+        --color-card-foreground: rgba(255, 255, 255, 0.92);
+        /*white/92*/
+        --color-popover: #1E293B;
+        /*slate-800*/
+        --color-popover-foreground: rgba(255, 255, 255, 0.92);
+        /*white/92*/
+        --color-primary: #0B4F6C;
+        /*cyan-900*/
+        --color-primary-foreground: #FFFFFF;
+        /*white*/
+        --color-secondary: #334155;
+        /*slate-700*/
+        --color-secondary-foreground: #FFFFFF;
+        /*white*/
+        --color-muted: #1E293B;
+        /*slate-800*/
+        --color-muted-foreground: rgba(255, 255, 255, 0.6);
+        /*white/60*/
+        --color-accent: #00A8CC;
+        /*cyan-500*/
+        --color-accent-foreground: #FFFFFF;
+        /*white*/
+        --color-destructive: #DC2626;
+        /*red-600*/
+        --color-destructive-foreground: #FFFFFF;
+        /*white*/
+        --color-border: rgba(255, 255, 255, 0.1);
+        /*white/10*/
+        --color-input: rgba(255, 255, 255, 0.1);
+        /*white/10*/
+        --color-ring: #00A8CC;
+        /*cyan-500*/
+        --color-success: #059669;
+        /*emerald-600*/
+        --color-success-foreground: #FFFFFF;
+        /*white*/
+        --color-warning: #D97706;
+        /*amber-600*/
+        --color-warning-foreground: #FFFFFF;
+        /*white*/
+        --color-error: #DC2626;
+        /*red-600*/
+        --color-error-foreground: #FFFFFF;
+        /*white*/
+        --color-surface: #1E293B;
+        /*slate-800*/
+        --color-text-primary: rgba(255, 255, 255, 0.92);
+        /*white/92*/
+        --color-text-secondary: rgba(255, 255, 255, 0.6);
+        /*white/60*/
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+        font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
+        font-size: 16px;
+        line-height: 1.6;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        font-family: 'Lexend', system-ui, -apple-system, sans-serif;
+    }
+
+    h1 {
+        @apply text-4xl font-semibold leading-tight;
+    }
+
+    h2 {
+        @apply text-3xl font-semibold leading-tight;
+    }
+
+    h3 {
+        @apply text-2xl font-medium leading-snug;
+    }
+
+    h4 {
+        @apply text-xl font-medium leading-snug;
+    }
+
+    h5 {
+        @apply text-lg font-medium leading-normal;
+    }
+
+    .caption {
+        font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+        @apply text-sm leading-relaxed;
+    }
+
+    .data-text {
+        font-family: 'JetBrains Mono', monospace;
+        font-feature-settings: 'tnum' on, 'lnum' on;
+    }
+
+    @media (max-width: 640px) {
+        body {
+            font-size: 15px;
+        }
+    }
+}
+
+@layer utilities {
+    .text-balance {
+        text-wrap: balance;
+    }
+
+    .smooth-scroll {
+        scroll-behavior: smooth;
+    }
+
+    .transition-base {
+        transition: all 250ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .shadow-elevation-1 {
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+    }
+
+    .shadow-elevation-2 {
+        box-shadow: 0 3px 6px rgba(15, 23, 42, 0.1);
+    }
+
+    .shadow-elevation-3 {
+        box-shadow: 0 6px 12px rgba(15, 23, 42, 0.12);
+    }
+
+    .shadow-elevation-4 {
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.15);
+    }
+
+    .dark .shadow-elevation-1 {
+        box-shadow: 0 1px 3px rgba(0, 168, 204, 0.05);
+    }
+
+    .dark .shadow-elevation-2 {
+        box-shadow: 0 3px 6px rgba(0, 168, 204, 0.08);
+    }
+
+    .dark .shadow-elevation-3 {
+        box-shadow: 0 6px 12px rgba(0, 168, 204, 0.1);
+    }
+
+    .dark .shadow-elevation-4 {
+        box-shadow: 0 12px 24px rgba(0, 168, 204, 0.12);
+    }
+
+    .glassmorphism {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+    }
+
+    .dark .glassmorphism {
+        background: rgba(30, 41, 59, 0.8);
+    }
+}

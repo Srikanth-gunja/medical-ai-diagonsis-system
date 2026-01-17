@@ -5,6 +5,7 @@ from ..models.rating import Rating
 from ..models.appointment import Appointment
 from ..models.doctor import Doctor
 from ..models.patient import Patient
+from ..models.notification import Notification
 import json
 
 ratings_bp = Blueprint('ratings', __name__)
@@ -81,6 +82,19 @@ def create_rating():
             'rating_count': rating_stats['count']
         })
         
+        # Create notification for doctor
+        doctor = Doctor.find_by_id(appointment['doctor_id'])
+        if doctor:
+            patient = Patient.find_by_user_id(current_user['id'])
+            patient_name = f"{patient.get('firstName', '')} {patient.get('lastName', '')}" if patient else 'A patient'
+            Notification.create(
+                user_id=doctor['user_id'],
+                title='New Review Received',
+                message=f"{patient_name} has left you a {score}-star review.",
+                notification_type='info',
+                link='/doctor-dashboard'
+            )
+        
         return jsonify({
             'message': 'Rating submitted successfully',
             'rating': Rating.to_dict(rating)
@@ -123,3 +137,38 @@ def check_rating(appointment_id):
     return jsonify({
         'hasRated': has_rated
     })
+
+
+@ratings_bp.route('/my-reviews', methods=['GET'])
+@jwt_required()
+def get_my_reviews():
+    """Get reviews for the logged-in doctor."""
+    current_user = get_current_user()
+    
+    if current_user['role'] != 'doctor':
+        return jsonify({'error': 'Only doctors can access this endpoint'}), 403
+    
+    doctor = Doctor.find_by_user_id(current_user['id'])
+    if not doctor:
+        return jsonify({'error': 'Doctor profile not found'}), 404
+    
+    ratings = Rating.find_by_doctor_id(doctor['_id'])
+    stats = Rating.calculate_average(doctor['_id'])
+    
+    # Enrich with patient names
+    result = []
+    for r in ratings:
+        rating_dict = Rating.to_dict(r)
+        patient = Patient.find_by_user_id(str(r.get('patient_id', '')))
+        if patient:
+            rating_dict['patientName'] = f"{patient.get('firstName', '')} {patient.get('lastName', '')}"
+        else:
+            rating_dict['patientName'] = 'Anonymous'
+        result.append(rating_dict)
+    
+    return jsonify({
+        'reviews': result,
+        'average': stats['average'],
+        'count': stats['count']
+    })
+
