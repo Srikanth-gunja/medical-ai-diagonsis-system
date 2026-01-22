@@ -192,12 +192,12 @@ def delete_appointment(appt_id):
 @appointments_bp.route('/<appt_id>/revoke', methods=['PATCH'])
 @jwt_required()
 def revoke_appointment(appt_id):
-    """Allow patient to revoke their pending appointment."""
+    """Allow patient to cancel their pending or confirmed appointment."""
     current_user = get_current_user()
     
-    # Only patients can revoke
+    # Only patients can cancel
     if current_user['role'] != 'patient':
-        return jsonify({'error': 'Only patients can revoke appointments'}), 403
+        return jsonify({'error': 'Only patients can cancel appointments'}), 403
     
     appointment = Appointment.find_by_id(appt_id)
     if not appointment:
@@ -207,11 +207,48 @@ def revoke_appointment(appt_id):
     if str(appointment['patient_id']) != current_user['id']:
         return jsonify({'error': 'Unauthorized'}), 403
     
-    # Only pending appointments can be revoked
-    if appointment['status'] != 'pending':
-        return jsonify({'error': 'Only pending appointments can be revoked'}), 400
+    # Only pending or confirmed appointments can be cancelled
+    if appointment['status'] not in ['pending', 'confirmed']:
+        return jsonify({'error': 'Only pending or confirmed appointments can be cancelled'}), 400
     
-    updated = Appointment.update_status(appt_id, 'cancelled')
+    # Get appointment details for notifications
+    doctor_name = appointment.get('doctor_name', 'Doctor')
+    appt_date = appointment.get('date', '')
+    appt_time = appointment.get('time', '')
+    doctor_id = appointment.get('doctor_id')
+    
+    # Update appointment status to rejected with patient cancellation reason
+    updated = Appointment.update(appt_id, {
+        'status': 'rejected',
+        'rejection_reason': 'Cancelled by patient'
+    })
+    
+    # Get patient name for notification
+    patient = Patient.find_by_user_id(current_user['id'])
+    patient_name = f"{patient.get('firstName', '')} {patient.get('lastName', '')}".strip() if patient else 'A patient'
+    
+    # Notify the doctor about the cancellation
+    if doctor_id:
+        doctor = Doctor.find_by_id(doctor_id)
+        if doctor:
+            Notification.create(
+                user_id=doctor['user_id'],
+                title='Appointment Cancelled by Patient',
+                message=f'{patient_name} has cancelled their appointment on {appt_date} at {appt_time}.',
+                notification_type='warning',
+                link='/doctor-dashboard'
+            )
+    
+    # Create activity for patient
+    create_activity(
+        user_id=current_user['id'],
+        activity_type='appointment',
+        title='Appointment Cancelled',
+        description=f'You cancelled your appointment with {doctor_name} on {appt_date} at {appt_time}.',
+        icon='XCircleIcon',
+        color='bg-warning'
+    )
+    
     return jsonify(Appointment.to_dict(updated))
 
 @appointments_bp.route('/<appt_id>/complete', methods=['POST'])

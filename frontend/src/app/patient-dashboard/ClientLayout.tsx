@@ -25,7 +25,7 @@ interface UserContextType {
 const UserContext = createContext<UserContextType>({
   user: null,
   isLoading: true,
-  refreshUser: async () => {},
+  refreshUser: async () => { },
 });
 
 export const useUser = () => useContext(UserContext);
@@ -93,7 +93,7 @@ export default function PatientDashboardClientLayout({
 
         // Filter to only future appointments
         const futureAppointments = appointments
-          .filter((a: any) => a.status !== 'cancelled' && a.status !== 'completed')
+          .filter((a: any) => a.status !== 'cancelled' && a.status !== 'completed' && a.status !== 'rejected')
           .filter((a: any) => {
             const appointmentDateTime = parseAppointmentDateTime(a.date, a.time);
             return appointmentDateTime.getTime() > now.getTime();

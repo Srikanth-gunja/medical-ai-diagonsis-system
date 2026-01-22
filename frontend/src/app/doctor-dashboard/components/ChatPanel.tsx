@@ -31,6 +31,8 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
   const [canChat, setCanChat] = useState(false);
+  const [hasAppointment, setHasAppointment] = useState(false);
+  const [chatTimeMessage, setChatTimeMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const pollInterval = useRef<NodeJS.Timeout | null>(null);
 
@@ -55,9 +57,30 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
     };
   }, [isOpen, patientId]);
 
-  // Fetch messages when appointment is selected
+  // Fetch messages and check chat status when appointment is selected
   useEffect(() => {
+    const fetchChatStatusForAppointment = async () => {
+      if (!selectedAppointmentId) return;
+
+      try {
+        const status = await messagesApi.getChatStatus(selectedAppointmentId);
+        setCanChat(status.canChat);
+        setHasAppointment(true);
+        if (!status.canChat && !status.isInTimeWindow) {
+          setChatTimeMessage(status.timeMessage || 'Chat is not available at this time');
+          setError(null);
+        } else {
+          setChatTimeMessage(null);
+          setError(null);
+        }
+      } catch (err) {
+        console.error('Failed to fetch chat status:', err);
+        setCanChat(false);
+      }
+    };
+
     if (selectedAppointmentId) {
+      fetchChatStatusForAppointment();
       fetchMessages();
       // Poll for new messages every 5 seconds
       pollInterval.current = setInterval(fetchMessages, 5000);
@@ -87,9 +110,26 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
       setAppointments(patientAppointments);
 
       if (patientAppointments.length > 0) {
-        setSelectedAppointmentId(patientAppointments[0].id);
-        setCanChat(true);
+        const firstAppointmentId = patientAppointments[0].id;
+        setSelectedAppointmentId(firstAppointmentId);
+        setHasAppointment(true);
+
+        // Check chat status from backend to respect time window
+        try {
+          const status = await messagesApi.getChatStatus(firstAppointmentId);
+          setCanChat(status.canChat);
+          if (!status.canChat && !status.isInTimeWindow) {
+            setChatTimeMessage(status.timeMessage || 'Chat is not available at this time');
+          } else {
+            setChatTimeMessage(null);
+          }
+        } catch (statusErr) {
+          console.error('Failed to fetch chat status:', statusErr);
+          setCanChat(false);
+        }
       } else {
+        setHasAppointment(false);
+        setChatTimeMessage(null);
         setCanChat(false);
         setError(
           'No active appointments with this patient. Chat is available during confirmed appointments.'
@@ -177,17 +217,15 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity duration-300 ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
+        className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
         onClick={onClose}
       />
 
       {/* Slide-in Chat Panel */}
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-md bg-card border-l border-border shadow-elevation-3 z-50 transform transition-transform duration-300 ease-out ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-card border-l border-border shadow-elevation-3 z-50 transform transition-transform duration-300 ease-out ${isOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
       >
         {/* Gradient Header */}
         <div className="relative bg-gradient-to-br from-primary via-primary/90 to-accent p-6 pb-4">
@@ -214,7 +252,11 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
               <div>
                 <h2 className="text-xl font-bold text-white">{patientName}</h2>
                 <p className="text-white/70 text-sm">
-                  {canChat ? 'Online • Active appointment' : 'No active appointment'}
+                  {canChat
+                    ? 'Online • Active appointment'
+                    : hasAppointment && chatTimeMessage
+                      ? chatTimeMessage
+                      : 'No active appointment'}
                 </p>
               </div>
             </div>
@@ -264,14 +306,15 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
           ) : !canChat ? (
             <div className="flex flex-col items-center justify-center h-full text-center py-8 px-4">
               <div className="w-20 h-20 bg-gradient-to-br from-warning/20 to-warning/5 rounded-full flex items-center justify-center mb-4">
-                <Icon name="CalendarIcon" size={40} className="text-warning" />
+                <Icon name={hasAppointment ? 'ClockIcon' : 'CalendarIcon'} size={40} className="text-warning" />
               </div>
               <h3 className="text-lg font-semibold text-text-primary mb-2">
-                No Active Appointment
+                {hasAppointment ? 'Chat Not Yet Available' : 'No Active Appointment'}
               </h3>
               <p className="text-sm text-text-secondary max-w-[280px]">
-                Chat is available only during confirmed appointments. Schedule or confirm an
-                appointment to start messaging.
+                {hasAppointment && chatTimeMessage
+                  ? chatTimeMessage
+                  : 'Chat is available only during confirmed appointments. Schedule or confirm an appointment to start messaging.'}
               </p>
             </div>
           ) : messages.length === 0 ? (
@@ -325,11 +368,10 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
 
                     {/* Message Bubble */}
                     <div
-                      className={`max-w-[75%] px-4 py-3 ${
-                        isMe
-                          ? 'bg-gradient-to-br from-primary to-primary/90 text-white rounded-2xl rounded-br-sm'
-                          : 'bg-card border border-border text-text-primary rounded-2xl rounded-bl-sm shadow-sm'
-                      } ${isTemp ? 'opacity-70' : ''}`}
+                      className={`max-w-[75%] px-4 py-3 ${isMe
+                        ? 'bg-gradient-to-br from-primary to-primary/90 text-white rounded-2xl rounded-br-sm'
+                        : 'bg-card border border-border text-text-primary rounded-2xl rounded-bl-sm shadow-sm'
+                        } ${isTemp ? 'opacity-70' : ''}`}
                     >
                       <p className="text-sm whitespace-pre-wrap leading-relaxed">
                         {message.content}

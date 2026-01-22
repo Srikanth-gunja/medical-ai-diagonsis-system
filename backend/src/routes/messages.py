@@ -88,8 +88,10 @@ def send_message(appointment_id):
     if appointment['status'] != 'confirmed':
         return jsonify({'error': 'Chat is only available for confirmed appointments'}), 403
     
-    # For development: removed strict time window check
-    # In production, you could re-enable is_during_appointment_time() check
+    # Check time window - only allow chat during appointment time
+    is_in_window, time_message = is_during_appointment_time(appointment)
+    if not is_in_window:
+        return jsonify({'error': time_message}), 403
     
     message = Message.create(
         appointment_id=appointment_id,
@@ -119,10 +121,12 @@ def get_chat_status(appointment_id):
         return jsonify({'error': 'Appointment not found'}), 404
     
     status = appointment.get('status', 'pending')
-    can_chat = status == 'confirmed'
     
     # Check time window
     is_in_window, time_message = is_during_appointment_time(appointment)
+    
+    # Chat is only enabled when appointment is confirmed AND we're in the time window
+    can_chat = status == 'confirmed' and is_in_window
     
     return jsonify({
         'canChat': can_chat,
