@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_BASE_URL } from '@/lib/api';
 import Icon from '@/components/ui/AppIcon';
 import SpecialtySelector from './SpecialtySelector';
 
@@ -126,7 +127,7 @@ const DoctorRegistrationForm = () => {
     setErrors({});
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -275,11 +276,10 @@ const DoctorRegistrationForm = () => {
                     value={formData.fullName}
                     onChange={handleInputChange}
                     placeholder="Dr. John Smith"
-                    className={`w-full h-12 px-4 bg-background border rounded-lg transition-base focus:outline-none focus:ring-2 ${
-                      errors.fullName
+                    className={`w-full h-12 px-4 bg-background border rounded-lg transition-base focus:outline-none focus:ring-2 ${errors.fullName
                         ? 'border-error focus:border-error focus:ring-error/20'
                         : 'border-input focus:border-primary focus:ring-primary/20'
-                    }`}
+                      }`}
                   />
                   {errors.fullName && (
                     <p className="mt-1 text-sm text-error flex items-center space-x-1">
@@ -299,11 +299,10 @@ const DoctorRegistrationForm = () => {
                     value={formData.email}
                     onChange={handleInputChange}
                     placeholder="doctor@example.com"
-                    className={`w-full h-12 px-4 bg-background border rounded-lg transition-base focus:outline-none focus:ring-2 ${
-                      errors.email
+                    className={`w-full h-12 px-4 bg-background border rounded-lg transition-base focus:outline-none focus:ring-2 ${errors.email
                         ? 'border-error focus:border-error focus:ring-error/20'
                         : 'border-input focus:border-primary focus:ring-primary/20'
-                    }`}
+                      }`}
                   />
                   {errors.email && (
                     <p className="mt-1 text-sm text-error flex items-center space-x-1">
@@ -324,11 +323,10 @@ const DoctorRegistrationForm = () => {
                       value={formData.password}
                       onChange={handleInputChange}
                       placeholder="••••••••"
-                      className={`w-full h-12 px-4 pr-12 bg-background border rounded-lg transition-base focus:outline-none focus:ring-2 ${
-                        errors.password
+                      className={`w-full h-12 px-4 pr-12 bg-background border rounded-lg transition-base focus:outline-none focus:ring-2 ${errors.password
                           ? 'border-error focus:border-error focus:ring-error/20'
                           : 'border-input focus:border-primary focus:ring-primary/20'
-                      }`}
+                        }`}
                     />
                     <button
                       type="button"
@@ -357,11 +355,10 @@ const DoctorRegistrationForm = () => {
                       value={formData.confirmPassword}
                       onChange={handleInputChange}
                       placeholder="••••••••"
-                      className={`w-full h-12 px-4 pr-12 bg-background border rounded-lg transition-base focus:outline-none focus:ring-2 ${
-                        errors.confirmPassword
+                      className={`w-full h-12 px-4 pr-12 bg-background border rounded-lg transition-base focus:outline-none focus:ring-2 ${errors.confirmPassword
                           ? 'border-error focus:border-error focus:ring-error/20'
                           : 'border-input focus:border-primary focus:ring-primary/20'
-                      }`}
+                        }`}
                     />
                     <button
                       type="button"
@@ -403,11 +400,10 @@ const DoctorRegistrationForm = () => {
                     value={formData.location}
                     onChange={handleInputChange}
                     placeholder="New York, NY"
-                    className={`w-full h-12 px-4 bg-background border rounded-lg transition-base focus:outline-none focus:ring-2 ${
-                      errors.location
+                    className={`w-full h-12 px-4 bg-background border rounded-lg transition-base focus:outline-none focus:ring-2 ${errors.location
                         ? 'border-error focus:border-error focus:ring-error/20'
                         : 'border-input focus:border-primary focus:ring-primary/20'
-                    }`}
+                      }`}
                   />
                   {errors.location && (
                     <p className="mt-1 text-sm text-error flex items-center space-x-1">

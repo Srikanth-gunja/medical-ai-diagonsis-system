@@ -3,7 +3,7 @@
  * Centralized API configuration with environment variable support and auth handling
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 // Types for API responses
 export interface ApiError {
