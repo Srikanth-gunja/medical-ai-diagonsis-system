@@ -21,6 +21,7 @@ interface AppointmentCardProps {
   onReschedule: (id: string) => void;
   onChat: (id: string) => void;
   onFinish?: (id: string) => void;
+  onJoin?: (id: string) => void;
 }
 
 export default function AppointmentCard({
@@ -29,6 +30,7 @@ export default function AppointmentCard({
   onReschedule,
   onChat,
   onFinish,
+  onJoin,
 }: AppointmentCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -142,6 +144,16 @@ export default function AppointmentCard({
                   <Icon name="ChatBubbleLeftRightIcon" size={16} />
                   <span>Chat</span>
                 </button>
+
+                {appointment.status === 'Confirmed' && appointment.type === 'Video' && onJoin && (
+                  <button
+                    onClick={() => onJoin(appointment.id)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-base text-sm font-medium"
+                  >
+                    <Icon name="VideoCameraIcon" size={16} />
+                    <span>Join Call</span>
+                  </button>
+                )}
               </>
             )}
 

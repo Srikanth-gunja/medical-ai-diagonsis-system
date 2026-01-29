@@ -19,6 +19,7 @@ import ChatPanel from './ChatPanel';
 import ReviewsSection from './ReviewsSection';
 import ConsultationModal, { type ConsultationData } from './ConsultationModal';
 import RejectReasonModal from './RejectReasonModal';
+import VideoCallModal from '@/components/VideoCallModal';
 import Icon from '@/components/ui/AppIcon';
 import {
   doctorsApi,
@@ -149,6 +150,10 @@ export default function DoctorDashboardInteractive() {
     id: string;
     patientName: string;
   } | null>(null);
+
+  // Video Call State
+  const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
+  const [videoCallAppointmentId, setVideoCallAppointmentId] = useState<string>('');
 
   // Data states
   const [doctorProfile, setDoctorProfile] = useState<ApiDoctor | null>(null);
@@ -428,6 +433,13 @@ export default function DoctorDashboardInteractive() {
   const handleRescheduleAppointment = (id: string) => {
     if (!isHydrated) return;
     console.log('Rescheduling appointment:', id);
+  };
+
+  const handleJoinVideoCall = (id: string) => {
+    if (isHydrated) {
+      setVideoCallAppointmentId(id);
+      setIsVideoCallOpen(true);
+    }
   };
 
   const handleChatWithPatient = (id: string) => {
@@ -733,6 +745,14 @@ export default function DoctorDashboardInteractive() {
 
         <ReviewsSection className="mb-8" />
 
+        <VideoCallModal
+          isOpen={isVideoCallOpen}
+          onClose={() => setIsVideoCallOpen(false)}
+          appointmentId={videoCallAppointmentId}
+          userId={doctorProfile?.id || ''}
+          userType="doctor"
+        />
+
         <div id="patients" className="bg-card border border-border rounded-lg p-6">
           <div className="flex items-center gap-4 mb-6 border-b border-border">
             <button
@@ -794,6 +814,7 @@ export default function DoctorDashboardInteractive() {
                     onReschedule={handleRescheduleAppointment}
                     onChat={handleChatWithPatient}
                     onFinish={handleFinishAppointment}
+                    onJoin={handleJoinVideoCall}
                   />
                 ))
               ) : (

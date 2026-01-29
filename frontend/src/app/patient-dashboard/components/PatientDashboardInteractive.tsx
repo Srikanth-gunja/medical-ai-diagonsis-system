@@ -12,6 +12,7 @@ import DoctorChatModal from './DoctorChatModal';
 import ReviewDoctorModal from './ReviewDoctorModal';
 import BookingModal from './BookingModal';
 import RescheduleModal from './RescheduleModal';
+import VideoCallModal from '@/components/VideoCallModal';
 import Icon from '@/components/ui/AppIcon';
 import { useUser } from '../ClientLayout';
 import {
@@ -76,6 +77,10 @@ const PatientDashboardInteractive = () => {
   const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
   const [selectedAppointmentForReschedule, setSelectedAppointmentForReschedule] =
     useState<Appointment | null>(null);
+
+  // Video Call State
+  const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
+  const [videoCallAppointmentId, setVideoCallAppointmentId] = useState<string>('');
 
   // Data states
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -237,7 +242,8 @@ const PatientDashboardInteractive = () => {
 
   const handleJoinAppointment = (id: string) => {
     if (isHydrated) {
-      alert(`Joining video consultation for appointment ${id}`);
+      setVideoCallAppointmentId(id);
+      setIsVideoCallOpen(true);
     }
   };
 
@@ -439,11 +445,10 @@ const PatientDashboardInteractive = () => {
                 <div className="flex items-center gap-2 border-b border-border mb-6">
                   <button
                     onClick={() => setAppointmentTab('upcoming')}
-                    className={`pb-3 px-4 font-medium transition-base relative ${
-                      appointmentTab === 'upcoming'
-                        ? 'text-primary'
-                        : 'text-text-secondary hover:text-text-primary'
-                    }`}
+                    className={`pb-3 px-4 font-medium transition-base relative ${appointmentTab === 'upcoming'
+                      ? 'text-primary'
+                      : 'text-text-secondary hover:text-text-primary'
+                      }`}
                   >
                     Upcoming
                     {appointments.filter((a) => a.status === 'confirmed').length > 0 && (
@@ -457,11 +462,10 @@ const PatientDashboardInteractive = () => {
                   </button>
                   <button
                     onClick={() => setAppointmentTab('pending')}
-                    className={`pb-3 px-4 font-medium transition-base relative ${
-                      appointmentTab === 'pending'
-                        ? 'text-primary'
-                        : 'text-text-secondary hover:text-text-primary'
-                    }`}
+                    className={`pb-3 px-4 font-medium transition-base relative ${appointmentTab === 'pending'
+                      ? 'text-primary'
+                      : 'text-text-secondary hover:text-text-primary'
+                      }`}
                   >
                     Pending
                     {appointments.filter((a) => a.status === 'pending').length > 0 && (
@@ -475,11 +479,10 @@ const PatientDashboardInteractive = () => {
                   </button>
                   <button
                     onClick={() => setAppointmentTab('completed')}
-                    className={`pb-3 px-4 font-medium transition-base relative ${
-                      appointmentTab === 'completed'
-                        ? 'text-primary'
-                        : 'text-text-secondary hover:text-text-primary'
-                    }`}
+                    className={`pb-3 px-4 font-medium transition-base relative ${appointmentTab === 'completed'
+                      ? 'text-primary'
+                      : 'text-text-secondary hover:text-text-primary'
+                      }`}
                   >
                     Completed
                     {appointments.filter((a) => a.status === 'completed').length > 0 && (
@@ -493,11 +496,10 @@ const PatientDashboardInteractive = () => {
                   </button>
                   <button
                     onClick={() => setAppointmentTab('rejected')}
-                    className={`pb-3 px-4 font-medium transition-base relative ${
-                      appointmentTab === 'rejected'
-                        ? 'text-primary'
-                        : 'text-text-secondary hover:text-text-primary'
-                    }`}
+                    className={`pb-3 px-4 font-medium transition-base relative ${appointmentTab === 'rejected'
+                      ? 'text-primary'
+                      : 'text-text-secondary hover:text-text-primary'
+                      }`}
                   >
                     Rejected
                     {appointments.filter((a) => a.status === 'rejected').length > 0 && (
@@ -706,16 +708,16 @@ const PatientDashboardInteractive = () => {
                 activities.length > 0
                   ? activities
                   : [
-                      {
-                        id: '1',
-                        type: 'appointment' as const,
-                        title: 'Welcome!',
-                        description: 'Start by booking your first appointment',
-                        timestamp: 'Just now',
-                        icon: 'SparklesIcon',
-                        color: 'bg-primary',
-                      },
-                    ]
+                    {
+                      id: '1',
+                      type: 'appointment' as const,
+                      title: 'Welcome!',
+                      description: 'Start by booking your first appointment',
+                      timestamp: 'Just now',
+                      icon: 'SparklesIcon',
+                      color: 'bg-primary',
+                    },
+                  ]
               }
             />
           </div>
@@ -763,6 +765,14 @@ const PatientDashboardInteractive = () => {
           }}
         />
       )}
+
+      <VideoCallModal
+        isOpen={isVideoCallOpen}
+        onClose={() => setIsVideoCallOpen(false)}
+        appointmentId={videoCallAppointmentId}
+        userId={(user as any)?.id || (user as any)?.userId || ''}
+        userType="patient"
+      />
     </>
   );
 };

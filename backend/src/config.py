@@ -12,3 +12,7 @@ class Config:
     
     # Google Gemini API Configuration
     GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY') or ''
+    
+    # Stream Video/Chat Configuration
+    STREAM_API_KEY = os.environ.get('STREAM_API_KEY')
+    STREAM_API_SECRET = os.environ.get('STREAM_API_SECRET')
