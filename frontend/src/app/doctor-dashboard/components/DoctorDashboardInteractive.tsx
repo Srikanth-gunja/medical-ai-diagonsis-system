@@ -20,7 +20,9 @@ import ReviewsSection from './ReviewsSection';
 import ConsultationModal, { type ConsultationData } from './ConsultationModal';
 import RejectReasonModal from './RejectReasonModal';
 import VideoCallModal from '@/components/video/VideoCallModal';
+import IncomingCallModal from '@/components/video/IncomingCallModal';
 import Icon from '@/components/ui/AppIcon';
+import { useVideoCall } from '@/contexts/VideoCallContext';
 import {
   doctorsApi,
   appointmentsApi,
@@ -154,6 +156,11 @@ export default function DoctorDashboardInteractive() {
   // Video Call state
   const [isVideoCallModalOpen, setIsVideoCallModalOpen] = useState(false);
   const [videoCallAppointmentId, setVideoCallAppointmentId] = useState<string | null>(null);
+  const [videoCallPatientName, setVideoCallPatientName] = useState<string>('Patient');
+  const [videoCallPatientId, setVideoCallPatientId] = useState<string>('');
+  
+  // Video call context for ringing support
+  const { incomingCall, initializeCall } = useVideoCall();
 
   // Data states
   const [doctorProfile, setDoctorProfile] = useState<ApiDoctor | null>(null);
@@ -508,10 +515,25 @@ export default function DoctorDashboardInteractive() {
     }
   };
 
-  const handleJoinVideoCall = (id: string) => {
-    if (isHydrated) {
-      setVideoCallAppointmentId(id);
-      setIsVideoCallModalOpen(true);
+  const handleJoinVideoCall = async (id: string) => {
+    if (!isHydrated) return;
+    
+    // Find the appointment to get patient details
+    const appointment = appointments.find((a) => a.id === id);
+    if (!appointment) return;
+    
+    setVideoCallAppointmentId(id);
+    setVideoCallPatientName(appointment.patientName);
+    setVideoCallPatientId(appointment.patientId);
+    setIsVideoCallModalOpen(true);
+    
+    try {
+      // Initialize ringing call with patient as member
+      await initializeCall(id, appointment.patientId, appointment.patientName);
+    } catch (error) {
+      console.error('Failed to start video call:', error);
+      alert('Failed to start video call. Please try again.');
+      setIsVideoCallModalOpen(false);
     }
   };
 
@@ -954,6 +976,7 @@ export default function DoctorDashboardInteractive() {
         }}
       />
 
+      {/* Video Call Modal for outgoing calls */}
       {videoCallAppointmentId && (
         <VideoCallModal
           isOpen={isVideoCallModalOpen}
@@ -962,8 +985,15 @@ export default function DoctorDashboardInteractive() {
             setVideoCallAppointmentId(null);
           }}
           appointmentId={videoCallAppointmentId}
+          otherUserName={videoCallPatientName}
         />
       )}
+
+      {/* Incoming Call Modal */}
+      <IncomingCallModal
+        isOpen={!!incomingCall}
+        onClose={() => {}}
+      />
     </div>
   );
 }

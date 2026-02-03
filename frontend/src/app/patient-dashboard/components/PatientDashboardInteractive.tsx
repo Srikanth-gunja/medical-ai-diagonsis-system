@@ -13,8 +13,10 @@ import ReviewDoctorModal from './ReviewDoctorModal';
 import BookingModal from './BookingModal';
 import RescheduleModal from './RescheduleModal';
 import VideoCallModal from '@/components/video/VideoCallModal';
+import IncomingCallModal from '@/components/video/IncomingCallModal';
 import Icon from '@/components/ui/AppIcon';
 import { useUser } from '../ClientLayout';
+import { useVideoCall } from '@/contexts/VideoCallContext';
 import {
   doctorsApi,
   appointmentsApi,
@@ -79,6 +81,11 @@ const PatientDashboardInteractive = () => {
     useState<Appointment | null>(null);
   const [isVideoCallModalOpen, setIsVideoCallModalOpen] = useState(false);
   const [videoCallAppointmentId, setVideoCallAppointmentId] = useState<string | null>(null);
+  const [videoCallDoctorName, setVideoCallDoctorName] = useState<string>('Doctor');
+  const [videoCallDoctorId, setVideoCallDoctorId] = useState<string>('');
+  
+  // Video call context for ringing support
+  const { incomingCall, initializeCall } = useVideoCall();
 
   // Data states
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -238,10 +245,25 @@ const PatientDashboardInteractive = () => {
     }
   };
 
-  const handleJoinAppointment = (id: string) => {
-    if (isHydrated) {
-      setVideoCallAppointmentId(id);
-      setIsVideoCallModalOpen(true);
+  const handleJoinAppointment = async (id: string) => {
+    if (!isHydrated) return;
+    
+    // Find the appointment to get doctor details
+    const appointment = appointments.find((a) => a.id === id);
+    if (!appointment) return;
+    
+    setVideoCallAppointmentId(id);
+    setVideoCallDoctorName(appointment.doctorName);
+    setVideoCallDoctorId(appointment.doctorId);
+    setIsVideoCallModalOpen(true);
+    
+    try {
+      // Initialize ringing call with doctor as member
+      await initializeCall(id, appointment.doctorId, appointment.doctorName);
+    } catch (error) {
+      console.error('Failed to start video call:', error);
+      alert('Failed to start video call. Please try again.');
+      setIsVideoCallModalOpen(false);
     }
   };
 
@@ -768,6 +790,7 @@ const PatientDashboardInteractive = () => {
         />
       )}
 
+      {/* Video Call Modal for outgoing calls */}
       {videoCallAppointmentId && (
         <VideoCallModal
           isOpen={isVideoCallModalOpen}
@@ -776,8 +799,15 @@ const PatientDashboardInteractive = () => {
             setVideoCallAppointmentId(null);
           }}
           appointmentId={videoCallAppointmentId}
+          otherUserName={videoCallDoctorName}
         />
       )}
+
+      {/* Incoming Call Modal */}
+      <IncomingCallModal
+        isOpen={!!incomingCall}
+        onClose={() => {}}
+      />
     </>
   );
 };
