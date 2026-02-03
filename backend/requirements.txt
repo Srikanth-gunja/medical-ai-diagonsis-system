@@ -14,4 +14,4 @@ pytest-asyncio
 httpx
 mongomock
 getstream>=0.1.0
-stream-chat>=3.0.0
+stream-chat>=3.0.0tzdata
