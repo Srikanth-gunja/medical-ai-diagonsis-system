@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "@headlessui/react": "^2.2.9",
-    "@stream-io/video-react-sdk": "^1.31.8"
-  }
-}
