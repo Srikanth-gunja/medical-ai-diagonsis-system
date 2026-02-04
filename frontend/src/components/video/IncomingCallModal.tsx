@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Fragment, useEffect, useRef } from 'react';
+import React, { Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { useVideoCall } from '../../contexts/VideoCallContext';
 import { PhoneIcon, XMarkIcon, VideoCameraIcon } from '@heroicons/react/24/outline';
@@ -12,37 +12,8 @@ interface IncomingCallModalProps {
 
 export default function IncomingCallModal({ isOpen, onClose }: IncomingCallModalProps) {
   const { incomingCall, acceptIncomingCall, rejectIncomingCall } = useVideoCall();
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  // Play ringing sound
-  useEffect(() => {
-    if (isOpen && typeof window !== 'undefined') {
-      // Create audio element for ringing sound
-      audioRef.current = new Audio('/sounds/incoming-call.mp3');
-      audioRef.current.loop = true;
-      audioRef.current.volume = 0.5;
-      
-      // Try to play (may be blocked by browser autoplay policy)
-      audioRef.current.play().catch((e) => {
-        console.log('Audio play blocked:', e);
-      });
-
-      return () => {
-        if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current.currentTime = 0;
-          audioRef.current = null;
-        }
-      };
-    }
-  }, [isOpen]);
 
   const handleAccept = async () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    
     try {
       await acceptIncomingCall();
       onClose();
@@ -52,11 +23,6 @@ export default function IncomingCallModal({ isOpen, onClose }: IncomingCallModal
   };
 
   const handleReject = async () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    
     try {
       await rejectIncomingCall();
       onClose();
@@ -69,7 +35,7 @@ export default function IncomingCallModal({ isOpen, onClose }: IncomingCallModal
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-[100]" onClose={() => {}}>
+      <Dialog as="div" className="relative z-[100]" onClose={() => { }}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"

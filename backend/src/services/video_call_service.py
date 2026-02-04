@@ -85,6 +85,8 @@ class VideoCallService:
         Validate user can access the video call.
         Returns appointment details if valid, None otherwise.
         """
+        from ..models.doctor import Doctor
+        
         db = get_db()
         try:
             appt_oid = ObjectId(appointment_id)
@@ -97,8 +99,17 @@ class VideoCallService:
             return None
 
         # Check if user is participant
+        # For patients: patient_id IS the user_id
         is_patient = str(appointment.get("patient_id")) == user_id
-        is_doctor = str(appointment.get("doctor_id")) == user_id
+        
+        # For doctors: doctor_id is Doctor._id, need to lookup doctor.user_id
+        is_doctor = False
+        if role == "doctor":
+            doctor_doc_id = appointment.get("doctor_id")
+            if doctor_doc_id:
+                doctor = Doctor.find_by_id(str(doctor_doc_id))
+                if doctor and str(doctor.get("user_id")) == user_id:
+                    is_doctor = True
 
         if not (is_patient or is_doctor):
             return None

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import VideoCallRoom from './VideoCallRoom';
@@ -16,45 +16,8 @@ interface VideoCallModalProps {
 
 export default function VideoCallModal({ isOpen, onClose, appointmentId, otherUserName = 'Doctor' }: VideoCallModalProps) {
   const { activeCall, isRinging, isInitializing, leaveCall } = useVideoCall();
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  // Play outgoing call sound when ringing
-  useEffect(() => {
-    if (isOpen && isRinging && typeof window !== 'undefined') {
-      // Create audio element for outgoing call sound
-      audioRef.current = new Audio('/sounds/outgoing-call.mp3');
-      audioRef.current.loop = true;
-      audioRef.current.volume = 0.5;
-      
-      // Try to play (may be blocked by browser autoplay policy)
-      audioRef.current.play().catch((e) => {
-        console.log('Audio play blocked:', e);
-      });
-
-      return () => {
-        if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current.currentTime = 0;
-          audioRef.current = null;
-        }
-      };
-    }
-  }, [isOpen, isRinging]);
-
-  // Stop audio when call is connected
-  useEffect(() => {
-    if (activeCall && !isRinging && audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-  }, [activeCall, isRinging]);
 
   const handleClose = async () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    
     if (activeCall) {
       await leaveCall();
     }
@@ -65,7 +28,7 @@ export default function VideoCallModal({ isOpen, onClose, appointmentId, otherUs
   if (isInitializing) {
     return (
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => {}}>
+        <Dialog as="div" className="relative z-50" onClose={() => { }}>
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -111,7 +74,7 @@ export default function VideoCallModal({ isOpen, onClose, appointmentId, otherUs
   if (isRinging && activeCall) {
     return (
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => {}}>
+        <Dialog as="div" className="relative z-50" onClose={() => { }}>
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -179,7 +142,7 @@ export default function VideoCallModal({ isOpen, onClose, appointmentId, otherUs
   if (activeCall) {
     return (
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => {}}>
+        <Dialog as="div" className="relative z-50" onClose={() => { }}>
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -217,7 +180,7 @@ export default function VideoCallModal({ isOpen, onClose, appointmentId, otherUs
   // Should not reach here, but show error state just in case
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={() => {}}>
+      <Dialog as="div" className="relative z-50" onClose={() => { }}>
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm" />
         <div className="fixed inset-0 overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4 text-center">
