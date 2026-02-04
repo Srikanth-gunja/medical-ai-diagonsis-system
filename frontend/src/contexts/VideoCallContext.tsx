@@ -89,8 +89,9 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   const [isRinging, setIsRinging] = useState(false);
   const [isClientReady, setIsClientReady] = useState(false);
   const [pendingAppointmentId, setPendingAppointmentId] = useState<string | null>(null);
+  const initializingRef = React.useRef(false);
 
-  // Initialize client when user is authenticated
+  // Initialize client immediately when user is authenticated (on app load)
   useEffect(() => {
     if (!user) {
       if (client) {
@@ -98,20 +99,28 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         setClient(null);
         setIsClientReady(false);
       }
+      initializingRef.current = false;
+      return;
+    }
+
+    // Prevent double initialization
+    if (client || initializingRef.current) {
       return;
     }
 
     const initClient = async () => {
+      initializingRef.current = true;
       try {
-        console.log('Initializing video client for user:', user.email);
+        console.log('🎥 Initializing video client for user:', user.email);
         const tokenData = await videoCallsApi.getToken();
 
         if (!tokenData.api_key || !tokenData.token) {
-          console.error('Failed to get video call token configuration - missing api_key or token');
+          console.error('❌ Failed to get video call token - missing api_key or token');
+          initializingRef.current = false;
           return;
         }
 
-        console.log('Got token data, creating StreamVideoClient...');
+        console.log('✅ Got token data, creating StreamVideoClient...');
         const streamUser: User = {
           id: tokenData.user_id,
           name: tokenData.user_name || user.email,
@@ -126,16 +135,16 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
 
         setClient(newClient);
         setIsClientReady(true);
-        console.log('Video client initialized successfully');
+        console.log('✅ Video client initialized successfully - ready for calls');
       } catch (error) {
-        console.error('Failed to initialize video client:', error);
+        console.error('❌ Failed to initialize video client:', error);
         setIsClientReady(false);
+        initializingRef.current = false;
       }
     };
 
-    if (!client) {
-      initClient();
-    }
+    // Initialize immediately on user login
+    initClient();
 
     return () => {
       // Cleanup handled by dependency change logic or unmount
