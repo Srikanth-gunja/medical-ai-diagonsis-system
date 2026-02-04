@@ -158,9 +158,9 @@ export default function DoctorDashboardInteractive() {
   const [videoCallAppointmentId, setVideoCallAppointmentId] = useState<string | null>(null);
   const [videoCallPatientName, setVideoCallPatientName] = useState<string>('Patient');
   const [videoCallPatientId, setVideoCallPatientId] = useState<string>('');
-  
+
   // Video call context for ringing support
-  const { incomingCall, initializeCall } = useVideoCall();
+  const { incomingCall, initializeCall, isClientReady } = useVideoCall();
 
   // Data states
   const [doctorProfile, setDoctorProfile] = useState<ApiDoctor | null>(null);
@@ -517,15 +517,21 @@ export default function DoctorDashboardInteractive() {
 
   const handleJoinVideoCall = async (id: string) => {
     if (!isHydrated) return;
-    
+
+    // Check if video client is ready
+    if (!isClientReady) {
+      alert('Video call service is still initializing. Please wait a moment and try again.');
+      return;
+    }
+
     // Find the appointment to get patient details for UI
     const appointment = appointments.find((a) => a.id === id);
     if (!appointment) return;
-    
+
     setVideoCallAppointmentId(id);
     setVideoCallPatientName(appointment.patientName);
     setIsVideoCallModalOpen(true);
-    
+
     try {
       // Initialize ringing call - backend handles user creation
       await initializeCall(id);
@@ -991,7 +997,7 @@ export default function DoctorDashboardInteractive() {
       {/* Incoming Call Modal */}
       <IncomingCallModal
         isOpen={!!incomingCall}
-        onClose={() => {}}
+        onClose={() => { }}
       />
     </div>
   );

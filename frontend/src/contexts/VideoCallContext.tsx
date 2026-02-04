@@ -24,6 +24,7 @@ interface VideoCallContextType {
   incomingCall: IncomingCall | null;
   isInitializing: boolean;
   isRinging: boolean;
+  isClientReady: boolean;
   initializeCall: (appointmentId: string) => Promise<void>;
   joinCall: (call: Call) => Promise<void>;
   acceptIncomingCall: () => Promise<void>;
@@ -86,6 +87,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const [isRinging, setIsRinging] = useState(false);
+  const [isClientReady, setIsClientReady] = useState(false);
   const [pendingAppointmentId, setPendingAppointmentId] = useState<string | null>(null);
 
   // Initialize client when user is authenticated
@@ -94,19 +96,22 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       if (client) {
         client.disconnectUser();
         setClient(null);
+        setIsClientReady(false);
       }
       return;
     }
 
     const initClient = async () => {
       try {
+        console.log('Initializing video client for user:', user.email);
         const tokenData = await videoCallsApi.getToken();
 
         if (!tokenData.api_key || !tokenData.token) {
-          console.error('Failed to get video call token configuration');
+          console.error('Failed to get video call token configuration - missing api_key or token');
           return;
         }
 
+        console.log('Got token data, creating StreamVideoClient...');
         const streamUser: User = {
           id: tokenData.user_id,
           name: tokenData.user_name || user.email,
@@ -120,8 +125,11 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         });
 
         setClient(newClient);
+        setIsClientReady(true);
+        console.log('Video client initialized successfully');
       } catch (error) {
         console.error('Failed to initialize video client:', error);
+        setIsClientReady(false);
       }
     };
 
@@ -151,7 +159,9 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const initializeCall = async (appointmentId: string): Promise<void> => {
-    if (!client) throw new Error('Video client not initialized');
+    if (!client || !isClientReady) {
+      throw new Error('Video client not initialized. Please wait a moment and try again.');
+    }
 
     setIsInitializing(true);
     setPendingAppointmentId(appointmentId);
@@ -243,29 +253,39 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Context value - always provide it so hooks work
+  const contextValue: VideoCallContextType = {
+    client,
+    activeCall,
+    incomingCall,
+    isInitializing,
+    isRinging,
+    isClientReady,
+    initializeCall,
+    joinCall,
+    acceptIncomingCall,
+    rejectIncomingCall,
+    leaveCall,
+    endCall,
+  };
+
+  // Only render StreamVideo when client is ready
+  // This prevents the "client is not initialized" error from Stream SDK
+  if (!client || !isClientReady) {
+    return (
+      <VideoCallContext.Provider value={contextValue}>
+        {children}
+      </VideoCallContext.Provider>
+    );
+  }
+
   return (
-    <VideoCallContext.Provider
-      value={{
-        client,
-        activeCall,
-        incomingCall,
-        isInitializing,
-        isRinging,
-        initializeCall,
-        joinCall,
-        acceptIncomingCall,
-        rejectIncomingCall,
-        leaveCall,
-        endCall,
-      }}
-    >
-      <StreamVideo client={client!}>
-        {client && (
-          <CallWatcherWrapper
-            onIncomingCall={handleIncomingCall}
-            onOutgoingCallEnded={handleOutgoingCallEnded}
-          />
-        )}
+    <VideoCallContext.Provider value={contextValue}>
+      <StreamVideo client={client}>
+        <CallWatcherWrapper
+          onIncomingCall={handleIncomingCall}
+          onOutgoingCallEnded={handleOutgoingCallEnded}
+        />
         {children}
       </StreamVideo>
     </VideoCallContext.Provider>

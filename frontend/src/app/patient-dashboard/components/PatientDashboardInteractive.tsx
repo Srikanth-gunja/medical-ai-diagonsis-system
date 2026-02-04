@@ -83,9 +83,9 @@ const PatientDashboardInteractive = () => {
   const [videoCallAppointmentId, setVideoCallAppointmentId] = useState<string | null>(null);
   const [videoCallDoctorName, setVideoCallDoctorName] = useState<string>('Doctor');
   const [videoCallDoctorId, setVideoCallDoctorId] = useState<string>('');
-  
+
   // Video call context for ringing support
-  const { incomingCall, initializeCall } = useVideoCall();
+  const { incomingCall, initializeCall, isClientReady } = useVideoCall();
 
   // Data states
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -247,15 +247,21 @@ const PatientDashboardInteractive = () => {
 
   const handleJoinAppointment = async (id: string) => {
     if (!isHydrated) return;
-    
+
+    // Check if video client is ready
+    if (!isClientReady) {
+      alert('Video call service is still initializing. Please wait a moment and try again.');
+      return;
+    }
+
     // Find the appointment to get doctor details for UI
     const appointment = appointments.find((a) => a.id === id);
     if (!appointment) return;
-    
+
     setVideoCallAppointmentId(id);
     setVideoCallDoctorName(appointment.doctorName);
     setIsVideoCallModalOpen(true);
-    
+
     try {
       // Initialize ringing call - backend handles user creation
       await initializeCall(id);
@@ -464,11 +470,10 @@ const PatientDashboardInteractive = () => {
                 <div className="flex items-center gap-2 border-b border-border mb-6">
                   <button
                     onClick={() => setAppointmentTab('upcoming')}
-                    className={`pb-3 px-4 font-medium transition-base relative ${
-                      appointmentTab === 'upcoming'
-                        ? 'text-primary'
-                        : 'text-text-secondary hover:text-text-primary'
-                    }`}
+                    className={`pb-3 px-4 font-medium transition-base relative ${appointmentTab === 'upcoming'
+                      ? 'text-primary'
+                      : 'text-text-secondary hover:text-text-primary'
+                      }`}
                   >
                     Upcoming
                     {appointments.filter((a) => a.status === 'confirmed').length > 0 && (
@@ -482,11 +487,10 @@ const PatientDashboardInteractive = () => {
                   </button>
                   <button
                     onClick={() => setAppointmentTab('pending')}
-                    className={`pb-3 px-4 font-medium transition-base relative ${
-                      appointmentTab === 'pending'
-                        ? 'text-primary'
-                        : 'text-text-secondary hover:text-text-primary'
-                    }`}
+                    className={`pb-3 px-4 font-medium transition-base relative ${appointmentTab === 'pending'
+                      ? 'text-primary'
+                      : 'text-text-secondary hover:text-text-primary'
+                      }`}
                   >
                     Pending
                     {appointments.filter((a) => a.status === 'pending').length > 0 && (
@@ -500,11 +504,10 @@ const PatientDashboardInteractive = () => {
                   </button>
                   <button
                     onClick={() => setAppointmentTab('completed')}
-                    className={`pb-3 px-4 font-medium transition-base relative ${
-                      appointmentTab === 'completed'
-                        ? 'text-primary'
-                        : 'text-text-secondary hover:text-text-primary'
-                    }`}
+                    className={`pb-3 px-4 font-medium transition-base relative ${appointmentTab === 'completed'
+                      ? 'text-primary'
+                      : 'text-text-secondary hover:text-text-primary'
+                      }`}
                   >
                     Completed
                     {appointments.filter((a) => a.status === 'completed').length > 0 && (
@@ -518,11 +521,10 @@ const PatientDashboardInteractive = () => {
                   </button>
                   <button
                     onClick={() => setAppointmentTab('rejected')}
-                    className={`pb-3 px-4 font-medium transition-base relative ${
-                      appointmentTab === 'rejected'
-                        ? 'text-primary'
-                        : 'text-text-secondary hover:text-text-primary'
-                    }`}
+                    className={`pb-3 px-4 font-medium transition-base relative ${appointmentTab === 'rejected'
+                      ? 'text-primary'
+                      : 'text-text-secondary hover:text-text-primary'
+                      }`}
                   >
                     Rejected
                     {appointments.filter((a) => a.status === 'rejected').length > 0 && (
@@ -731,16 +733,16 @@ const PatientDashboardInteractive = () => {
                 activities.length > 0
                   ? activities
                   : [
-                      {
-                        id: '1',
-                        type: 'appointment' as const,
-                        title: 'Welcome!',
-                        description: 'Start by booking your first appointment',
-                        timestamp: 'Just now',
-                        icon: 'SparklesIcon',
-                        color: 'bg-primary',
-                      },
-                    ]
+                    {
+                      id: '1',
+                      type: 'appointment' as const,
+                      title: 'Welcome!',
+                      description: 'Start by booking your first appointment',
+                      timestamp: 'Just now',
+                      icon: 'SparklesIcon',
+                      color: 'bg-primary',
+                    },
+                  ]
               }
             />
           </div>
@@ -805,7 +807,7 @@ const PatientDashboardInteractive = () => {
       {/* Incoming Call Modal */}
       <IncomingCallModal
         isOpen={!!incomingCall}
-        onClose={() => {}}
+        onClose={() => { }}
       />
     </>
   );
