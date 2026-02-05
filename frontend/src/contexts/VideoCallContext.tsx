@@ -167,14 +167,30 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const clientRef = useRef<StreamVideoClient | null>(null);
   const mountedRef = useRef(true);
+  // Refs to avoid stale closure issues in timeouts
+  const isRingingRef = useRef(false);
+  const isConnectingRef = useRef(false);
+  const activeCallRef = useRef<Call | null>(null);
 
   const streamMock = typeof window !== 'undefined' ? (window as any).__STREAM_MOCK__ : null;
   const isMockMode = !!streamMock;
 
-  // Keep clientRef in sync
+  // Keep refs in sync with state to avoid stale closures in timeouts
   useEffect(() => {
     clientRef.current = client;
   }, [client]);
+
+  useEffect(() => {
+    isRingingRef.current = isRinging;
+  }, [isRinging]);
+
+  useEffect(() => {
+    isConnectingRef.current = isConnecting;
+  }, [isConnecting]);
+
+  useEffect(() => {
+    activeCallRef.current = activeCall;
+  }, [activeCall]);
 
   // Clear all timers
   const clearAllTimers = useCallback(() => {
@@ -287,7 +303,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
             streamMock?.client ||
             ({
               call: () => streamMock?.call || null,
-              disconnectUser: () => {},
+              disconnectUser: () => { },
             } as unknown as StreamVideoClient);
           if (mountedRef.current) {
             setClient(mockClient);
@@ -463,7 +479,8 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
 
     // Set up connection timeout (WhatsApp-like 30s timeout)
     connectionTimeoutRef.current = setTimeout(() => {
-      if (isConnecting && !activeCall) {
+      // Use refs to get current state values (avoid stale closure)
+      if (isConnectingRef.current && !activeCallRef.current) {
         logger.error('❌ Connection timeout - call took too long to establish');
         setCallError('Connection timed out. Please check your internet and try again.');
         setIsConnecting(false);
@@ -541,16 +558,18 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
 
       // Set up ringing timeout (WhatsApp-like 60s auto-cancel)
       ringingTimeoutRef.current = setTimeout(async () => {
-        if (isRinging && activeCall) {
+        // Use refs to get current state values (avoid stale closure)
+        const currentCall = activeCallRef.current;
+        if (isRingingRef.current && currentCall) {
           logger.log('⏰ Ringing timeout - other party did not answer');
           setCallError('No answer. The other party did not respond.');
           try {
-            await call.endCall();
+            await currentCall.endCall();
           } catch (e) {
             logger.error('Error ending timed-out call:', e);
           }
           try {
-            await call.leave();
+            await currentCall.leave();
           } catch (e) {
             logger.error('Error leaving timed-out call:', e);
           }

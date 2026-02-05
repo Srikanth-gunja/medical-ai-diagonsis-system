@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { useVideoCall } from '../../contexts/VideoCallContext';
@@ -24,15 +24,30 @@ export default function IncomingCallModal({ isOpen, onClose }: IncomingCallModal
   const [isAccepting, setIsAccepting] = useState(false);
   const [acceptError, setAcceptError] = useState<string | null>(null);
   const [ringingTime, setRingingTime] = useState(0);
+  const ringingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Track ringing duration
+  // Track ringing duration with proper cleanup using ref
   useEffect(() => {
     if (incomingCall && !isConnecting && !isAccepting) {
-      const timer = setInterval(() => {
+      // Start timer
+      ringingTimerRef.current = setInterval(() => {
         setRingingTime(prev => prev + 1);
       }, 1000);
-      return () => clearInterval(timer);
+    } else {
+      // Clear timer when not in ringing state
+      if (ringingTimerRef.current) {
+        clearInterval(ringingTimerRef.current);
+        ringingTimerRef.current = null;
+      }
     }
+
+    // Cleanup on unmount
+    return () => {
+      if (ringingTimerRef.current) {
+        clearInterval(ringingTimerRef.current);
+        ringingTimerRef.current = null;
+      }
+    };
   }, [incomingCall, isConnecting, isAccepting]);
 
   // Reset ringing time when incoming call changes
@@ -90,7 +105,7 @@ export default function IncomingCallModal({ isOpen, onClose }: IncomingCallModal
   if (isConnecting || isAccepting) {
     return (
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-[100]" onClose={() => {}}>
+        <Dialog as="div" className="relative z-[100]" onClose={() => { }}>
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -174,7 +189,7 @@ export default function IncomingCallModal({ isOpen, onClose }: IncomingCallModal
 
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-[100]" onClose={() => {}}>
+      <Dialog as="div" className="relative z-[100]" onClose={() => { }}>
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-300"
@@ -221,7 +236,12 @@ export default function IncomingCallModal({ isOpen, onClose }: IncomingCallModal
                 <p className="text-lg text-gray-300 mb-1">
                   From: <span className="font-semibold text-white">{incomingCall.callerName}</span>
                 </p>
-                <p className="text-sm text-gray-400 mb-8">Appointment consultation</p>
+                <p className="text-sm text-gray-400 mb-2">Appointment consultation</p>
+                {/* Display ringing time */}
+                <div className="flex items-center justify-center gap-1 text-sm text-gray-500 mb-6">
+                  <ClockIcon className="w-4 h-4" />
+                  <span>Ringing for {formatElapsedTime(ringingTime)}</span>
+                </div>
 
                 {acceptError && (
                   <div className="mb-6 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">

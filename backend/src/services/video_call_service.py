@@ -90,7 +90,7 @@ class VideoCallService:
         db = get_db()
         try:
             appt_oid = ObjectId(appointment_id)
-        except:
+        except Exception:
             return None
 
         appointment = db[APPOINTMENTS_COLLECTION].find_one({"_id": appt_oid})
@@ -118,6 +118,48 @@ class VideoCallService:
         # Ideally only confirmed, but for testing pending might be useful
         if appointment.get("status") not in ["confirmed", "pending", "in_progress"]:
             return None
+
+        # Validate time window - allow calls 30 mins before to 30 mins after appointment
+        # Skip time validation for in_progress appointments (already started)
+        if appointment.get("status") != "in_progress":
+            try:
+                appt_date_str = appointment.get("date")
+                appt_time_str = appointment.get("time")
+                
+                if appt_date_str and appt_time_str:
+                    # Parse date
+                    appt_date = datetime.strptime(appt_date_str, "%Y-%m-%d").date()
+                    
+                    # Parse time (handles formats like "10:00 AM", "10:00AM", "10:00")
+                    time_str = appt_time_str.strip().upper()
+                    appt_time = None
+                    
+                    # Try parsing with AM/PM first
+                    for fmt in ["%I:%M %p", "%I:%M%p", "%H:%M"]:
+                        try:
+                            appt_time = datetime.strptime(time_str, fmt).time()
+                            break
+                        except ValueError:
+                            continue
+                    
+                    if appt_time:
+                        # Combine date and time
+                        appt_datetime = datetime.combine(appt_date, appt_time)
+                        now = datetime.utcnow()
+                        
+                        # Grace period: 30 minutes before to 30 minutes after
+                        grace_before = timedelta(minutes=30)
+                        grace_after = timedelta(minutes=30)
+                        
+                        earliest_allowed = appt_datetime - grace_before
+                        latest_allowed = appt_datetime + grace_after
+                        
+                        if now < earliest_allowed or now > latest_allowed:
+                            print(f"Video call access denied - outside time window. Now: {now}, Appointment: {appt_datetime}")
+                            return None
+            except Exception as e:
+                # If parsing fails, allow the call (don't block due to parsing issues)
+                print(f"Warning: Could not validate appointment time window: {e}")
 
         return appointment
 

@@ -89,7 +89,6 @@ const PatientDashboardInteractive = () => {
   const [isVideoCallModalOpen, setIsVideoCallModalOpen] = useState(false);
   const [videoCallAppointmentId, setVideoCallAppointmentId] = useState<string | null>(null);
   const [videoCallDoctorName, setVideoCallDoctorName] = useState<string>('Doctor');
-  const [videoCallDoctorId, setVideoCallDoctorId] = useState<string>('');
 
   // Video call context for ringing support
   const { incomingCall, initializeCall, isClientReady } = useVideoCall();
@@ -342,15 +341,15 @@ const PatientDashboardInteractive = () => {
 
     setVideoCallAppointmentId(id);
     setVideoCallDoctorName(appointment.doctorName);
-    setIsVideoCallModalOpen(true);
 
     try {
-      // Initialize ringing call - backend handles user creation
+      // Initialize ringing call first - backend handles user creation
       await initializeCall(id);
+      // Only open modal after successful initialization
+      setIsVideoCallModalOpen(true);
     } catch (error) {
       logger.error('Failed to start video call:', error);
       alert('Failed to start video call. Please try again.');
-      setIsVideoCallModalOpen(false);
     }
   };
 
@@ -495,28 +494,28 @@ const PatientDashboardInteractive = () => {
   }), [appointments]);
 
   // Memoized filtered appointments for each tab
-  const confirmedAppointments = useMemo(() => 
+  const confirmedAppointments = useMemo(() =>
     appointments.filter((a) => a.status === 'confirmed' || a.status === 'in_progress'),
     [appointments]
   );
-  
-  const pendingAppointmentsList = useMemo(() => 
+
+  const pendingAppointmentsList = useMemo(() =>
     appointments.filter((a) => a.status === 'pending'),
     [appointments]
   );
-  
-  const completedAppointmentsList = useMemo(() => 
+
+  const completedAppointmentsList = useMemo(() =>
     appointments.filter((a) => a.status === 'completed' || a.status === 'no_show'),
     [appointments]
   );
-  
-  const rejectedAppointmentsList = useMemo(() => 
+
+  const rejectedAppointmentsList = useMemo(() =>
     appointments.filter((a) => a.status === 'rejected'),
     [appointments]
   );
 
   // Filter appointments for upcoming section: confirmed or pending - memoized
-  const upcomingAppointments = useMemo(() => 
+  const upcomingAppointments = useMemo(() =>
     appointments.filter(
       (a) => a.status === 'confirmed' || a.status === 'pending' || a.status === 'in_progress'
     ),
@@ -651,16 +650,16 @@ const PatientDashboardInteractive = () => {
                     <>
                       {confirmedAppointments.length > 0 ? (
                         confirmedAppointments.map((appointment) => (
-                            <UpcomingAppointmentCard
-                              key={appointment.id}
-                              appointment={appointment}
-                              onReschedule={handleReschedule}
-                              onJoin={handleJoinAppointment}
-                              onCancel={handleCancelAppointment}
-                              onChat={handleChat}
-                              onReview={handleReview}
-                            />
-                          ))
+                          <UpcomingAppointmentCard
+                            key={appointment.id}
+                            appointment={appointment}
+                            onReschedule={handleReschedule}
+                            onJoin={handleJoinAppointment}
+                            onCancel={handleCancelAppointment}
+                            onChat={handleChat}
+                            onReview={handleReview}
+                          />
+                        ))
                       ) : (
                         <div className="text-center py-12">
                           <Icon
@@ -681,16 +680,16 @@ const PatientDashboardInteractive = () => {
                     <>
                       {pendingAppointmentsList.length > 0 ? (
                         pendingAppointmentsList.map((appointment) => (
-                            <UpcomingAppointmentCard
-                              key={appointment.id}
-                              appointment={appointment}
-                              onReschedule={handleReschedule}
-                              onJoin={handleJoinAppointment}
-                              onCancel={handleCancelAppointment}
-                              onChat={handleChat}
-                              onReview={handleReview}
-                            />
-                          ))
+                          <UpcomingAppointmentCard
+                            key={appointment.id}
+                            appointment={appointment}
+                            onReschedule={handleReschedule}
+                            onJoin={handleJoinAppointment}
+                            onCancel={handleCancelAppointment}
+                            onChat={handleChat}
+                            onReview={handleReview}
+                          />
+                        ))
                       ) : (
                         <div className="text-center py-12">
                           <Icon
@@ -711,16 +710,16 @@ const PatientDashboardInteractive = () => {
                     <>
                       {completedAppointmentsList.length > 0 ? (
                         completedAppointmentsList.map((appointment) => (
-                            <UpcomingAppointmentCard
-                              key={appointment.id}
-                              appointment={appointment}
-                              onReschedule={handleReschedule}
-                              onJoin={handleJoinAppointment}
-                              onCancel={handleCancelAppointment}
-                              onChat={handleChat}
-                              onReview={handleReview}
-                            />
-                          ))
+                          <UpcomingAppointmentCard
+                            key={appointment.id}
+                            appointment={appointment}
+                            onReschedule={handleReschedule}
+                            onJoin={handleJoinAppointment}
+                            onCancel={handleCancelAppointment}
+                            onChat={handleChat}
+                            onReview={handleReview}
+                          />
+                        ))
                       ) : (
                         <div className="text-center py-12">
                           <Icon
@@ -741,16 +740,16 @@ const PatientDashboardInteractive = () => {
                     <>
                       {rejectedAppointmentsList.length > 0 ? (
                         rejectedAppointmentsList.map((appointment) => (
-                            <UpcomingAppointmentCard
-                              key={appointment.id}
-                              appointment={appointment}
-                              onReschedule={handleReschedule}
-                              onJoin={handleJoinAppointment}
-                              onCancel={handleCancelAppointment}
-                              onChat={handleChat}
-                              onReview={handleReview}
-                            />
-                          ))
+                          <UpcomingAppointmentCard
+                            key={appointment.id}
+                            appointment={appointment}
+                            onReschedule={handleReschedule}
+                            onJoin={handleJoinAppointment}
+                            onCancel={handleCancelAppointment}
+                            onChat={handleChat}
+                            onReview={handleReview}
+                          />
+                        ))
                       ) : (
                         <div className="text-center py-12">
                           <Icon

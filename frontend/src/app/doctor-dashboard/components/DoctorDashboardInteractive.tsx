@@ -223,7 +223,6 @@ export default function DoctorDashboardInteractive() {
   const [isVideoCallModalOpen, setIsVideoCallModalOpen] = useState(false);
   const [videoCallAppointmentId, setVideoCallAppointmentId] = useState<string | null>(null);
   const [videoCallPatientName, setVideoCallPatientName] = useState<string>('Patient');
-  const [videoCallPatientId, setVideoCallPatientId] = useState<string>('');
 
   // Video call context for ringing support
   const { incomingCall, initializeCall, isClientReady } = useVideoCall();
@@ -709,11 +708,12 @@ export default function DoctorDashboardInteractive() {
 
     setVideoCallAppointmentId(id);
     setVideoCallPatientName(appointment.patientName);
-    setIsVideoCallModalOpen(true);
 
     try {
-      // Initialize ringing call - backend handles user creation
+      // Initialize ringing call first - backend handles user creation
       await initializeCall(id);
+      // Only open modal after successful initialization
+      setIsVideoCallModalOpen(true);
     } catch (error) {
       logger.error('Failed to start video call:', error);
       showToast({
@@ -721,7 +721,6 @@ export default function DoctorDashboardInteractive() {
         title: 'Video Call Failed',
         message: 'Failed to start video call. Please try again.',
       });
-      setIsVideoCallModalOpen(false);
     }
   };
 
@@ -1108,11 +1107,10 @@ export default function DoctorDashboardInteractive() {
                         </div>
                       </div>
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium border ${
-                          appointment.status === 'No Show'
+                        className={`px-3 py-1 rounded-full text-xs font-medium border ${appointment.status === 'No Show'
                             ? 'bg-warning/10 text-warning border-warning/20'
                             : 'bg-primary/10 text-primary border-primary/20'
-                        }`}
+                          }`}
                       >
                         {appointment.status}
                       </span>
@@ -1186,7 +1184,7 @@ export default function DoctorDashboardInteractive() {
       )}
 
       {/* Incoming Call Modal */}
-      <IncomingCallModal isOpen={!!incomingCall} onClose={() => {}} />
+      <IncomingCallModal isOpen={!!incomingCall} onClose={() => { }} />
 
       {/* Confirmation Dialog */}
       {ConfirmDialogComponent}

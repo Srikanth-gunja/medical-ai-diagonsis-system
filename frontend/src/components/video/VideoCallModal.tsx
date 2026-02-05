@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import VideoCallRoom from './VideoCallRoom';
@@ -40,10 +40,20 @@ export default function VideoCallModal({
 
   const [isStartingCall, setIsStartingCall] = useState(false);
   const [startError, setStartError] = useState<string | null>(null);
+  // Ref to prevent double-initialization
+  const hasStartedCallRef = useRef(false);
 
-  // Auto-start call when modal opens and client is ready
+  // Reset ref when modal closes
   useEffect(() => {
-    if (isOpen && isClientReady && !activeCall && !isInitializing && !isConnecting && !isRinging && !isStartingCall) {
+    if (!isOpen) {
+      hasStartedCallRef.current = false;
+    }
+  }, [isOpen]);
+
+  // Auto-start call when modal opens and client is ready (only if not already started)
+  useEffect(() => {
+    if (isOpen && isClientReady && !activeCall && !isInitializing && !isConnecting && !isRinging && !isStartingCall && !hasStartedCallRef.current) {
+      hasStartedCallRef.current = true;
       const startCall = async () => {
         setIsStartingCall(true);
         setStartError(null);
@@ -107,7 +117,7 @@ export default function VideoCallModal({
   if (isClientInitializing || (!isClientReady && !callError && !startError)) {
     return (
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => {}}>
+        <Dialog as="div" className="relative z-50" onClose={() => { }}>
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -172,7 +182,7 @@ export default function VideoCallModal({
   if (isInitializing || isConnecting) {
     return (
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => {}}>
+        <Dialog as="div" className="relative z-50" onClose={() => { }}>
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -263,7 +273,7 @@ export default function VideoCallModal({
   if (isRinging && activeCall) {
     return (
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => {}}>
+        <Dialog as="div" className="relative z-50" onClose={() => { }}>
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -341,7 +351,7 @@ export default function VideoCallModal({
   if (activeCall) {
     return (
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => {}}>
+        <Dialog as="div" className="relative z-50" onClose={() => { }}>
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -381,42 +391,62 @@ export default function VideoCallModal({
   if (displayError && !activeCall && !isRinging) {
     return (
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => {}}>
-          <div className="fixed inset-0 bg-black/90 backdrop-blur-sm" />
+        <Dialog as="div" className="relative z-50" onClose={() => { }}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black/90 backdrop-blur-sm" />
+          </Transition.Child>
           <div className="fixed inset-0 overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4 text-center">
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-gradient-to-b from-gray-900 to-gray-800 p-8 text-center align-middle shadow-xl transition-all">
-                {/* Error icon */}
-                <div className="relative mb-6">
-                  <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mx-auto">
-                    <XMarkIcon className="w-10 h-10 text-red-500" />
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-gradient-to-b from-gray-900 to-gray-800 p-8 text-center align-middle shadow-xl transition-all">
+                  {/* Error icon */}
+                  <div className="relative mb-6">
+                    <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mx-auto">
+                      <XMarkIcon className="w-10 h-10 text-red-500" />
+                    </div>
                   </div>
-                </div>
 
-                <Dialog.Title as="h3" className="text-xl font-bold text-white mb-2">
-                  Call Failed
-                </Dialog.Title>
-                <p className="text-red-300 mb-6">
-                  {displayError}
-                </p>
+                  <Dialog.Title as="h3" className="text-xl font-bold text-white mb-2">
+                    Call Failed
+                  </Dialog.Title>
+                  <p className="text-red-300 mb-6">
+                    {displayError}
+                  </p>
 
-                <div className="flex items-center justify-center gap-4">
-                  <button
-                    onClick={handleClose}
-                    className="flex items-center justify-center gap-2 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-full text-white font-medium transition-colors"
-                  >
-                    <XMarkIcon className="w-5 h-5" />
-                    Close
-                  </button>
-                  <button
-                    onClick={handleRetry}
-                    className="flex items-center justify-center gap-2 px-6 py-3 bg-primary hover:bg-primary/90 rounded-full text-white font-medium transition-colors"
-                  >
-                    <ArrowPathIcon className="w-5 h-5" />
-                    Try Again
-                  </button>
-                </div>
-              </Dialog.Panel>
+                  <div className="flex items-center justify-center gap-4">
+                    <button
+                      onClick={handleClose}
+                      className="flex items-center justify-center gap-2 px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-full text-white font-medium transition-colors"
+                    >
+                      <XMarkIcon className="w-5 h-5" />
+                      Close
+                    </button>
+                    <button
+                      onClick={handleRetry}
+                      className="flex items-center justify-center gap-2 px-6 py-3 bg-primary hover:bg-primary/90 rounded-full text-white font-medium transition-colors"
+                    >
+                      <ArrowPathIcon className="w-5 h-5" />
+                      Try Again
+                    </button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
             </div>
           </div>
         </Dialog>
@@ -427,7 +457,7 @@ export default function VideoCallModal({
   // Should not reach here, but show fallback
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={() => {}}>
+      <Dialog as="div" className="relative z-50" onClose={() => { }}>
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm" />
         <div className="fixed inset-0 overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4 text-center">
