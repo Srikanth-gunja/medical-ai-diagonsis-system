@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthenticatedHeader from '@/components/common/AuthenticatedHeader';
 import NavigationBreadcrumbs from '@/components/common/NavigationBreadcrumbs';
@@ -23,6 +23,9 @@ import VideoCallModal from '@/components/video/VideoCallModal';
 import IncomingCallModal from '@/components/video/IncomingCallModal';
 import Icon from '@/components/ui/AppIcon';
 import { useVideoCall } from '@/contexts/VideoCallContext';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { DashboardSkeleton, AppointmentCardSkeleton, StatsCardSkeleton } from '@/components/ui/Skeletons';
 import {
   doctorsApi,
   appointmentsApi,
@@ -37,6 +40,7 @@ import {
   type Appointment as ApiAppointment,
   type Doctor as ApiDoctor,
 } from '@/lib/api';
+import { logger } from '@/lib/logger';
 
 interface Appointment {
   id: string;
@@ -220,6 +224,10 @@ export default function DoctorDashboardInteractive() {
   // Video call context for ringing support
   const { incomingCall, initializeCall, isClientReady } = useVideoCall();
 
+  // Toast and confirmation dialogs
+  const { showToast } = useToast();
+  const { confirm, ConfirmDialogComponent } = useConfirm();
+
   // Data states
   const [doctorProfile, setDoctorProfile] = useState<ApiDoctor | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -249,7 +257,7 @@ export default function DoctorDashboardInteractive() {
         const profile = await doctorsApi.getProfile();
         setDoctorProfile(profile);
       } catch (err) {
-        console.error('Failed to fetch doctor profile:', err);
+        logger.error('Failed to fetch doctor profile:', err);
       }
 
       // Fetch schedule to get slot duration
@@ -259,7 +267,7 @@ export default function DoctorDashboardInteractive() {
         durationMinutes = schedule?.slotDuration ?? slotDuration;
         setSlotDuration(durationMinutes);
       } catch (err) {
-        console.error('Failed to fetch schedule:', err);
+        logger.error('Failed to fetch schedule:', err);
       }
 
       // Fetch appointments
@@ -426,7 +434,7 @@ export default function DoctorDashboardInteractive() {
           setNextAppointment(null);
         }
       } catch (err) {
-        console.error('Failed to fetch appointments:', err);
+        logger.error('Failed to fetch appointments:', err);
       }
 
       // Fetch patients directly
@@ -447,7 +455,7 @@ export default function DoctorDashboardInteractive() {
         }));
         setPatients(formattedPatients);
       } catch (err) {
-        console.error('Failed to fetch patients:', err);
+        logger.error('Failed to fetch patients:', err);
       }
 
       // Fetch analytics
@@ -455,7 +463,7 @@ export default function DoctorDashboardInteractive() {
         const analyticsData = await analyticsApi.getDoctor();
         setAnalytics(analyticsData);
       } catch (err) {
-        console.error('Failed to fetch analytics:', err);
+        logger.error('Failed to fetch analytics:', err);
       }
 
       // Fetch chart data
@@ -463,7 +471,7 @@ export default function DoctorDashboardInteractive() {
         const chartDataResp = await analyticsApi.getDoctorChartData();
         setChartData(chartDataResp);
       } catch (err) {
-        console.error('Failed to fetch chart data:', err);
+        logger.error('Failed to fetch chart data:', err);
       }
 
       // Fetch notification count
@@ -471,10 +479,10 @@ export default function DoctorDashboardInteractive() {
         const countData = await notificationsApi.getUnreadCount();
         setNotificationCount(countData.count);
       } catch (err) {
-        console.error('Failed to fetch notification count:', err);
+        logger.error('Failed to fetch notification count:', err);
       }
     } catch (err) {
-      console.error('Dashboard error:', err);
+      logger.error('Dashboard error:', err);
     } finally {
       if (!silent) {
         setIsLoading(false);
@@ -507,7 +515,7 @@ export default function DoctorDashboardInteractive() {
         const countData = await notificationsApi.getUnreadCount();
         setNotificationCount(countData.count);
       } catch (err) {
-        console.error('Failed to poll notification count:', err);
+        logger.error('Failed to poll notification count:', err);
       }
     }, 30000);
 
@@ -530,7 +538,7 @@ export default function DoctorDashboardInteractive() {
     eventSource.addEventListener('messages.updated', handleUpdate);
     eventSource.addEventListener('message', handleUpdate);
     eventSource.onerror = (err) => {
-      console.error('SSE connection error (doctor dashboard):', err);
+      logger.error('SSE connection error (doctor dashboard):', err);
     };
 
     return () => {
@@ -584,7 +592,7 @@ export default function DoctorDashboardInteractive() {
       await appointmentsApi.updateStatus(id, 'confirmed');
       fetchData();
     } catch (err) {
-      console.error('Failed to confirm appointment:', err);
+      logger.error('Failed to confirm appointment:', err);
     }
   };
 
@@ -594,13 +602,13 @@ export default function DoctorDashboardInteractive() {
       await appointmentsApi.updateStatus(id, 'no_show');
       fetchData();
     } catch (err) {
-      console.error('Failed to mark no-show:', err);
+      logger.error('Failed to mark no-show:', err);
     }
   };
 
   const handleRescheduleAppointment = (id: string) => {
     if (!isHydrated) return;
-    console.log('Rescheduling appointment:', id);
+    logger.log('Rescheduling appointment:', id);
   };
 
   const handleChatWithPatient = (id: string) => {
@@ -651,7 +659,7 @@ export default function DoctorDashboardInteractive() {
       await appointmentsApi.updateStatus(id, 'confirmed');
       fetchData();
     } catch (err) {
-      console.error('Failed to approve request:', err);
+      logger.error('Failed to approve request:', err);
     }
   };
 
@@ -672,7 +680,7 @@ export default function DoctorDashboardInteractive() {
       setPendingRejectRequest(null);
       fetchData();
     } catch (err) {
-      console.error('Failed to reject request:', err);
+      logger.error('Failed to reject request:', err);
     }
   };
 
@@ -681,7 +689,11 @@ export default function DoctorDashboardInteractive() {
 
     // Check if video client is ready
     if (!isClientReady) {
-      alert('Video call service is still initializing. Please wait a moment and try again.');
+      showToast({
+        type: 'warning',
+        title: 'Video Service Initializing',
+        message: 'Please wait a moment and try again.',
+      });
       return;
     }
 
@@ -697,8 +709,12 @@ export default function DoctorDashboardInteractive() {
       // Initialize ringing call - backend handles user creation
       await initializeCall(id);
     } catch (error) {
-      console.error('Failed to start video call:', error);
-      alert('Failed to start video call. Please try again.');
+      logger.error('Failed to start video call:', error);
+      showToast({
+        type: 'error',
+        title: 'Video Call Failed',
+        message: 'Failed to start video call. Please try again.',
+      });
       setIsVideoCallModalOpen(false);
     }
   };
@@ -719,10 +735,14 @@ export default function DoctorDashboardInteractive() {
         });
         setShowConsultationModal(true);
       } else {
-        alert('No active appointment found for this patient');
+        showToast({
+          type: 'warning',
+          title: 'No Active Appointment',
+          message: 'No active appointment found for this patient.',
+        });
       }
     } catch (err) {
-      console.error('Failed to find patient appointment:', err);
+      logger.error('Failed to find patient appointment:', err);
     }
   };
 
@@ -736,7 +756,7 @@ export default function DoctorDashboardInteractive() {
       setPendingFinishAppointment(null);
       fetchData();
     } catch (err) {
-      console.error('Failed to complete appointment:', err);
+      logger.error('Failed to complete appointment:', err);
     } finally {
       setIsCompletingAppointment(false);
     }
@@ -763,11 +783,7 @@ export default function DoctorDashboardInteractive() {
   };
 
   if (!isHydrated || isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent" />
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (
@@ -871,14 +887,14 @@ export default function DoctorDashboardInteractive() {
               <span className="font-medium text-text-primary">Manage Schedule</span>
             </button>
             <button
-              onClick={() => console.log('View analytics')}
+              onClick={() => logger.log('View analytics')}
               className="flex flex-col items-center gap-3 p-6 bg-success/5 border border-success/20 rounded-lg hover:shadow-elevation-2 transition-base"
             >
               <Icon name="ChartBarIcon" size={32} className="text-success" />
               <span className="font-medium text-text-primary">View Analytics</span>
             </button>
             <button
-              onClick={() => console.log('Patient records')}
+              onClick={() => logger.log('Patient records')}
               className="flex flex-col items-center gap-3 p-6 bg-warning/5 border border-warning/20 rounded-lg hover:shadow-elevation-2 transition-base"
             >
               <Icon name="FolderIcon" size={32} className="text-warning" />
@@ -1167,6 +1183,9 @@ export default function DoctorDashboardInteractive() {
         isOpen={!!incomingCall}
         onClose={() => { }}
       />
+
+      {/* Confirmation Dialog */}
+      {ConfirmDialogComponent}
     </div>
   );
 }

@@ -2,12 +2,15 @@
 
 import { AuthProvider } from '../contexts/AuthContext';
 import { VideoCallProvider } from '../contexts/VideoCallContext';
+import { ToastProvider } from '@/components/ui/Toast';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
       <VideoCallProvider>
-        {children}
+        <ToastProvider>
+          {children}
+        </ToastProvider>
       </VideoCallProvider>
     </AuthProvider>
   );

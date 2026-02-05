@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Icon from '@/components/ui/AppIcon';
 import { chatbotApi } from '@/lib/api';
+import { logger } from '@/lib/logger';
 
 interface Message {
   id: string;
@@ -16,36 +17,63 @@ interface AIChatbotModalProps {
   onClose: () => void;
 }
 
-// Simple markdown renderer for chatbot messages
-const renderMarkdown = (text: string) => {
-  // Split by lines to process line-by-line
+// Safe markdown renderer - NO dangerouslySetInnerHTML
+const renderMarkdown = (text: string): React.ReactNode[] => {
   const lines = text.split('\n');
   const elements: React.ReactNode[] = [];
-  let listItems: string[] = [];
+  let listItems: React.ReactNode[] = [];
   let inList = false;
 
+  // Escape HTML to prevent XSS
+  const escapeHtml = (unsafe: string): string => {
+    return unsafe
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
+  // Process inline formatting safely - returns React nodes, not HTML
   const processLine = (line: string, index: number): React.ReactNode => {
-    // Process inline formatting
-    let processed = line;
-
-    // Bold: **text** or __text__
-    processed = processed.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    processed = processed.replace(/__(.+?)__/g, '<strong>$1</strong>');
-
-    // Italic: *text* or _text_
-    processed = processed.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
-    processed = processed.replace(/(?<!_)_([^_]+?)_(?!_)/g, '<em>$1</em>');
-
-    return <span key={index} dangerouslySetInnerHTML={{ __html: processed }} />;
+    // First escape HTML
+    let processed = escapeHtml(line);
+    
+    // Split by markers and create React elements
+    const parts: React.ReactNode[] = [];
+    let remaining = processed;
+    let key = 0;
+    
+    // Process bold: **text**
+    const boldRegex = /\*\*(.+?)\*\*/g;
+    let match;
+    let lastIndex = 0;
+    
+    while ((match = boldRegex.exec(processed)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(<span key={key++}>{processed.slice(lastIndex, match.index)}</span>);
+      }
+      parts.push(<strong key={key++}>{match[1]}</strong>);
+      lastIndex = match.index + match[0].length;
+    }
+    
+    if (lastIndex < processed.length) {
+      parts.push(<span key={key++}>{processed.slice(lastIndex)}</span>);
+    }
+    
+    // If no bold found, return as is
+    if (parts.length === 0) {
+      return <span key={index}>{processed}</span>;
+    }
+    
+    return <span key={index}>{parts}</span>;
   };
 
   const flushList = () => {
     if (listItems.length > 0) {
       elements.push(
         <ul key={`list-${elements.length}`} className="list-disc ml-5 my-2 space-y-1">
-          {listItems.map((item, i) => (
-            <li key={i}>{processLine(item, i)}</li>
-          ))}
+          {listItems}
         </ul>
       );
       listItems = [];
@@ -60,7 +88,8 @@ const renderMarkdown = (text: string) => {
 
     if (bulletMatch || numberedMatch) {
       inList = true;
-      listItems.push(bulletMatch ? bulletMatch[1] : numberedMatch![1]);
+      const content = bulletMatch ? bulletMatch[1] : numberedMatch![1];
+      listItems.push(<li key={`item-${index}`}>{processLine(content, index)}</li>);
     } else {
       if (inList) {
         flushList();
@@ -134,6 +163,7 @@ const AIChatbotModal = ({ isOpen, onClose }: AIChatbotModalProps) => {
 
       setMessages((prev) => [...prev, botMessage]);
     } catch (error) {
+      logger.error('Chatbot error:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'bot',

@@ -2,6 +2,7 @@ import React from 'react';
 import type { Metadata, Viewport } from 'next';
 import '../styles/index.css';
 import { Providers } from './providers';
+import { ClientLayout } from '@/components/layout/ClientLayout';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -9,8 +10,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Next.js with Tailwind CSS',
-  description: 'A boilerplate project with Next.js and Tailwind CSS',
+  title: 'MediCare - Your Trusted Healthcare Platform',
+  description: 'Connect with verified doctors, book appointments, manage prescriptions, and track your health journey all in one place.',
   icons: {
     icon: [{ url: '/favicon.ico', type: 'image/x-icon' }],
   },
@@ -25,9 +26,10 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Providers>
-          {children}
+          <ClientLayout>
+            {children}
+          </ClientLayout>
         </Providers>
-
       </body>
     </html>
   );

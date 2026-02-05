@@ -48,10 +48,11 @@ def generate_token():
             {"error": "Failed to generate token. Service not configured."}
         ), 503
 
+    # SECURITY: API key should NOT be returned to frontend
+    # Frontend should use NEXT_PUBLIC_GETSTREAM_API_KEY from env
     return jsonify(
         {
             "token": token,
-            "api_key": os.environ.get("GETSTREAM_API_KEY"),
             "user_id": user_id,
             "user_name": user_name,
         }
@@ -142,11 +143,11 @@ def create_call(appointment_id):
         # We could also record call start time here
         Appointment.update(appointment_id, {"call_started_at": datetime.utcnow()})
 
+    # SECURITY: API key is loaded from frontend env, not returned from backend
     return jsonify(
         {
             "call_id": call_id,
             "token": token,
-            "api_key": os.environ.get("GETSTREAM_API_KEY"),
             "user_id": user_id,
             "user_name": user_name,
             "appointment": Appointment.to_dict(appointment),

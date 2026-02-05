@@ -12,6 +12,7 @@ import {
 import { useAuth } from './AuthContext';
 import { getToken } from '@/lib/api';
 import { videoCallsApi } from '../lib/api';
+import { logger } from '@/lib/logger';
 
 interface IncomingCall {
   call: Call;
@@ -82,6 +83,36 @@ function CallWatcherWrapper({
   useCallWatcher(onIncomingCall, onOutgoingCallEnded);
   return null;
 }
+
+// Moved inside component scope - helper function to get friendly error messages
+const getFriendlyError = (error: unknown): string => {
+  const message =
+    typeof error === 'string'
+      ? error
+      : error instanceof Error
+        ? error.message
+        : JSON.stringify(error || '');
+
+  if (!message) return 'Something went wrong with the call.';
+  const normalized = message.toLowerCase();
+
+  if (normalized.includes('getusermedia') || normalized.includes('media devices')) {
+    return 'Camera or microphone access is blocked. Please allow permissions and try again.';
+  }
+  if (normalized.includes('notallowed') || normalized.includes('permission')) {
+    return 'Camera or microphone permission was denied. Please enable it in your browser.';
+  }
+  if (normalized.includes('notfound') || normalized.includes('device')) {
+    return 'No camera or microphone was found. Please connect a device and try again.';
+  }
+  if (normalized.includes('metadata')) {
+    return 'Unable to join the call. Please try again in a few seconds.';
+  }
+  if (normalized.includes('accept')) {
+    return 'Call could not be accepted. Please try again.';
+  }
+  return 'Something went wrong with the call. Please try again.';
+};
 
 export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   const { user, isLoading: isAuthLoading } = useAuth();
@@ -155,16 +186,19 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
           return;
         }
 
-        console.log('🎥 Initializing video client for user:', user.email);
+        logger.log('🎥 Initializing video client for user:', user.email);
         const tokenData = await retryWithBackoff(() => videoCallsApi.getToken());
 
-        if (!tokenData.api_key || !tokenData.token) {
-          console.error('❌ Failed to get video call token - missing api_key or token');
+        // SECURITY: API key is now loaded from env, not from backend
+        const apiKey = process.env.NEXT_PUBLIC_GETSTREAM_API_KEY;
+        
+        if (!apiKey || !tokenData.token) {
+          logger.error('❌ Failed to get video call token - missing api_key or token');
           initializingRef.current = false;
           return;
         }
 
-        console.log('✅ Got token data, creating StreamVideoClient...');
+        logger.log('✅ Got token data, creating StreamVideoClient...');
         const streamUser: User = {
           id: tokenData.user_id,
           name: tokenData.user_name || user.email,
@@ -172,16 +206,16 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         };
 
         const newClient = new StreamVideoClient({
-          apiKey: tokenData.api_key,
+          apiKey: apiKey,
           user: streamUser,
           token: tokenData.token,
         });
 
         setClient(newClient);
         setIsClientReady(true);
-        console.log('✅ Video client initialized successfully - ready for calls');
+        logger.log('✅ Video client initialized successfully - ready for calls');
       } catch (error) {
-        console.error('❌ Failed to initialize video client:', error);
+        logger.error('❌ Failed to initialize video client:', error);
         setIsClientReady(false);
         initializingRef.current = false;
       }
@@ -262,12 +296,12 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
             callStartedAtRef.current = Date.now();
           }
         } catch (joinError) {
-          console.error('Error joining outgoing call:', joinError);
+          logger.error('Error joining outgoing call:', joinError);
           setCallError(getFriendlyError(joinError));
         }
       }
     } catch (error) {
-      console.error('Error initializing call:', error);
+      logger.error('Error initializing call:', error);
       setCallError(getFriendlyError(error));
       throw error;
     } finally {
@@ -286,7 +320,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         callStartedAtRef.current = Date.now();
       }
     } catch (error) {
-      console.error('Error joining call:', error);
+      logger.error('Error joining call:', error);
       setCallError(getFriendlyError(error));
       throw error;
     }
@@ -301,7 +335,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       }
       await joinCall(incomingCall.call);
     } catch (error) {
-      console.error('Error accepting incoming call:', error);
+      logger.error('Error accepting incoming call:', error);
       setCallError(getFriendlyError(error));
       throw error;
     }
@@ -317,7 +351,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       callStartedAtRef.current = null;
       setCallError(null);
     } catch (error) {
-      console.error('Error rejecting incoming call:', error);
+      logger.error('Error rejecting incoming call:', error);
       setCallError(getFriendlyError(error));
       throw error;
     }
@@ -334,12 +368,12 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
           await videoCallsApi.endCall(appointmentId, duration);
         }
       } catch (error) {
-        console.error('Error logging call end:', error);
+        logger.error('Error logging call end:', error);
       } finally {
         try {
           await activeCall.leave();
         } catch (error) {
-          console.error('Error leaving call:', error);
+          logger.error('Error leaving call:', error);
         }
         setActiveCall(null);
         setIsRinging(false);
@@ -362,19 +396,19 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
           await videoCallsApi.endCall(appointmentId, duration);
         }
       } catch (error) {
-        console.error('Error logging call end:', error);
+        logger.error('Error logging call end:', error);
       } finally {
         // End it for everyone, then leave locally
         try {
           await activeCall.endCall();
         } catch (error) {
-          console.error('Error ending call:', error);
+          logger.error('Error ending call:', error);
           setCallError(getFriendlyError(error));
         }
         try {
           await activeCall.leave();
         } catch (error) {
-          console.error('Error leaving call:', error);
+          logger.error('Error leaving call:', error);
         }
         setActiveCall(null);
         setIsRinging(false);
@@ -385,6 +419,8 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       }
     }
   };
+
+  const clearCallError = () => setCallError(null);
 
   // Context value - always provide it so hooks work
   const contextValue: VideoCallContextType = {
@@ -438,33 +474,3 @@ export function useVideoCall() {
   }
   return context;
 }
-  const getFriendlyError = (error: unknown) => {
-    const message =
-      typeof error === 'string'
-        ? error
-        : error instanceof Error
-          ? error.message
-          : JSON.stringify(error || '');
-
-    if (!message) return 'Something went wrong with the call.';
-    const normalized = message.toLowerCase();
-
-    if (normalized.includes('getusermedia') || normalized.includes('media devices')) {
-      return 'Camera or microphone access is blocked. Please allow permissions and try again.';
-    }
-    if (normalized.includes('notallowed') || normalized.includes('permission')) {
-      return 'Camera or microphone permission was denied. Please enable it in your browser.';
-    }
-    if (normalized.includes('notfound') || normalized.includes('device')) {
-      return 'No camera or microphone was found. Please connect a device and try again.';
-    }
-    if (normalized.includes('metadata')) {
-      return 'Unable to join the call. Please try again in a few seconds.';
-    }
-    if (normalized.includes('accept')) {
-      return 'Call could not be accepted. Please try again.';
-    }
-    return 'Something went wrong with the call. Please try again.';
-  };
-
-  const clearCallError = () => setCallError(null);

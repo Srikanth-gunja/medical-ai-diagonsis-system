@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import UpcomingAppointmentCard from './UpcomingAppointmentCard';
 import DoctorSearchFilters from './DoctorSearchFilters';
 import DoctorCard from './DoctorCard';
@@ -15,6 +15,9 @@ import RescheduleModal from './RescheduleModal';
 import VideoCallModal from '@/components/video/VideoCallModal';
 import IncomingCallModal from '@/components/video/IncomingCallModal';
 import Icon from '@/components/ui/AppIcon';
+import { useToast } from '@/components/ui/Toast';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { DashboardSkeleton, AppointmentCardSkeleton } from '@/components/ui/Skeletons';
 import { useUser } from '../ClientLayout';
 import { useVideoCall } from '@/contexts/VideoCallContext';
 import {
@@ -28,6 +31,7 @@ import {
   API_BASE_URL,
   getToken,
 } from '@/lib/api';
+import { logger } from '@/lib/logger';
 
 interface Appointment {
   id: string;
@@ -90,6 +94,10 @@ const PatientDashboardInteractive = () => {
   // Video call context for ringing support
   const { incomingCall, initializeCall, isClientReady } = useVideoCall();
 
+  // Toast notifications and confirmation dialogs
+  const { showToast } = useToast();
+  const { confirm, ConfirmDialogComponent } = useConfirm();
+
   // Data states
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -145,13 +153,13 @@ const PatientDashboardInteractive = () => {
           }));
         setAppointments(formattedAppointments);
       } catch (err) {
-        console.error('Failed to fetch appointments:', err);
+        logger.error('Failed to fetch appointments:', err);
       }
 
       // Fetch doctors
       try {
         const doctorData = await doctorsApi.getAll();
-        console.log('Doctors fetched:', doctorData);
+        logger.log('Doctors fetched:', doctorData);
 
         let nextAvailableMap = new Map<string, string>();
         try {
@@ -163,7 +171,7 @@ const PatientDashboardInteractive = () => {
             ][]
           );
         } catch (err) {
-          console.error('Failed to fetch next available slots:', err);
+          logger.error('Failed to fetch next available slots:', err);
         }
 
         const formattedDoctors: Doctor[] = doctorData.map((d: ApiDoctor) => ({
@@ -181,7 +189,7 @@ const PatientDashboardInteractive = () => {
         }));
         setDoctors(formattedDoctors);
       } catch (err) {
-        console.error('Failed to fetch doctors:', err);
+        logger.error('Failed to fetch doctors:', err);
       }
 
       // Fetch activities
@@ -189,12 +197,12 @@ const PatientDashboardInteractive = () => {
         const activityData = await activitiesApi.getRecent();
         setActivities(activityData);
       } catch (err) {
-        console.error('Failed to fetch activities:', err);
+        logger.error('Failed to fetch activities:', err);
         setActivities([]);
       }
     } catch (err) {
       setError('Failed to load dashboard data. Please try again.');
-      console.error('Dashboard error:', err);
+      logger.error('Dashboard error:', err);
     } finally {
       if (!silent) {
         setIsLoading(false);
@@ -223,7 +231,7 @@ const PatientDashboardInteractive = () => {
     eventSource.addEventListener('messages.updated', handleUpdate);
     eventSource.addEventListener('message', handleUpdate);
     eventSource.onerror = (err) => {
-      console.error('SSE connection error (patient dashboard):', err);
+      logger.error('SSE connection error (patient dashboard):', err);
     };
 
     return () => {
@@ -309,7 +317,7 @@ const PatientDashboardInteractive = () => {
       setSelectedAppointmentForReschedule(null);
       fetchData(); // Refresh appointments
     } catch (err) {
-      console.error('Failed to reschedule appointment:', err);
+      logger.error('Failed to reschedule appointment:', err);
       alert('Failed to reschedule appointment. Please try again.');
     }
   };
@@ -335,7 +343,7 @@ const PatientDashboardInteractive = () => {
       // Initialize ringing call - backend handles user creation
       await initializeCall(id);
     } catch (error) {
-      console.error('Failed to start video call:', error);
+      logger.error('Failed to start video call:', error);
       alert('Failed to start video call. Please try again.');
       setIsVideoCallModalOpen(false);
     }
@@ -343,12 +351,29 @@ const PatientDashboardInteractive = () => {
 
   const handleCancelAppointment = async (id: string) => {
     if (isHydrated) {
-      if (confirm('Are you sure you want to cancel this appointment?')) {
+      const confirmed = await confirm({
+        title: 'Cancel Appointment?',
+        message: 'Are you sure you want to cancel this appointment? This action cannot be undone.',
+        confirmLabel: 'Cancel Appointment',
+        cancelLabel: 'Keep Appointment',
+        type: 'warning',
+      });
+
+      if (confirmed) {
         try {
           await appointmentsApi.revoke(id);
           setAppointments((prev) => prev.filter((a) => a.id !== id));
+          showToast({
+            type: 'success',
+            title: 'Appointment Cancelled',
+            message: 'Your appointment has been successfully cancelled.',
+          });
         } catch (err) {
-          alert('Failed to cancel appointment');
+          showToast({
+            type: 'error',
+            title: 'Failed to Cancel',
+            message: 'Unable to cancel appointment. Please try again.',
+          });
         }
       }
     }
@@ -426,70 +451,78 @@ const PatientDashboardInteractive = () => {
     }
   };
 
-  // Filter doctors based on search and filters
-  const filteredDoctors = doctors.filter((doctor) => {
-    const matchesSearch =
-      !searchQuery ||
-      doctor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      doctor.specialty.toLowerCase().includes(searchQuery.toLowerCase());
+  // Filter doctors based on search and filters - memoized for performance
+  const filteredDoctors = useMemo(() => {
+    return doctors.filter((doctor) => {
+      const matchesSearch =
+        !searchQuery ||
+        doctor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        doctor.specialty.toLowerCase().includes(searchQuery.toLowerCase());
 
-    // Case-insensitive specialty matching
-    const matchesSpecialty =
-      !filters.specialty || doctor.specialty.toLowerCase() === filters.specialty.toLowerCase();
+      // Case-insensitive specialty matching
+      const matchesSpecialty =
+        !filters.specialty || doctor.specialty.toLowerCase() === filters.specialty.toLowerCase();
 
-    const matchesRating = doctor.rating >= filters.minRating;
+      const matchesRating = doctor.rating >= filters.minRating;
 
-    const matchesAvailability = !filters.availableToday || doctor.availableToday;
+      const matchesAvailability = !filters.availableToday || doctor.availableToday;
 
-    const matchesConsultationType =
-      filters.consultationType === 'all' ||
-      doctor.consultationTypes.includes(filters.consultationType as 'video' | 'in-person');
+      const matchesConsultationType =
+        filters.consultationType === 'all' ||
+        doctor.consultationTypes.includes(filters.consultationType as 'video' | 'in-person');
 
-    return (
-      matchesSearch &&
-      matchesSpecialty &&
-      matchesRating &&
-      matchesAvailability &&
-      matchesConsultationType
-    );
-  });
+      return (
+        matchesSearch &&
+        matchesSpecialty &&
+        matchesRating &&
+        matchesAvailability &&
+        matchesConsultationType
+      );
+    });
+  }, [doctors, searchQuery, filters]);
 
-  if (!isHydrated || isLoading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 sm:px-6 py-8">
-          <div className="space-y-8">
-            <div className="h-10 bg-muted rounded animate-pulse w-1/3" />
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 space-y-6">
-                <div className="h-48 bg-muted rounded-xl animate-pulse" />
-                <div className="h-48 bg-muted rounded-xl animate-pulse" />
-              </div>
-              <div className="space-y-6">
-                <div className="h-96 bg-muted rounded-xl animate-pulse" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Memoized appointment counts for tabs
+  const appointmentCounts = useMemo(() => ({
+    confirmed: appointments.filter((a) => a.status === 'confirmed' || a.status === 'in_progress').length,
+    pending: appointments.filter((a) => a.status === 'pending').length,
+    completed: appointments.filter((a) => a.status === 'completed' || a.status === 'no_show').length,
+    rejected: appointments.filter((a) => a.status === 'rejected').length,
+  }), [appointments]);
 
-  // Filter appointments for upcoming section: confirmed or pending
-  const upcomingAppointments = appointments.filter(
-    (a) => a.status === 'confirmed' || a.status === 'pending' || a.status === 'in_progress'
+  // Memoized filtered appointments for each tab
+  const confirmedAppointments = useMemo(() => 
+    appointments.filter((a) => a.status === 'confirmed' || a.status === 'in_progress'),
+    [appointments]
+  );
+  
+  const pendingAppointmentsList = useMemo(() => 
+    appointments.filter((a) => a.status === 'pending'),
+    [appointments]
+  );
+  
+  const completedAppointmentsList = useMemo(() => 
+    appointments.filter((a) => a.status === 'completed' || a.status === 'no_show'),
+    [appointments]
+  );
+  
+  const rejectedAppointmentsList = useMemo(() => 
+    appointments.filter((a) => a.status === 'rejected'),
+    [appointments]
   );
 
-  // You might want to show completed appointments differently or in a history section,
-  // but for now, we'll include completed ones that haven't been reviewed if we want to prompt review?
-  // Based on user request "after appointment complete patient can revivew", let's include completed appointments here too?
-  // Or maybe confusing. Let's stick to the current filter logic but allow completed ones to show up so we can review them?
-  // The previous code was: .filter((a: ApiAppointment) => a.status !== 'cancelled' && a.status !== 'completed')
-  // I changed it in fetchData to include completed.
+  if (!isHydrated || isLoading) {
+    return <DashboardSkeleton />;
+  }
 
-  // Let's filter for UI: upcoming (confirmed/pending) + recently completed?
-  // For simplicity, let's just show all active appointments (not cancelled) in the list for now,
-  // or maybe separate them. The user wants to review completed ones.
+  // Filter appointments for upcoming section: confirmed or pending - memoized
+  const upcomingAppointments = useMemo(() => 
+    appointments.filter(
+      (a) => a.status === 'confirmed' || a.status === 'pending' || a.status === 'in_progress'
+    ),
+    [appointments]
+  );
+
+  // Display all appointments
   const displayAppointments = appointments;
 
   return (
@@ -545,9 +578,9 @@ const PatientDashboardInteractive = () => {
                       }`}
                   >
                     Upcoming
-                    {appointments.filter((a) => a.status === 'confirmed' || a.status === 'in_progress').length > 0 && (
+                    {appointmentCounts.confirmed > 0 && (
                       <span className="ml-2 px-2 py-0.5 bg-success/10 text-success rounded-full text-xs font-semibold">
-                        {appointments.filter((a) => a.status === 'confirmed' || a.status === 'in_progress').length}
+                        {appointmentCounts.confirmed}
                       </span>
                     )}
                     {appointmentTab === 'upcoming' && (
@@ -562,9 +595,9 @@ const PatientDashboardInteractive = () => {
                       }`}
                   >
                     Pending
-                    {appointments.filter((a) => a.status === 'pending').length > 0 && (
+                    {appointmentCounts.pending > 0 && (
                       <span className="ml-2 px-2 py-0.5 bg-warning/10 text-warning rounded-full text-xs font-semibold">
-                        {appointments.filter((a) => a.status === 'pending').length}
+                        {appointmentCounts.pending}
                       </span>
                     )}
                     {appointmentTab === 'pending' && (
@@ -579,9 +612,9 @@ const PatientDashboardInteractive = () => {
                       }`}
                   >
                     Completed
-                    {appointments.filter((a) => a.status === 'completed' || a.status === 'no_show').length > 0 && (
+                    {appointmentCounts.completed > 0 && (
                       <span className="ml-2 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-semibold">
-                        {appointments.filter((a) => a.status === 'completed' || a.status === 'no_show').length}
+                        {appointmentCounts.completed}
                       </span>
                     )}
                     {appointmentTab === 'completed' && (
@@ -596,9 +629,9 @@ const PatientDashboardInteractive = () => {
                       }`}
                   >
                     Rejected
-                    {appointments.filter((a) => a.status === 'rejected').length > 0 && (
+                    {appointmentCounts.rejected > 0 && (
                       <span className="ml-2 px-2 py-0.5 bg-error/10 text-error rounded-full text-xs font-semibold">
-                        {appointments.filter((a) => a.status === 'rejected').length}
+                        {appointmentCounts.rejected}
                       </span>
                     )}
                     {appointmentTab === 'rejected' && (
@@ -611,10 +644,8 @@ const PatientDashboardInteractive = () => {
                 <div className="space-y-4">
                   {appointmentTab === 'upcoming' && (
                     <>
-                      {appointments.filter((a) => a.status === 'confirmed' || a.status === 'in_progress').length > 0 ? (
-                        appointments
-                          .filter((a) => a.status === 'confirmed' || a.status === 'in_progress')
-                          .map((appointment) => (
+                      {confirmedAppointments.length > 0 ? (
+                        confirmedAppointments.map((appointment) => (
                             <UpcomingAppointmentCard
                               key={appointment.id}
                               appointment={appointment}
@@ -643,10 +674,8 @@ const PatientDashboardInteractive = () => {
 
                   {appointmentTab === 'pending' && (
                     <>
-                      {appointments.filter((a) => a.status === 'pending').length > 0 ? (
-                        appointments
-                          .filter((a) => a.status === 'pending')
-                          .map((appointment) => (
+                      {pendingAppointmentsList.length > 0 ? (
+                        pendingAppointmentsList.map((appointment) => (
                             <UpcomingAppointmentCard
                               key={appointment.id}
                               appointment={appointment}
@@ -675,10 +704,8 @@ const PatientDashboardInteractive = () => {
 
                   {appointmentTab === 'completed' && (
                     <>
-                      {appointments.filter((a) => a.status === 'completed' || a.status === 'no_show').length > 0 ? (
-                        appointments
-                          .filter((a) => a.status === 'completed' || a.status === 'no_show')
-                          .map((appointment) => (
+                      {completedAppointmentsList.length > 0 ? (
+                        completedAppointmentsList.map((appointment) => (
                             <UpcomingAppointmentCard
                               key={appointment.id}
                               appointment={appointment}
@@ -707,10 +734,8 @@ const PatientDashboardInteractive = () => {
 
                   {appointmentTab === 'rejected' && (
                     <>
-                      {appointments.filter((a) => a.status === 'rejected').length > 0 ? (
-                        appointments
-                          .filter((a) => a.status === 'rejected')
-                          .map((appointment) => (
+                      {rejectedAppointmentsList.length > 0 ? (
+                        rejectedAppointmentsList.map((appointment) => (
                             <UpcomingAppointmentCard
                               key={appointment.id}
                               appointment={appointment}
@@ -878,6 +903,9 @@ const PatientDashboardInteractive = () => {
         isOpen={!!incomingCall}
         onClose={() => { }}
       />
+
+      {/* Confirmation Dialog */}
+      {ConfirmDialogComponent}
     </>
   );
 };
