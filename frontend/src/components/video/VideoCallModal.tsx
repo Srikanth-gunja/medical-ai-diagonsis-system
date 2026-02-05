@@ -15,10 +15,17 @@ interface VideoCallModalProps {
 }
 
 export default function VideoCallModal({ isOpen, onClose, appointmentId, otherUserName = 'Doctor' }: VideoCallModalProps) {
-  const { activeCall, isRinging, isInitializing, endCall, leaveCall, callError, clearCallError } =
+  const { activeCall, isRinging, isInitializing, endCall, leaveCall, callError, clearCallError, cancelInitializingCall } =
     useVideoCall();
 
   const handleClose = async () => {
+    if (isInitializing) {
+      await cancelInitializingCall();
+      clearCallError();
+      onClose();
+      return;
+    }
+
     if (activeCall) {
       // End the call for both participants
       await endCall();

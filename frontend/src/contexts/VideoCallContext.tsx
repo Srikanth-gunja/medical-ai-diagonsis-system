@@ -29,6 +29,7 @@ interface VideoCallContextType {
   isClientReady: boolean;
   callError: string | null;
   initializeCall: (appointmentId: string) => Promise<void>;
+  cancelInitializingCall: () => Promise<void>;
   joinCall: (call: Call) => Promise<void>;
   acceptIncomingCall: () => Promise<void>;
   rejectIncomingCall: () => Promise<void>;
@@ -126,6 +127,8 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   const [pendingAppointmentId, setPendingAppointmentId] = useState<string | null>(null);
   const callStartedAtRef = React.useRef<number | null>(null);
   const initializingRef = React.useRef(false);
+  const initRequestIdRef = React.useRef(0);
+  const initCancelledRef = React.useRef(false);
   const streamMock =
     typeof window !== 'undefined' ? (window as any).__STREAM_MOCK__ : null;
   const isMockMode = !!streamMock;
@@ -262,6 +265,8 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Video client not initialized. Please wait a moment and try again.');
     }
 
+    const initId = (initRequestIdRef.current += 1);
+    initCancelledRef.current = false;
     setCallError(null);
     setIsInitializing(true);
     setPendingAppointmentId(appointmentId);
@@ -292,6 +297,23 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         },
       });
 
+      if (initCancelledRef.current || initId !== initRequestIdRef.current) {
+        try {
+          await call.endCall();
+        } catch (error) {
+          logger.error('Error ending canceled call:', error);
+        }
+        try {
+          await call.leave();
+        } catch (error) {
+          logger.error('Error leaving canceled call:', error);
+        }
+        setActiveCall(null);
+        setIsRinging(false);
+        setPendingAppointmentId(null);
+        return;
+      }
+
       setActiveCall(call);
       setIsRinging(true);
 
@@ -306,6 +328,19 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         } catch (joinError) {
           logger.error('Error joining outgoing call:', joinError);
           setCallError(getFriendlyError(joinError));
+          try {
+            await call.endCall();
+          } catch (error) {
+            logger.error('Error ending failed call:', error);
+          }
+          try {
+            await call.leave();
+          } catch (error) {
+            logger.error('Error leaving failed call:', error);
+          }
+          setActiveCall(null);
+          setIsRinging(false);
+          setPendingAppointmentId(null);
         }
       }
     } catch (error) {
@@ -313,7 +348,31 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       setCallError(getFriendlyError(error));
       throw error;
     } finally {
-      setIsInitializing(false);
+      if (initId === initRequestIdRef.current) {
+        setIsInitializing(false);
+      }
+    }
+  };
+
+  const cancelInitializingCall = async (): Promise<void> => {
+    initCancelledRef.current = true;
+    setIsInitializing(false);
+    setIsRinging(false);
+    setCallError(null);
+
+    if (activeCall) {
+      try {
+        await activeCall.endCall();
+      } catch (error) {
+        logger.error('Error ending canceled call:', error);
+      }
+      try {
+        await activeCall.leave();
+      } catch (error) {
+        logger.error('Error leaving canceled call:', error);
+      }
+      setActiveCall(null);
+      setPendingAppointmentId(null);
     }
   };
 
@@ -440,6 +499,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     isClientReady,
     callError,
     initializeCall,
+    cancelInitializingCall,
     joinCall,
     acceptIncomingCall,
     rejectIncomingCall,
