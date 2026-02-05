@@ -451,6 +451,11 @@ def seed_database():
             "created_at": datetime.utcnow() - timedelta(days=16),
         },
     ]
+
+    # Ensure appointments have a slot duration captured at booking time
+    for appt in appointments:
+        appt.setdefault("slot_duration", 30)
+
     db.appointments.insert_many(appointments)
     print(f"✓ Created {len(appointments)} sample appointments")
 

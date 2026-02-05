@@ -1,6 +1,7 @@
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from ..models.doctor import Doctor
 from ..models.schedule import Schedule
 import json
@@ -90,6 +91,38 @@ def get_formatted_availability(doctor_id):
     return availability if availability else ["No availability set"]
 
 
+def _parse_slot_time(date_str: str, time_str: str):
+    """Parse slot time like '9:00 AM' for a given date."""
+    try:
+        time_val = datetime.strptime(time_str, '%I:%M %p').time()
+        date_val = datetime.strptime(date_str, '%Y-%m-%d').date()
+        return datetime.combine(date_val, time_val)
+    except ValueError:
+        return None
+
+
+def _get_next_available_slot_ist(doctor_id: str) -> str | None:
+    """Return formatted next available slot in IST or None."""
+    ist = ZoneInfo("Asia/Kolkata")
+    now = datetime.now(ist)
+    today_str = now.strftime('%Y-%m-%d')
+    tomorrow_str = (now + timedelta(days=1)).strftime('%Y-%m-%d')
+
+    today_slots = Schedule.get_available_slots(doctor_id, today_str)
+    for slot in today_slots:
+        dt = _parse_slot_time(today_str, slot)
+        if dt:
+            dt = dt.replace(tzinfo=ist)
+            if dt > now:
+                return f"Today, {slot}"
+
+    tomorrow_slots = Schedule.get_available_slots(doctor_id, tomorrow_str)
+    if tomorrow_slots:
+        return f"Tomorrow, {tomorrow_slots[0]}"
+
+    return None
+
+
 @doctors_bp.route('', methods=['GET'])
 def get_doctors():
     doctors = Doctor.find_all()
@@ -101,7 +134,21 @@ def get_doctors():
         doc_dict['availabilityStatus'] = status_message
         # Use schedule-based availability instead of old static field
         doc_dict['availability'] = get_formatted_availability(doc['_id'])
+        # Next available slot calculated in IST
+        next_available = _get_next_available_slot_ist(str(doc['_id']))
+        if next_available:
+            doc_dict['nextAvailable'] = next_available
         result.append(doc_dict)
+    return jsonify(result)
+
+
+@doctors_bp.route('/next-available', methods=['GET'])
+def get_next_available():
+    """Return next available slot for all doctors in IST."""
+    doctors = Doctor.find_all()
+    result = {}
+    for doc in doctors:
+        result[str(doc['_id'])] = _get_next_available_slot_ist(str(doc['_id']))
     return jsonify(result)
 
 @doctors_bp.route('/profile', methods=['GET'])

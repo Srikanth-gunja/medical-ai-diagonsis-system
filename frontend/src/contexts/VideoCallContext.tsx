@@ -10,6 +10,7 @@ import {
   useCalls,
 } from '@stream-io/video-react-sdk';
 import { useAuth } from './AuthContext';
+import { getToken } from '@/lib/api';
 import { videoCallsApi } from '../lib/api';
 
 interface IncomingCall {
@@ -83,7 +84,7 @@ function CallWatcherWrapper({
 }
 
 export function VideoCallProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [activeCall, setActiveCall] = useState<Call | null>(null);
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
@@ -120,7 +121,11 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
 
   // Initialize client immediately when user is authenticated (on app load)
   useEffect(() => {
-    if (!user) {
+    if (isAuthLoading) {
+      return;
+    }
+    const token = getToken();
+    if (!user || !token) {
       if (client) {
         client.disconnectUser();
         setClient(null);
@@ -188,7 +193,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     return () => {
       // Cleanup handled by dependency change logic or unmount
     };
-  }, [user, client, isMockMode, retryWithBackoff, streamMock]);
+  }, [user, isAuthLoading, client, isMockMode, retryWithBackoff, streamMock]);
 
   const handleIncomingCall = useCallback((call: Call) => {
     // Extract appointment ID from call custom data

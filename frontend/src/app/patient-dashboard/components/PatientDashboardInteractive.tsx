@@ -24,6 +24,7 @@ import {
   type Doctor as ApiDoctor,
   type Appointment as ApiAppointment,
   type Activity,
+  schedulesApi,
   API_BASE_URL,
   getToken,
 } from '@/lib/api';
@@ -151,6 +152,20 @@ const PatientDashboardInteractive = () => {
       try {
         const doctorData = await doctorsApi.getAll();
         console.log('Doctors fetched:', doctorData);
+
+        let nextAvailableMap = new Map<string, string>();
+        try {
+          const nextAvailable = await doctorsApi.getNextAvailable();
+          nextAvailableMap = new Map(
+            Object.entries(nextAvailable).filter(([, v]) => typeof v === 'string') as [
+              string,
+              string
+            ][]
+          );
+        } catch (err) {
+          console.error('Failed to fetch next available slots:', err);
+        }
+
         const formattedDoctors: Doctor[] = doctorData.map((d: ApiDoctor) => ({
           id: d.id,
           name: d.name.replace('Dr. ', ''),
@@ -162,7 +177,7 @@ const PatientDashboardInteractive = () => {
           experience: d.experience || 5,
           availableToday: d.availableToday ?? false,
           consultationTypes: d.consultationTypes || ['video', 'in-person'],
-          nextAvailable: d.nextAvailable || 'Tomorrow',
+          nextAvailable: nextAvailableMap.get(d.id) || d.nextAvailable || 'Tomorrow',
         }));
         setDoctors(formattedDoctors);
       } catch (err) {

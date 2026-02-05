@@ -307,6 +307,8 @@ export const authApi = {
 // Doctors API
 export const doctorsApi = {
   getAll: (): Promise<Doctor[]> => fetchApi<Doctor[]>('/doctors'),
+  getNextAvailable: (): Promise<Record<string, string | null>> =>
+    fetchApi<Record<string, string | null>>('/doctors/next-available'),
 
   getById: (id: string): Promise<Doctor> => fetchApi<Doctor>(`/doctors/${id}`),
 
