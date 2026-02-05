@@ -4,11 +4,15 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import Icon from '@/components/ui/AppIcon';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const HeroSection = () => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
   const logoContainerRef = useRef<HTMLDivElement>(null);
+  const { theme } = useTheme();
+  const logoSrc =
+    theme === 'dark' ? '/assets/images/medicare-3d-logo-dark.png' : '/assets/images/medicare-3d-logo.png';
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!logoContainerRef.current) return;
@@ -111,7 +115,7 @@ const HeroSection = () => {
             >
               {/* Glow effect behind logo */}
               <div
-                className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30 rounded-full blur-3xl scale-75 transition-all duration-300"
+                className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30 dark:from-accent/20 dark:to-primary/20 rounded-full blur-3xl scale-75 transition-all duration-300"
                 style={{
                   transform: `translateX(${mousePosition.x * 20}px) translateY(${mousePosition.y * 20}px)`,
                   opacity: isHovering ? 0.8 : 0.5,
@@ -127,12 +131,14 @@ const HeroSection = () => {
                 }}
               >
                 <Image
-                  src="/assets/images/medicare-3d-logo.png"
+                  src={logoSrc}
                   alt="MediCare - Healthcare Made Simple"
                   fill
-                  className="object-contain drop-shadow-2xl"
+                  className="object-contain drop-shadow-2xl dark:brightness-90 dark:saturate-125 dark:contrast-110"
                   priority
                 />
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 to-accent/10 dark:from-accent/10 dark:to-primary/20 mix-blend-soft-light opacity-60 pointer-events-none" />
+                <div className="absolute -top-6 -right-6 w-3/4 h-3/4 rounded-[999px] bg-gradient-to-br from-accent/20 via-transparent to-transparent blur-2xl opacity-50 pointer-events-none" />
               </div>
 
               {/* Floating decorative elements with parallax */}

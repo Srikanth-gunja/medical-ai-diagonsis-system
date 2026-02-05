@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Icon from '@/components/ui/AppIcon';
 import AppImage from '@/components/ui/AppImage';
 import { notificationsApi, type Notification } from '@/lib/api';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface User {
   name: string;
@@ -28,6 +29,7 @@ const AuthenticatedHeader = ({
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [localNotificationCount, setLocalNotificationCount] = useState(notificationCount);
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
@@ -230,6 +232,14 @@ const AuthenticatedHeader = ({
           </div>
 
           <div className="flex items-center space-x-2 sm:space-x-4">
+            <button
+              onClick={toggleTheme}
+              className="p-2 text-text-secondary hover:text-primary hover:bg-muted rounded-lg transition-base"
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+            >
+              <Icon name={theme === 'dark' ? 'SunIcon' : 'MoonIcon'} size={20} />
+            </button>
             {/* Notifications */}
             <div className="relative" ref={notificationsRef}>
               <button
@@ -390,6 +400,17 @@ const AuthenticatedHeader = ({
               </Link>
             ))}
             <div className="pt-4 space-y-2 border-t border-border">
+              <button
+                onClick={() => {
+                  toggleTheme();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="flex items-center justify-between w-full px-4 py-3 text-text-secondary hover:text-primary hover:bg-muted rounded-lg transition-base font-medium"
+                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                <Icon name={theme === 'dark' ? 'SunIcon' : 'MoonIcon'} size={18} />
+              </button>
               <div className="flex items-center space-x-3 px-4 py-2">
                 <div className="w-10 h-10 rounded-full overflow-hidden bg-muted">
                   <AppImage

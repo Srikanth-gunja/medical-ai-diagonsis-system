@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Icon from '@/components/ui/AppIcon';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface PublicHeaderProps {
   className?: string;
@@ -10,6 +11,7 @@ interface PublicHeaderProps {
 
 const PublicHeader = ({ className = '' }: PublicHeaderProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -53,6 +55,14 @@ const PublicHeader = ({ className = '' }: PublicHeaderProps) => {
           </nav>
 
           <div className="hidden md:flex items-center space-x-4">
+            <button
+              onClick={toggleTheme}
+              className="p-2 text-text-secondary hover:text-primary hover:bg-muted rounded-lg transition-base"
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+            >
+              <Icon name={theme === 'dark' ? 'SunIcon' : 'MoonIcon'} size={20} />
+            </button>
             <Link
               href="/login"
               className="px-6 py-2.5 text-primary font-medium hover:bg-muted rounded-lg transition-base"
@@ -102,6 +112,17 @@ const PublicHeader = ({ className = '' }: PublicHeaderProps) => {
               About
             </Link>
             <div className="pt-4 space-y-2 border-t border-border">
+              <button
+                onClick={() => {
+                  toggleTheme();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="flex items-center justify-between w-full px-4 py-3 text-text-secondary hover:bg-muted rounded-lg transition-base font-medium"
+                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                <Icon name={theme === 'dark' ? 'SunIcon' : 'MoonIcon'} size={18} />
+              </button>
               <Link
                 href="/login"
                 className="block px-4 py-3 text-center text-primary font-medium hover:bg-muted rounded-lg transition-base"
