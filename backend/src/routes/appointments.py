@@ -7,6 +7,7 @@ from ..models.patient import Patient
 from ..models.medical_record import MedicalRecord
 from ..models.notification import Notification
 from ..database import get_db
+from ..realtime import publish_event
 import json
 from datetime import datetime
 
@@ -35,6 +36,7 @@ def create_activity(user_id: str, activity_type: str, title: str, description: s
         'color': color,
     }
     db[ACTIVITIES_COLLECTION].insert_one(activity)
+    publish_event([str(user_id)], 'activities.updated', {})
 
 @appointments_bp.route('', methods=['GET'])
 @jwt_required()
@@ -112,16 +114,35 @@ def create_appointment():
         color='bg-primary'
     )
     
-    return jsonify(Appointment.to_dict(appointment)), 201
+    appointment_dict = Appointment.to_dict(appointment)
+
+    # Push real-time updates to patient and doctor
+    target_user_ids = [current_user['id']]
+    if doctor:
+        target_user_ids.append(str(doctor['user_id']))
+    publish_event(target_user_ids, 'appointments.updated', {'appointmentId': appointment_dict['id']})
+
+    return jsonify(appointment_dict), 201
 
 @appointments_bp.route('/<appt_id>/status', methods=['PATCH'])
 @jwt_required()
 def update_status(appt_id):
+    current_user = get_current_user()
     data = request.get_json()
     status = data.get('status')
     
     # Get appointment before update for notification
     original_appointment = Appointment.find_by_id(appt_id)
+    if not original_appointment:
+        return jsonify({'error': 'Appointment not found'}), 404
+
+    # Only the assigned doctor (or admin) can update status
+    if current_user.get('role') == 'doctor':
+        doctor = Doctor.find_by_user_id(current_user['id'])
+        if not doctor or str(doctor.get('_id')) != str(original_appointment.get('doctor_id')):
+            return jsonify({'error': 'Unauthorized'}), 403
+    elif current_user.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
     
     appointment = Appointment.update_status(appt_id, status)
     if appointment:
@@ -178,14 +199,32 @@ def update_status(appt_id):
                     color='bg-warning'
                 )
         
-        return jsonify(Appointment.to_dict(appointment))
+        appointment_dict = Appointment.to_dict(appointment)
+        target_user_ids = []
+        if original_appointment:
+            target_user_ids.append(str(original_appointment['patient_id']))
+            if original_appointment.get('doctor_id'):
+                doctor_for_appt = Doctor.find_by_id(original_appointment.get('doctor_id'))
+                if doctor_for_appt:
+                    target_user_ids.append(str(doctor_for_appt['user_id']))
+        publish_event(target_user_ids, 'appointments.updated', {'appointmentId': appointment_dict['id']})
+        return jsonify(appointment_dict)
     return jsonify({'error': 'Appointment not found'}), 404
 
 @appointments_bp.route('/<appt_id>', methods=['DELETE'])
 @jwt_required()
 def delete_appointment(appt_id):
+    existing = Appointment.find_by_id(appt_id)
     result = Appointment.delete(appt_id)
     if result.deleted_count > 0:
+        target_user_ids = []
+        if existing:
+            target_user_ids.append(str(existing['patient_id']))
+            if existing.get('doctor_id'):
+                doctor = Doctor.find_by_id(existing.get('doctor_id'))
+                if doctor:
+                    target_user_ids.append(str(doctor['user_id']))
+        publish_event(target_user_ids, 'appointments.updated', {'appointmentId': str(appt_id)})
         return jsonify({'message': 'Appointment deleted successfully'})
     return jsonify({'error': 'Appointment not found'}), 404
 
@@ -249,7 +288,12 @@ def revoke_appointment(appt_id):
         color='bg-warning'
     )
     
-    return jsonify(Appointment.to_dict(updated))
+    appointment_dict = Appointment.to_dict(updated)
+    target_user_ids = [current_user['id']]
+    if doctor:
+        target_user_ids.append(str(doctor['user_id']))
+    publish_event(target_user_ids, 'appointments.updated', {'appointmentId': appointment_dict['id']})
+    return jsonify(appointment_dict)
 
 @appointments_bp.route('/<appt_id>/complete', methods=['POST'])
 @jwt_required()
@@ -305,6 +349,11 @@ def complete_appointment(appt_id):
         color='bg-success'
     )
     
+    target_user_ids = [patient_user_id]
+    if doctor:
+        target_user_ids.append(str(doctor['user_id']))
+    publish_event(target_user_ids, 'appointments.updated', {'appointmentId': str(appt_id)})
+
     return jsonify({
         'message': 'Appointment completed and medical record created',
         'appointment': Appointment.to_dict(updated_appointment),
@@ -371,6 +420,11 @@ def reject_appointment(appt_id):
             f"appointment:{appt_id}"
         )
     
+    target_user_ids = [str(patient_id)]
+    if doctor:
+        target_user_ids.append(str(doctor['user_id']))
+    publish_event(target_user_ids, 'appointments.updated', {'appointmentId': str(appt_id)})
+
     return jsonify({
         'message': 'Appointment rejected',
         'appointment': Appointment.to_dict(updated)
@@ -437,6 +491,11 @@ def reschedule_appointment(appt_id):
         color='bg-primary'
     )
     
+    target_user_ids = [str(appointment['patient_id'])]
+    if doctor:
+        target_user_ids.append(str(doctor['user_id']))
+    publish_event(target_user_ids, 'appointments.updated', {'appointmentId': str(appt_id)})
+
     return jsonify({
         'message': 'Appointment rescheduled successfully',
         'appointment': Appointment.to_dict(updated)

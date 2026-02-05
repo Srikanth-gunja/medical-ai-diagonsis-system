@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from bson import ObjectId
 from ..database import get_db
+from ..realtime import publish_event
 import json
 from datetime import datetime, timedelta
 
@@ -92,6 +93,8 @@ def create_activity():
     
     result = db[ACTIVITIES_COLLECTION].insert_one(activity)
     activity['_id'] = result.inserted_id
+
+    publish_event([str(activity['user_id'])], 'activities.updated', {})
     
     return jsonify({
         'id': str(activity['_id']),

@@ -577,7 +577,7 @@ export interface Notification {
   userId: string;
   title: string;
   message: string;
-  type: 'info' | 'success' | 'warning' | 'error' | 'appointment' | 'message';
+  type: 'info' | 'success' | 'warning' | 'error' | 'appointment' | 'message' | 'prescription';
   link?: string;
   read: boolean;
   createdAt: string;

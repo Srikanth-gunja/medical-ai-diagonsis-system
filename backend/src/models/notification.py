@@ -23,6 +23,12 @@ class Notification:
         
         result = db[NOTIFICATIONS_COLLECTION].insert_one(notification_data)
         notification_data['_id'] = result.inserted_id
+        try:
+            from ..realtime import publish_event
+            publish_event([str(notification_data['user_id'])], 'notifications.updated', {})
+        except Exception:
+            # Avoid breaking notification creation if realtime is unavailable
+            pass
         return notification_data
     
     @staticmethod

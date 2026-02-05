@@ -7,6 +7,7 @@ from ..models.doctor import Doctor
 from ..models.patient import Patient
 from ..models.notification import Notification
 from ..database import get_db
+from ..realtime import publish_event
 import json
 from datetime import datetime
 
@@ -28,6 +29,7 @@ def create_activity(user_id: str, activity_type: str, title: str, description: s
         'color': color,
     }
     db[ACTIVITIES_COLLECTION].insert_one(activity)
+    publish_event([str(user_id)], 'activities.updated', {})
 
 
 def get_current_user():
@@ -110,6 +112,10 @@ def create_prescription():
     
     result = Prescription.to_dict(prescription)
     result['doctorName'] = doctor['name']
+
+    publish_event([str(appointment['patient_id']), str(doctor['user_id'])], 'prescriptions.updated', {
+        'prescriptionId': result['id']
+    })
     
     return jsonify(result), 201
 
@@ -292,4 +298,3 @@ def create_prescription_for_patient(patient_id):
     result['patientName'] = f"{patient.get('firstName', '')} {patient.get('lastName', '')}"
     
     return jsonify(result), 201
-

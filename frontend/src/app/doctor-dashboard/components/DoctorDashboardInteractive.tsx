@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import AuthenticatedHeader from '@/components/common/AuthenticatedHeader';
 import NavigationBreadcrumbs from '@/components/common/NavigationBreadcrumbs';
@@ -30,6 +30,8 @@ import {
   patientsApi,
   authApi,
   notificationsApi,
+  API_BASE_URL,
+  getToken,
   type DoctorAnalytics,
   type Appointment as ApiAppointment,
   type Doctor as ApiDoctor,
@@ -209,10 +211,76 @@ export default function DoctorDashboardInteractive() {
     }, 30000);
 
     return () => clearInterval(notificationInterval);
-  }, []);
+  }, [fetchData]);
 
-  const fetchData = async () => {
-    setIsLoading(true);
+  useEffect(() => {
+    if (!isHydrated) return;
+    const token = getToken();
+    if (!token) return;
+
+    const streamUrl = `${API_BASE_URL}/events/stream?token=${encodeURIComponent(token)}`;
+    const eventSource = new EventSource(streamUrl, { withCredentials: true });
+    const handleUpdate = () => fetchData({ silent: true });
+
+    eventSource.addEventListener('appointments.updated', handleUpdate);
+    eventSource.addEventListener('activities.updated', handleUpdate);
+    eventSource.addEventListener('notifications.updated', handleUpdate);
+    eventSource.addEventListener('prescriptions.updated', handleUpdate);
+    eventSource.addEventListener('messages.updated', handleUpdate);
+    eventSource.addEventListener('message', handleUpdate);
+    eventSource.onerror = (err) => {
+      console.error('SSE connection error (doctor dashboard):', err);
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [fetchData, isHydrated]);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchData({ silent: true });
+      }
+    };
+
+    window.addEventListener('focus', handleVisibility);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('focus', handleVisibility);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [fetchData, isHydrated]);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    const refreshInterval = setInterval(() => {
+      fetchData({ silent: true });
+    }, 15000);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchData({ silent: true });
+      }
+    };
+
+    window.addEventListener('focus', handleVisibility);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(refreshInterval);
+      window.removeEventListener('focus', handleVisibility);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [fetchData, isHydrated]);
+
+  const fetchData = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
+    if (!silent) {
+      setIsLoading(true);
+    }
     try {
       // Fetch doctor profile
       try {
@@ -399,9 +467,11 @@ export default function DoctorDashboardInteractive() {
     } catch (err) {
       console.error('Dashboard error:', err);
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, []);
 
   const formatDate = (dateStr: string): string => {
     try {
@@ -618,7 +688,7 @@ export default function DoctorDashboardInteractive() {
           avatar:
             doctorProfile?.image || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d',
         }}
-        notificationCount={requests.length}
+        notificationCount={notificationCount}
         onLogout={handleLogout}
       />
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import UpcomingAppointmentCard from './UpcomingAppointmentCard';
 import DoctorSearchFilters from './DoctorSearchFilters';
 import DoctorCard from './DoctorCard';
@@ -24,6 +24,8 @@ import {
   type Doctor as ApiDoctor,
   type Appointment as ApiAppointment,
   type Activity,
+  API_BASE_URL,
+  getToken,
 } from '@/lib/api';
 
 interface Appointment {
@@ -107,13 +109,11 @@ const PatientDashboardInteractive = () => {
     'upcoming' | 'pending' | 'completed' | 'rejected'
   >('upcoming');
 
-  useEffect(() => {
-    setIsHydrated(true);
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setIsLoading(true);
+  const fetchData = useCallback(async (options?: { silent?: boolean }) => {
+    const silent = options?.silent ?? false;
+    if (!silent) {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
@@ -175,9 +175,57 @@ const PatientDashboardInteractive = () => {
       setError('Failed to load dashboard data. Please try again.');
       console.error('Dashboard error:', err);
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    setIsHydrated(true);
+    fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    const token = getToken();
+    if (!token) return;
+
+    const streamUrl = `${API_BASE_URL}/events/stream?token=${encodeURIComponent(token)}`;
+    const eventSource = new EventSource(streamUrl, { withCredentials: true });
+    const handleUpdate = () => fetchData({ silent: true });
+
+    eventSource.addEventListener('appointments.updated', handleUpdate);
+    eventSource.addEventListener('activities.updated', handleUpdate);
+    eventSource.addEventListener('notifications.updated', handleUpdate);
+    eventSource.addEventListener('prescriptions.updated', handleUpdate);
+    eventSource.addEventListener('messages.updated', handleUpdate);
+    eventSource.addEventListener('message', handleUpdate);
+    eventSource.onerror = (err) => {
+      console.error('SSE connection error (patient dashboard):', err);
+    };
+
+    return () => {
+      eventSource.close();
+    };
+  }, [fetchData, isHydrated]);
+
+  useEffect(() => {
+    if (!isHydrated) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchData({ silent: true });
+      }
+    };
+
+    window.addEventListener('focus', handleVisibility);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('focus', handleVisibility);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [fetchData, isHydrated]);
 
   const formatDate = (dateStr: string): string => {
     try {

@@ -31,6 +31,7 @@ const AuthenticatedHeader = ({
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [localNotificationCount, setLocalNotificationCount] = useState(notificationCount);
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
+  const [, setTimeTick] = useState(0);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -46,6 +47,15 @@ const AuthenticatedHeader = ({
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Re-render periodically to update "time ago" labels
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimeTick((prev) => prev + 1);
+    }, 60000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const toggleMobileMenu = () => {
@@ -112,6 +122,8 @@ const AuthenticatedHeader = ({
         return 'CalendarIcon';
       case 'message':
         return 'ChatBubbleLeftRightIcon';
+      case 'prescription':
+        return 'ClipboardDocumentListIcon';
       case 'success':
         return 'CheckCircleIcon';
       case 'warning':
@@ -128,6 +140,8 @@ const AuthenticatedHeader = ({
       case 'appointment':
         return 'text-primary';
       case 'message':
+        return 'text-accent';
+      case 'prescription':
         return 'text-accent';
       case 'success':
         return 'text-success';

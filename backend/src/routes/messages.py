@@ -4,6 +4,8 @@ from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from ..models.message import Message
 from ..models.appointment import Appointment
+from ..models.doctor import Doctor
+from ..realtime import publish_event
 import json
 
 messages_bp = Blueprint('messages', __name__)
@@ -52,6 +54,22 @@ def is_during_appointment_time(appointment):
 
     return True, ""
 
+
+def verify_appointment_access(current_user, appointment):
+    user_id = current_user['id']
+    role = current_user.get('role')
+    patient_id = str(appointment.get('patient_id', ''))
+    doctor_id = appointment.get('doctor_id')
+
+    if role == 'patient':
+        return user_id == patient_id
+    if role == 'doctor':
+        doctor = Doctor.find_by_user_id(user_id)
+        if not doctor:
+            return False
+        return str(doctor.get('_id')) == str(doctor_id)
+    return False
+
 @messages_bp.route('/<appointment_id>', methods=['GET'])
 @jwt_required()
 def get_messages(appointment_id):
@@ -63,12 +81,7 @@ def get_messages(appointment_id):
     if not appointment:
         return jsonify({'error': 'Appointment not found'}), 404
     
-    # Check if user is part of this appointment
-    user_id = current_user['id']
-    patient_id = str(appointment.get('patient_id', ''))
-    doctor_id = str(appointment.get('doctor_id', ''))
-    
-    if user_id != patient_id and current_user['role'] != 'doctor':
+    if not verify_appointment_access(current_user, appointment):
         return jsonify({'error': 'Unauthorized'}), 403
     
     # Mark messages as read
@@ -91,6 +104,9 @@ def send_message(appointment_id):
     appointment = Appointment.find_by_id(appointment_id)
     if not appointment:
         return jsonify({'error': 'Appointment not found'}), 404
+
+    if not verify_appointment_access(current_user, appointment):
+        return jsonify({'error': 'Unauthorized'}), 403
     
     # Check appointment status - only confirmed appointments allow chat
     if appointment['status'] != 'confirmed':
@@ -107,7 +123,22 @@ def send_message(appointment_id):
         sender_role=current_user['role'],
         content=data['content']
     )
-    
+
+    target_user_ids = []
+    patient_id = str(appointment.get('patient_id', ''))
+    if patient_id:
+        target_user_ids.append(patient_id)
+    doctor_user_id = None
+    doctor_id = appointment.get('doctor_id')
+    if doctor_id:
+        doctor = Doctor.find_by_id(doctor_id)
+        if doctor and doctor.get('user_id'):
+            doctor_user_id = str(doctor['user_id'])
+    if doctor_user_id:
+        target_user_ids.append(doctor_user_id)
+    if target_user_ids:
+        publish_event(target_user_ids, 'messages.updated', {'appointmentId': appointment_id})
+
     return jsonify(Message.to_dict(message)), 201
 
 @messages_bp.route('/<appointment_id>/unread', methods=['GET'])
@@ -115,6 +146,11 @@ def send_message(appointment_id):
 def get_unread_count(appointment_id):
     """Get unread message count."""
     current_user = get_current_user()
+    appointment = Appointment.find_by_id(appointment_id)
+    if not appointment:
+        return jsonify({'error': 'Appointment not found'}), 404
+    if not verify_appointment_access(current_user, appointment):
+        return jsonify({'error': 'Unauthorized'}), 403
     count = Message.get_unread_count(appointment_id, current_user['role'])
     return jsonify({'unread': count})
 
@@ -127,6 +163,9 @@ def get_chat_status(appointment_id):
     appointment = Appointment.find_by_id(appointment_id)
     if not appointment:
         return jsonify({'error': 'Appointment not found'}), 404
+
+    if not verify_appointment_access(current_user, appointment):
+        return jsonify({'error': 'Unauthorized'}), 403
     
     status = appointment.get('status', 'pending')
     

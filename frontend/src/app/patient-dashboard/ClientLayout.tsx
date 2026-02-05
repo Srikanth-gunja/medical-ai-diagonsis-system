@@ -2,7 +2,14 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { patientsApi, authApi, appointmentsApi, notificationsApi, type Patient } from '@/lib/api';
+import {
+  patientsApi,
+  authApi,
+  appointmentsApi,
+  notificationsApi,
+  API_BASE_URL,
+  type Patient,
+} from '@/lib/api';
 import PatientDashboardHeader from './components/PatientDashboardHeader';
 import StatusIndicatorBar from '@/components/common/StatusIndicatorBar';
 import NavigationBreadcrumbs from '@/components/common/NavigationBreadcrumbs';
@@ -47,6 +54,15 @@ export default function PatientDashboardClientLayout({
     message: string;
     time: string;
   } | null>(null);
+
+  const refreshNotificationCount = async () => {
+    try {
+      const { count } = await notificationsApi.getUnreadCount();
+      setNotificationCount(count);
+    } catch (err) {
+      console.error('Failed to fetch notification count:', err);
+    }
+  };
 
   const fetchUser = async () => {
     try {
@@ -136,12 +152,7 @@ export default function PatientDashboardClientLayout({
       }
 
       // Fetch notification count
-      try {
-        const { count } = await notificationsApi.getUnreadCount();
-        setNotificationCount(count);
-      } catch (err) {
-        console.error('Failed to fetch notification count:', err);
-      }
+      await refreshNotificationCount();
     } catch (error) {
       console.error('Failed to fetch user profile:', error);
       // Token might be invalid
@@ -154,6 +165,25 @@ export default function PatientDashboardClientLayout({
 
   useEffect(() => {
     fetchUser();
+  }, []);
+
+  useEffect(() => {
+    const token = authApi.getToken();
+    if (!token) return;
+
+    const streamUrl = `${API_BASE_URL}/events/stream?token=${encodeURIComponent(token)}`;
+    const eventSource = new EventSource(streamUrl, { withCredentials: true });
+    const handleUpdate = () => refreshNotificationCount();
+
+    eventSource.addEventListener('notifications.updated', handleUpdate);
+    eventSource.addEventListener('message', handleUpdate);
+    eventSource.onerror = (err) => {
+      console.error('SSE connection error (patient layout):', err);
+    };
+
+    return () => {
+      eventSource.close();
+    };
   }, []);
 
   if (isLoading) {

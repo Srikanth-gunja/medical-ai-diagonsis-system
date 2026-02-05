@@ -59,6 +59,7 @@ def create_app(config_class=Config):
     from .routes.notifications import notifications_bp
     from .routes.admin import admin_bp
     from .routes.video_calls import video_calls_bp
+    from .routes.events import events_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(doctors_bp, url_prefix='/api/doctors')
@@ -75,6 +76,6 @@ def create_app(config_class=Config):
     app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(video_calls_bp, url_prefix='/api/video-calls')
+    app.register_blueprint(events_bp, url_prefix='/api/events')
 
     return app
-

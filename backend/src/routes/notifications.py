@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..models.notification import Notification
+from ..realtime import publish_event
 import json
 
 notifications_bp = Blueprint('notifications', __name__)
@@ -48,7 +49,9 @@ def get_unread_count():
 @jwt_required()
 def mark_as_read(notification_id):
     """Mark a notification as read."""
+    current_user = get_current_user()
     Notification.mark_as_read(notification_id)
+    publish_event([current_user['id']], 'notifications.updated', {})
     return jsonify({'success': True})
 
 
@@ -58,6 +61,7 @@ def mark_all_as_read():
     """Mark all notifications as read."""
     current_user = get_current_user()
     Notification.mark_all_as_read(current_user['id'])
+    publish_event([current_user['id']], 'notifications.updated', {})
     return jsonify({'success': True})
 
 
@@ -65,5 +69,7 @@ def mark_all_as_read():
 @jwt_required()
 def delete_notification(notification_id):
     """Delete a notification."""
+    current_user = get_current_user()
     Notification.delete(notification_id)
+    publish_event([current_user['id']], 'notifications.updated', {})
     return jsonify({'success': True})
