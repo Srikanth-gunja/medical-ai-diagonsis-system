@@ -36,8 +36,6 @@ interface Patient {
   phone: string;
 }
 
-
-
 export default function AdminDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<
@@ -288,10 +286,11 @@ export default function AdminDashboard() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 rounded-md font-medium transition-base capitalize relative ${activeTab === tab
+              className={`px-4 py-2 rounded-md font-medium transition-base capitalize relative ${
+                activeTab === tab
                   ? 'bg-primary text-primary-foreground'
                   : 'text-text-secondary hover:text-text-primary'
-                }`}
+              }`}
             >
               {tab === 'profile-requests' ? 'Profile Requests' : tab}
               {tab === 'profile-requests' && profileRequests.length > 0 && (
@@ -431,10 +430,11 @@ export default function AdminDashboard() {
                 <button
                   key={filter}
                   onClick={() => setDoctorFilter(filter)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-base capitalize ${doctorFilter === filter
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-base capitalize ${
+                    doctorFilter === filter
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted text-text-secondary hover:text-text-primary'
-                    }`}
+                  }`}
                 >
                   {filter}
                 </button>
@@ -483,12 +483,13 @@ export default function AdminDashboard() {
                       <td className="px-6 py-4 text-text-secondary">{doctor.location}</td>
                       <td className="px-6 py-4">
                         <span
-                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${doctor.verificationStatus === 'verified'
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                            doctor.verificationStatus === 'verified'
                               ? 'bg-success/10 text-success'
                               : doctor.verificationStatus === 'pending'
                                 ? 'bg-warning/10 text-warning'
                                 : 'bg-error/10 text-error'
-                            }`}
+                          }`}
                         >
                           {doctor.verificationStatus}
                         </span>

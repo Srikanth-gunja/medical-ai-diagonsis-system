@@ -218,15 +218,17 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          }`}
+        className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity duration-300 ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
         onClick={onClose}
       />
 
       {/* Slide-in Chat Panel */}
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-md bg-card border-l border-border shadow-elevation-3 z-50 transform transition-transform duration-300 ease-out ${isOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-card border-l border-border shadow-elevation-3 z-50 transform transition-transform duration-300 ease-out ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
       >
         {/* Gradient Header */}
         <div className="relative bg-gradient-to-br from-primary via-primary/90 to-accent p-6 pb-4">
@@ -307,7 +309,11 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
           ) : !canChat ? (
             <div className="flex flex-col items-center justify-center h-full text-center py-8 px-4">
               <div className="w-20 h-20 bg-gradient-to-br from-warning/20 to-warning/5 rounded-full flex items-center justify-center mb-4">
-                <Icon name={hasAppointment ? 'ClockIcon' : 'CalendarIcon'} size={40} className="text-warning" />
+                <Icon
+                  name={hasAppointment ? 'ClockIcon' : 'CalendarIcon'}
+                  size={40}
+                  className="text-warning"
+                />
               </div>
               <h3 className="text-lg font-semibold text-text-primary mb-2">
                 {hasAppointment ? 'Chat Not Yet Available' : 'No Active Appointment'}
@@ -369,10 +375,11 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
 
                     {/* Message Bubble */}
                     <div
-                      className={`max-w-[75%] px-4 py-3 ${isMe
-                        ? 'bg-gradient-to-br from-primary to-primary/90 text-white rounded-2xl rounded-br-sm'
-                        : 'bg-card border border-border text-text-primary rounded-2xl rounded-bl-sm shadow-sm'
-                        } ${isTemp ? 'opacity-70' : ''}`}
+                      className={`max-w-[75%] px-4 py-3 ${
+                        isMe
+                          ? 'bg-gradient-to-br from-primary to-primary/90 text-white rounded-2xl rounded-br-sm'
+                          : 'bg-card border border-border text-text-primary rounded-2xl rounded-bl-sm shadow-sm'
+                      } ${isTemp ? 'opacity-70' : ''}`}
                     >
                       <p className="text-sm whitespace-pre-wrap leading-relaxed">
                         {message.content}

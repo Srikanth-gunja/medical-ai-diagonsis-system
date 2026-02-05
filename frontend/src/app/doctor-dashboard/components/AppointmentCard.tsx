@@ -147,48 +147,48 @@ export default function AppointmentCard({
               (appointment.status === 'Confirmed' ||
                 appointment.status === 'Pending' ||
                 appointment.status === 'In Progress') && (
-              <>
-                {(appointment.status === 'Confirmed' || appointment.status === 'In Progress') &&
-                  appointment.type === 'Video' &&
-                  onJoinCall && (
+                <>
+                  {(appointment.status === 'Confirmed' || appointment.status === 'In Progress') &&
+                    appointment.type === 'Video' &&
+                    onJoinCall && (
+                      <button
+                        onClick={() => onJoinCall(appointment.id)}
+                        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-base text-sm font-medium"
+                      >
+                        <Icon name="VideoCameraIcon" size={16} />
+                        <span>Join Call</span>
+                      </button>
+                    )}
+
                   <button
-                    onClick={() => onJoinCall(appointment.id)}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-base text-sm font-medium"
+                    onClick={() => onReschedule(appointment.id)}
+                    className="flex items-center gap-2 px-4 py-2 bg-muted text-text-primary rounded-lg hover:bg-muted/80 transition-base text-sm font-medium"
                   >
-                    <Icon name="VideoCameraIcon" size={16} />
-                    <span>Join Call</span>
+                    <Icon name="CalendarIcon" size={16} />
+                    <span>Reschedule</span>
                   </button>
-                )}
 
-                <button
-                  onClick={() => onReschedule(appointment.id)}
-                  className="flex items-center gap-2 px-4 py-2 bg-muted text-text-primary rounded-lg hover:bg-muted/80 transition-base text-sm font-medium"
-                >
-                  <Icon name="CalendarIcon" size={16} />
-                  <span>Reschedule</span>
-                </button>
-
-                <button
-                  onClick={() => onChat(appointment.id)}
-                  className="flex items-center gap-2 px-4 py-2 bg-accent text-accent-foreground rounded-lg hover:shadow-elevation-2 transition-base text-sm font-medium"
-                >
-                  <Icon name="ChatBubbleLeftRightIcon" size={16} />
-                  <span>Chat</span>
-                </button>
-              </>
-            )}
+                  <button
+                    onClick={() => onChat(appointment.id)}
+                    className="flex items-center gap-2 px-4 py-2 bg-accent text-accent-foreground rounded-lg hover:shadow-elevation-2 transition-base text-sm font-medium"
+                  >
+                    <Icon name="ChatBubbleLeftRightIcon" size={16} />
+                    <span>Chat</span>
+                  </button>
+                </>
+              )}
 
             {!appointment.isExpiredNoActivity &&
               (appointment.status === 'Confirmed' || appointment.status === 'In Progress') &&
               onFinish && (
-              <button
-                onClick={() => onFinish(appointment.id)}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-base text-sm font-medium"
-              >
-                <Icon name="CheckCircleIcon" size={16} />
-                <span>Finish Appointment</span>
-              </button>
-            )}
+                <button
+                  onClick={() => onFinish(appointment.id)}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-base text-sm font-medium"
+                >
+                  <Icon name="CheckCircleIcon" size={16} />
+                  <span>Finish Appointment</span>
+                </button>
+              )}
 
             {appointment.isExpiredNoActivity && onMarkNoShow && (
               <button

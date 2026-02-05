@@ -25,7 +25,11 @@ import Icon from '@/components/ui/AppIcon';
 import { useVideoCall } from '@/contexts/VideoCallContext';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
-import { DashboardSkeleton, AppointmentCardSkeleton, StatsCardSkeleton } from '@/components/ui/Skeletons';
+import {
+  DashboardSkeleton,
+  AppointmentCardSkeleton,
+  StatsCardSkeleton,
+} from '@/components/ui/Skeletons';
 import {
   doctorsApi,
   appointmentsApi,
@@ -297,12 +301,14 @@ export default function DoctorDashboardInteractive() {
           ) as 'Confirmed' | 'Pending' | 'Completed' | 'Cancelled' | 'In Progress' | 'No Show';
 
           const startTime = parseDateTime(a.date, a.time);
-          const endTime = startTime ? new Date(startTime.getTime() + durationMinutes * 60000) : null;
+          const endTime = startTime
+            ? new Date(startTime.getTime() + durationMinutes * 60000)
+            : null;
           const hasActivity = Boolean(
             a.call_started_at ||
-              a.call_duration ||
-              a.status === 'in_progress' ||
-              a.status === 'completed'
+            a.call_duration ||
+            a.status === 'in_progress' ||
+            a.status === 'completed'
           );
           const isExpiredNoActivity = Boolean(
             endTime && now.getTime() > endTime.getTime() + graceMinutes * 60000 && !hasActivity
@@ -585,7 +591,6 @@ export default function DoctorDashboardInteractive() {
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [fetchData, isHydrated]);
-
 
   const handleConfirmAppointment = async (id: string) => {
     if (!isHydrated) return;
@@ -1181,10 +1186,7 @@ export default function DoctorDashboardInteractive() {
       )}
 
       {/* Incoming Call Modal */}
-      <IncomingCallModal
-        isOpen={!!incomingCall}
-        onClose={() => { }}
-      />
+      <IncomingCallModal isOpen={!!incomingCall} onClose={() => {}} />
 
       {/* Confirmation Dialog */}
       {ConfirmDialogComponent}
