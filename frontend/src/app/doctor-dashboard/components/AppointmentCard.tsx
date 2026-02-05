@@ -11,8 +11,10 @@ interface Appointment {
   patientImageAlt: string;
   time: string;
   type: 'Video' | 'In-Person' | 'Phone';
-  status: 'Confirmed' | 'Pending' | 'Completed' | 'Cancelled';
+  status: 'Confirmed' | 'Pending' | 'Completed' | 'Cancelled' | 'In Progress' | 'No Show';
   reason: string;
+  isExpiredNoActivity?: boolean;
+  uiStatus?: 'Confirmed' | 'Pending' | 'Completed' | 'Cancelled' | 'In Progress' | 'No Show';
 }
 
 interface AppointmentCardProps {
@@ -22,6 +24,7 @@ interface AppointmentCardProps {
   onChat: (id: string) => void;
   onFinish?: (id: string) => void;
   onJoinCall?: (id: string) => void;
+  onMarkNoShow?: (id: string) => void;
 }
 
 export default function AppointmentCard({
@@ -32,7 +35,10 @@ export default function AppointmentCard({
   onFinish,
   onJoinCall,
 }: AppointmentCardProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(
+    appointment.status === 'In Progress' || appointment.isExpiredNoActivity === true
+  );
+  const displayStatus = appointment.uiStatus || appointment.status;
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -44,6 +50,10 @@ export default function AppointmentCard({
         return 'bg-primary/10 text-primary border-primary/20';
       case 'Cancelled':
         return 'bg-error/10 text-error border-error/20';
+      case 'In Progress':
+        return 'bg-accent/10 text-accent border-accent/20';
+      case 'No Show':
+        return 'bg-warning/10 text-warning border-warning/20';
       default:
         return 'bg-muted text-muted-foreground border-border';
     }
@@ -91,9 +101,9 @@ export default function AppointmentCard({
 
         <div className="flex flex-col items-end gap-2">
           <span
-            className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(appointment.status)}`}
+            className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(displayStatus)}`}
           >
-            {appointment.status}
+            {displayStatus}
           </span>
           <button
             onClick={() => setIsExpanded(!isExpanded)}
@@ -111,13 +121,19 @@ export default function AppointmentCard({
 
       {isExpanded && (
         <div className="mt-4 pt-4 border-t border-border space-y-3 animate-fade-in">
+          {appointment.isExpiredNoActivity && (
+            <div className="rounded-lg border border-warning/20 bg-warning/10 px-3 py-2 text-sm text-warning">
+              The scheduled window has passed with no activity. You can mark this as a no-show or
+              reschedule.
+            </div>
+          )}
           <div>
             <p className="text-sm text-text-secondary">Reason for visit:</p>
             <p className="text-sm text-text-primary mt-1">{appointment.reason}</p>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {appointment.status === 'Pending' && (
+            {appointment.status === 'Pending' && !appointment.isExpiredNoActivity && (
               <button
                 onClick={() => onConfirm(appointment.id)}
                 className="flex items-center gap-2 px-4 py-2 bg-success text-success-foreground rounded-lg hover:shadow-elevation-2 transition-base text-sm font-medium"
@@ -127,9 +143,14 @@ export default function AppointmentCard({
               </button>
             )}
 
-            {(appointment.status === 'Confirmed' || appointment.status === 'Pending') && (
+            {!appointment.isExpiredNoActivity &&
+              (appointment.status === 'Confirmed' ||
+                appointment.status === 'Pending' ||
+                appointment.status === 'In Progress') && (
               <>
-                {appointment.status === 'Confirmed' && appointment.type === 'Video' && onJoinCall && (
+                {(appointment.status === 'Confirmed' || appointment.status === 'In Progress') &&
+                  appointment.type === 'Video' &&
+                  onJoinCall && (
                   <button
                     onClick={() => onJoinCall(appointment.id)}
                     className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-base text-sm font-medium"
@@ -157,13 +178,35 @@ export default function AppointmentCard({
               </>
             )}
 
-            {appointment.status === 'Confirmed' && onFinish && (
+            {!appointment.isExpiredNoActivity &&
+              (appointment.status === 'Confirmed' || appointment.status === 'In Progress') &&
+              onFinish && (
               <button
                 onClick={() => onFinish(appointment.id)}
                 className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-base text-sm font-medium"
               >
                 <Icon name="CheckCircleIcon" size={16} />
                 <span>Finish Appointment</span>
+              </button>
+            )}
+
+            {appointment.isExpiredNoActivity && onMarkNoShow && (
+              <button
+                onClick={() => onMarkNoShow(appointment.id)}
+                className="flex items-center gap-2 px-4 py-2 bg-warning text-warning-foreground rounded-lg hover:bg-warning/90 transition-base text-sm font-medium"
+              >
+                <Icon name="ExclamationTriangleIcon" size={16} />
+                <span>Mark No-Show</span>
+              </button>
+            )}
+
+            {appointment.isExpiredNoActivity && (
+              <button
+                onClick={() => onReschedule(appointment.id)}
+                className="flex items-center gap-2 px-4 py-2 bg-muted text-text-primary rounded-lg hover:bg-muted/80 transition-base text-sm font-medium"
+              >
+                <Icon name="CalendarIcon" size={16} />
+                <span>Reschedule</span>
               </button>
             )}
           </div>

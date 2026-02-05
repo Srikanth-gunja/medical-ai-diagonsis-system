@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 from ..database import get_db, NOTIFICATIONS_COLLECTION
 
@@ -112,6 +112,9 @@ class Notification:
         """Convert notification document to dict."""
         if not notification:
             return None
+        created_at = notification.get('created_at')
+        if created_at and created_at.tzinfo is None:
+          created_at = created_at.replace(tzinfo=timezone.utc)
         return {
             'id': str(notification['_id']),
             'userId': str(notification['user_id']),
@@ -121,5 +124,5 @@ class Notification:
             'link': notification.get('link'),
             'referenceId': notification.get('reference_id'),
             'read': notification['read'],
-            'createdAt': notification['created_at'].isoformat() if notification.get('created_at') else None
+            'createdAt': created_at.isoformat() if created_at else None
         }

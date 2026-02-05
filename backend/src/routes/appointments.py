@@ -6,6 +6,7 @@ from ..models.doctor import Doctor
 from ..models.patient import Patient
 from ..models.medical_record import MedicalRecord
 from ..models.notification import Notification
+from ..models.schedule import Schedule
 from ..database import get_db
 from ..realtime import publish_event
 import json
@@ -78,6 +79,9 @@ def get_appointments():
 def create_appointment():
     data = request.get_json()
     current_user = get_current_user()
+
+    schedule = Schedule.find_by_doctor_id(data['doctorId'])
+    slot_duration = schedule.get('slot_duration', 30) if schedule else 30
     
     appointment = Appointment.create(
         patient_id=current_user['id'],
@@ -85,7 +89,8 @@ def create_appointment():
         doctor_name=data['doctorName'],
         date=data['date'],
         time=data['time'],
-        symptoms=data.get('symptoms', '')
+        symptoms=data.get('symptoms', ''),
+        slot_duration=slot_duration
     )
     
     # Get patient name for notification
@@ -196,6 +201,22 @@ def update_status(appt_id):
                     title='Appointment Cancelled',
                     description=f'Your appointment with {doctor_name} on {appt_date} at {appt_time} was cancelled.',
                     icon='XCircleIcon',
+                    color='bg-warning'
+                )
+            elif status == 'no_show':
+                Notification.create(
+                    user_id=patient_id,
+                    title='Appointment Marked No-Show',
+                    message=f'Your appointment with {doctor_name} on {appt_date} at {appt_time} was marked as no-show.',
+                    notification_type='warning',
+                    link='/patient-dashboard'
+                )
+                create_activity(
+                    user_id=str(patient_id),
+                    activity_type='appointment',
+                    title='Appointment No-Show',
+                    description=f'Your appointment with {doctor_name} on {appt_date} at {appt_time} was marked as no-show.',
+                    icon='ExclamationTriangleIcon',
                     color='bg-warning'
                 )
         
@@ -470,11 +491,15 @@ def reschedule_appointment(appt_id):
     old_time = appointment.get('time', '')
     doctor_name = appointment.get('doctor_name', 'Doctor')
     
+    schedule = Schedule.find_by_doctor_id(appointment['doctor_id'])
+    slot_duration = schedule.get('slot_duration', 30) if schedule else 30
+
     # Update appointment with new date/time
     updated = Appointment.update(appt_id, {
         'date': new_date,
         'time': new_time,
-        'status': 'pending'  # Reset to pending for doctor to confirm
+        'status': 'pending',  # Reset to pending for doctor to confirm
+        'slot_duration': slot_duration,
     })
     
     # Get patient info for notification

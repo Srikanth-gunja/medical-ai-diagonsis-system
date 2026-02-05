@@ -37,7 +37,7 @@ interface Appointment {
   date: string;
   time: string;
   type: 'video' | 'in-person';
-  status: 'confirmed' | 'pending' | 'completed' | 'rejected';
+  status: 'confirmed' | 'pending' | 'completed' | 'rejected' | 'in_progress' | 'no_show';
   doctorId: string;
   rated?: boolean;
   rejectionReason?: string;
@@ -131,7 +131,13 @@ const PatientDashboardInteractive = () => {
             date: formatDate(a.date),
             time: a.time,
             type: (a.type as 'video' | 'in-person') || 'video',
-            status: a.status as 'confirmed' | 'pending' | 'completed' | 'rejected',
+            status: a.status as
+              | 'confirmed'
+              | 'pending'
+              | 'completed'
+              | 'rejected'
+              | 'in_progress'
+              | 'no_show',
             doctorId: a.doctorId,
             rated: (a as any).rated || false,
             rejectionReason: (a as any).rejectionReason || '',
@@ -456,7 +462,7 @@ const PatientDashboardInteractive = () => {
 
   // Filter appointments for upcoming section: confirmed or pending
   const upcomingAppointments = appointments.filter(
-    (a) => a.status === 'confirmed' || a.status === 'pending'
+    (a) => a.status === 'confirmed' || a.status === 'pending' || a.status === 'in_progress'
   );
 
   // You might want to show completed appointments differently or in a history section,
@@ -524,9 +530,9 @@ const PatientDashboardInteractive = () => {
                       }`}
                   >
                     Upcoming
-                    {appointments.filter((a) => a.status === 'confirmed').length > 0 && (
+                    {appointments.filter((a) => a.status === 'confirmed' || a.status === 'in_progress').length > 0 && (
                       <span className="ml-2 px-2 py-0.5 bg-success/10 text-success rounded-full text-xs font-semibold">
-                        {appointments.filter((a) => a.status === 'confirmed').length}
+                        {appointments.filter((a) => a.status === 'confirmed' || a.status === 'in_progress').length}
                       </span>
                     )}
                     {appointmentTab === 'upcoming' && (
@@ -558,9 +564,9 @@ const PatientDashboardInteractive = () => {
                       }`}
                   >
                     Completed
-                    {appointments.filter((a) => a.status === 'completed').length > 0 && (
+                    {appointments.filter((a) => a.status === 'completed' || a.status === 'no_show').length > 0 && (
                       <span className="ml-2 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-semibold">
-                        {appointments.filter((a) => a.status === 'completed').length}
+                        {appointments.filter((a) => a.status === 'completed' || a.status === 'no_show').length}
                       </span>
                     )}
                     {appointmentTab === 'completed' && (
@@ -590,9 +596,9 @@ const PatientDashboardInteractive = () => {
                 <div className="space-y-4">
                   {appointmentTab === 'upcoming' && (
                     <>
-                      {appointments.filter((a) => a.status === 'confirmed').length > 0 ? (
+                      {appointments.filter((a) => a.status === 'confirmed' || a.status === 'in_progress').length > 0 ? (
                         appointments
-                          .filter((a) => a.status === 'confirmed')
+                          .filter((a) => a.status === 'confirmed' || a.status === 'in_progress')
                           .map((appointment) => (
                             <UpcomingAppointmentCard
                               key={appointment.id}
@@ -654,9 +660,9 @@ const PatientDashboardInteractive = () => {
 
                   {appointmentTab === 'completed' && (
                     <>
-                      {appointments.filter((a) => a.status === 'completed').length > 0 ? (
+                      {appointments.filter((a) => a.status === 'completed' || a.status === 'no_show').length > 0 ? (
                         appointments
-                          .filter((a) => a.status === 'completed')
+                          .filter((a) => a.status === 'completed' || a.status === 'no_show')
                           .map((appointment) => (
                             <UpcomingAppointmentCard
                               key={appointment.id}

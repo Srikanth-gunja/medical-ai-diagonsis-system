@@ -13,7 +13,7 @@ interface Appointment {
   date: string;
   time: string;
   type: 'video' | 'in-person';
-  status: 'confirmed' | 'pending' | 'completed' | 'cancelled' | 'rejected';
+  status: 'confirmed' | 'pending' | 'completed' | 'cancelled' | 'rejected' | 'in_progress' | 'no_show';
   rated?: boolean;
   rejectionReason?: string;
 }
@@ -49,6 +49,10 @@ const UpcomingAppointmentCard = ({
         return 'bg-warning/10 text-warning border-warning/20';
       case 'completed':
         return 'bg-muted text-muted-foreground border-border';
+      case 'in_progress':
+        return 'bg-accent/10 text-accent border-accent/20';
+      case 'no_show':
+        return 'bg-warning/10 text-warning border-warning/20';
       case 'rejected':
         return 'bg-error/10 text-error border-error/20';
       default:
@@ -64,11 +68,21 @@ const UpcomingAppointmentCard = ({
         return 'ClockIcon';
       case 'completed':
         return 'CheckBadgeIcon';
+      case 'in_progress':
+        return 'VideoCameraIcon';
+      case 'no_show':
+        return 'ExclamationTriangleIcon';
       case 'rejected':
         return 'XCircleIcon';
       default:
         return 'CalendarIcon';
     }
+  };
+
+  const formatStatusLabel = () => {
+    if (appointment.status === 'in_progress') return 'In Progress';
+    if (appointment.status === 'no_show') return 'No Show';
+    return appointment.status.replace('_', ' ');
   };
 
   if (!isHydrated) {
@@ -131,11 +145,11 @@ const UpcomingAppointmentCard = ({
             className={`inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${getStatusColor()}`}
           >
             <Icon name={getStatusIcon() as any} size={14} />
-            <span className="capitalize">{appointment.status}</span>
+            <span className="capitalize">{formatStatusLabel()}</span>
           </span>
 
           <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
-            {appointment.status === 'confirmed' && (
+            {(appointment.status === 'confirmed' || appointment.status === 'in_progress') && (
               <button
                 onClick={() => onChat(appointment.id)}
                 className="flex items-center justify-center space-x-1.5 px-3 py-2 bg-primary/10 text-primary border border-primary/20 rounded-lg hover:bg-primary/20 transition-base text-sm font-medium"
@@ -146,7 +160,8 @@ const UpcomingAppointmentCard = ({
               </button>
             )}
 
-            {appointment.status === 'confirmed' && appointment.type === 'video' && (
+            {(appointment.status === 'confirmed' || appointment.status === 'in_progress') &&
+              appointment.type === 'video' && (
               <button
                 onClick={() => onJoin(appointment.id)}
                 className="flex items-center justify-center space-x-1.5 px-3 py-2 bg-primary text-primary-foreground rounded-lg hover:shadow-elevation-2 active:scale-[0.97] transition-base text-sm font-medium"
@@ -192,7 +207,8 @@ const UpcomingAppointmentCard = ({
 
             {appointment.status !== 'completed' &&
               appointment.status !== 'cancelled' &&
-              appointment.status !== 'rejected' && (
+              appointment.status !== 'rejected' &&
+              appointment.status !== 'no_show' && (
                 <div className="flex space-x-1">
                   <button
                     onClick={() => onReschedule(appointment.id)}

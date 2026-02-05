@@ -49,10 +49,14 @@ export interface Appointment {
   doctorImage?: string;
   date: string;
   time: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'in_progress' | 'no_show';
   symptoms?: string;
   type?: 'video' | 'in-person';
   rated?: boolean;
+  slotDuration?: number;
+  call_started_at?: string;
+  call_ended_at?: string;
+  call_duration?: number;
 }
 
 export interface Patient {

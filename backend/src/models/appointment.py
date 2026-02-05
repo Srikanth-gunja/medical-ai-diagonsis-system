@@ -6,7 +6,7 @@ class Appointment:
     """Appointment model."""
     
     @staticmethod
-    def create(patient_id, doctor_id, doctor_name, date, time, symptoms=''):
+    def create(patient_id, doctor_id, doctor_name, date, time, symptoms='', slot_duration=30):
         """Create a new appointment."""
         db = get_db()
         appointment_data = {
@@ -17,6 +17,7 @@ class Appointment:
             'time': time,
             'status': 'pending',
             'symptoms': symptoms,
+            'slot_duration': slot_duration,
             'created_at': datetime.utcnow()
         }
         result = db[APPOINTMENTS_COLLECTION].insert_one(appointment_data)
@@ -98,5 +99,5 @@ class Appointment:
             'call_started_at': appointment.get('call_started_at', '').isoformat() if appointment.get('call_started_at') else None,
             'call_ended_at': appointment.get('call_ended_at', '').isoformat() if appointment.get('call_ended_at') else None,
             'call_duration': appointment.get('call_duration'),
+            'slotDuration': appointment.get('slot_duration'),
         }
-

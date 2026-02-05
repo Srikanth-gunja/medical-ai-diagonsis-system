@@ -15,6 +15,7 @@ class Config:
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
     DEBUG = _is_truthy(os.environ.get('FLASK_DEBUG'))
     JWT_TOKEN_LOCATION = ['headers']
+    JWT_QUERY_STRING_NAME = 'token'
     
     # MongoDB Configuration
     MONGO_URI = os.environ.get('MONGO_URI') or 'mongodb://127.0.0.1:27017/'

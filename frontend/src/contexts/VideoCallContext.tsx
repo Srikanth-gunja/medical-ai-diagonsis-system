@@ -25,12 +25,14 @@ interface VideoCallContextType {
   isInitializing: boolean;
   isRinging: boolean;
   isClientReady: boolean;
+  callError: string | null;
   initializeCall: (appointmentId: string) => Promise<void>;
   joinCall: (call: Call) => Promise<void>;
   acceptIncomingCall: () => Promise<void>;
   rejectIncomingCall: () => Promise<void>;
   leaveCall: () => Promise<void>;
   endCall: () => Promise<void>;
+  clearCallError: () => void;
 }
 
 const VideoCallContext = createContext<VideoCallContextType | undefined>(undefined);
@@ -88,6 +90,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   const [isInitializing, setIsInitializing] = useState(false);
   const [isRinging, setIsRinging] = useState(false);
   const [isClientReady, setIsClientReady] = useState(false);
+  const [callError, setCallError] = useState<string | null>(null);
   const [pendingAppointmentId, setPendingAppointmentId] = useState<string | null>(null);
   const callStartedAtRef = React.useRef<number | null>(null);
   const initializingRef = React.useRef(false);
@@ -197,6 +200,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       appointmentId,
       callerName,
     });
+    setCallError(null);
     if (appointmentId) {
       setPendingAppointmentId(appointmentId);
     }
@@ -211,6 +215,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       throw new Error('Video client not initialized. Please wait a moment and try again.');
     }
 
+    setCallError(null);
     setIsInitializing(true);
     setPendingAppointmentId(appointmentId);
 
@@ -253,10 +258,12 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (joinError) {
           console.error('Error joining outgoing call:', joinError);
+          setCallError(getFriendlyError(joinError));
         }
       }
     } catch (error) {
       console.error('Error initializing call:', error);
+      setCallError(getFriendlyError(error));
       throw error;
     } finally {
       setIsInitializing(false);
@@ -269,11 +276,13 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       setActiveCall(call);
       setIncomingCall(null);
       setIsRinging(false);
+      setCallError(null);
       if (!callStartedAtRef.current) {
         callStartedAtRef.current = Date.now();
       }
     } catch (error) {
       console.error('Error joining call:', error);
+      setCallError(getFriendlyError(error));
       throw error;
     }
   };
@@ -288,6 +297,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       await joinCall(incomingCall.call);
     } catch (error) {
       console.error('Error accepting incoming call:', error);
+      setCallError(getFriendlyError(error));
       throw error;
     }
   };
@@ -300,8 +310,10 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       setIncomingCall(null);
       setPendingAppointmentId(null);
       callStartedAtRef.current = null;
+      setCallError(null);
     } catch (error) {
       console.error('Error rejecting incoming call:', error);
+      setCallError(getFriendlyError(error));
       throw error;
     }
   };
@@ -318,13 +330,19 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.error('Error logging call end:', error);
+      } finally {
+        try {
+          await activeCall.leave();
+        } catch (error) {
+          console.error('Error leaving call:', error);
+        }
+        setActiveCall(null);
+        setIsRinging(false);
+        setIncomingCall(null);
+        setPendingAppointmentId(null);
+        callStartedAtRef.current = null;
+        setCallError(null);
       }
-
-      await activeCall.leave();
-      setActiveCall(null);
-      setIsRinging(false);
-      setPendingAppointmentId(null);
-      callStartedAtRef.current = null;
     }
   };
 
@@ -340,15 +358,26 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (error) {
         console.error('Error logging call end:', error);
+      } finally {
+        // End it for everyone, then leave locally
+        try {
+          await activeCall.endCall();
+        } catch (error) {
+          console.error('Error ending call:', error);
+          setCallError(getFriendlyError(error));
+        }
+        try {
+          await activeCall.leave();
+        } catch (error) {
+          console.error('Error leaving call:', error);
+        }
+        setActiveCall(null);
+        setIsRinging(false);
+        setIncomingCall(null);
+        setPendingAppointmentId(null);
+        callStartedAtRef.current = null;
+        setCallError(null);
       }
-
-      // If doctor, end it for everyone
-      await activeCall.endCall();
-      await activeCall.leave();
-      setActiveCall(null);
-      setIsRinging(false);
-      setPendingAppointmentId(null);
-      callStartedAtRef.current = null;
     }
   };
 
@@ -360,12 +389,14 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     isInitializing,
     isRinging,
     isClientReady,
+    callError,
     initializeCall,
     joinCall,
     acceptIncomingCall,
     rejectIncomingCall,
     leaveCall,
     endCall,
+    clearCallError,
   };
 
   // Only render StreamVideo when client is ready
@@ -402,3 +433,33 @@ export function useVideoCall() {
   }
   return context;
 }
+  const getFriendlyError = (error: unknown) => {
+    const message =
+      typeof error === 'string'
+        ? error
+        : error instanceof Error
+          ? error.message
+          : JSON.stringify(error || '');
+
+    if (!message) return 'Something went wrong with the call.';
+    const normalized = message.toLowerCase();
+
+    if (normalized.includes('getusermedia') || normalized.includes('media devices')) {
+      return 'Camera or microphone access is blocked. Please allow permissions and try again.';
+    }
+    if (normalized.includes('notallowed') || normalized.includes('permission')) {
+      return 'Camera or microphone permission was denied. Please enable it in your browser.';
+    }
+    if (normalized.includes('notfound') || normalized.includes('device')) {
+      return 'No camera or microphone was found. Please connect a device and try again.';
+    }
+    if (normalized.includes('metadata')) {
+      return 'Unable to join the call. Please try again in a few seconds.';
+    }
+    if (normalized.includes('accept')) {
+      return 'Call could not be accepted. Please try again.';
+    }
+    return 'Something went wrong with the call. Please try again.';
+  };
+
+  const clearCallError = () => setCallError(null);

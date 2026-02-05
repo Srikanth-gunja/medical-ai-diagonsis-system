@@ -154,8 +154,15 @@ const AuthenticatedHeader = ({
     }
   };
 
+  const normalizeIsoToUtc = (value: string) => {
+    // If the string has no timezone offset, treat it as UTC
+    if (!value) return value;
+    const hasTimezone = /[zZ]|[+-]\d{2}:\d{2}$/.test(value);
+    return hasTimezone ? value : `${value}Z`;
+  };
+
   const formatTimeAgo = (dateString: string) => {
-    const date = new Date(dateString);
+    const date = new Date(normalizeIsoToUtc(dateString));
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const minutes = Math.floor(diff / 60000);

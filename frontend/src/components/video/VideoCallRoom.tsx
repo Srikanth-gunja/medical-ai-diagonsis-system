@@ -12,6 +12,7 @@ import {
 } from '@stream-io/video-react-sdk';
 import { ArrowsPointingOutIcon, ArrowsPointingInIcon } from '@heroicons/react/24/outline';
 import '@stream-io/video-react-sdk/dist/css/styles.css';
+import { useVideoCall } from '@/contexts/VideoCallContext';
 
 interface VideoCallRoomProps {
   call: Call;
@@ -29,21 +30,49 @@ export default function VideoCallRoom({ call, onLeave }: VideoCallRoomProps) {
 }
 
 function VideoCallRoomInner({ onLeave }: { onLeave: () => void }) {
+  const { callError } = useVideoCall();
   const { useCallCallingState, useParticipantCount } = useCallStateHooks();
   const callingState = useCallCallingState();
   const participantCount = useParticipantCount();
   const [layout, setLayout] = useState<'speaker' | 'grid'>('speaker');
   const [isFullScreen, setIsFullScreen] = useState(false);
   const hasHandledEndRef = React.useRef(false);
+  const hasMediaDevices =
+    typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia;
 
   useEffect(() => {
-    if (callingState === 'left' || callingState === 'ended') {
+    if (
+      callingState === 'left' ||
+      callingState === 'ended' ||
+      callingState === 'idle' ||
+      callingState === 'rejected'
+    ) {
       if (!hasHandledEndRef.current) {
         hasHandledEndRef.current = true;
         onLeave();
       }
     }
   }, [callingState, onLeave]);
+
+  if (!hasMediaDevices) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-gray-900 text-white">
+        <div className="text-center max-w-md px-6">
+          <p className="text-lg font-semibold mb-2">Camera/Microphone Unavailable</p>
+          <p className="text-sm text-gray-300 mb-6">
+            This browser session does not support media devices. Please use HTTPS or
+            open the site on `localhost`, then try again.
+          </p>
+          <button
+            onClick={onLeave}
+            className="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-md text-white font-medium transition-colors"
+          >
+            Exit Call
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Toggle fullscreen
   const toggleFullScreen = () => {
@@ -59,6 +88,23 @@ function VideoCallRoomInner({ onLeave }: { onLeave: () => void }) {
       }
     }
   };
+
+  if (callError) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-gray-900 text-white">
+        <div className="text-center max-w-md px-6">
+          <p className="text-lg font-semibold mb-2">Call Error</p>
+          <p className="text-sm text-gray-300 mb-6">{callError}</p>
+          <button
+            onClick={onLeave}
+            className="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-md text-white font-medium transition-colors"
+          >
+            Exit Call
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (callingState !== 'joined') {
     return (

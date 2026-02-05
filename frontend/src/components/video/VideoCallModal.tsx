@@ -15,12 +15,17 @@ interface VideoCallModalProps {
 }
 
 export default function VideoCallModal({ isOpen, onClose, appointmentId, otherUserName = 'Doctor' }: VideoCallModalProps) {
-  const { activeCall, isRinging, isInitializing, leaveCall } = useVideoCall();
+  const { activeCall, isRinging, isInitializing, endCall, leaveCall, callError, clearCallError } =
+    useVideoCall();
 
   const handleClose = async () => {
     if (activeCall) {
+      // End the call for both participants
+      await endCall();
+    } else {
       await leaveCall();
     }
+    clearCallError();
     onClose();
   };
 
@@ -121,6 +126,12 @@ export default function VideoCallModal({ isOpen, onClose, appointmentId, otherUs
                     Waiting for them to answer
                   </p>
 
+                  {callError && (
+                    <div className="mb-6 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                      {callError}
+                    </div>
+                  )}
+
                   {/* Cancel button */}
                   <button
                     onClick={handleClose}
@@ -185,7 +196,9 @@ export default function VideoCallModal({ isOpen, onClose, appointmentId, otherUs
         <div className="fixed inset-0 overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4 text-center">
             <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-gray-900 p-8 text-center align-middle shadow-xl transition-all">
-              <p className="text-red-400 mb-4">Something went wrong with the call.</p>
+              <p className="text-red-400 mb-4">
+                {callError || 'Something went wrong with the call.'}
+              </p>
               <button
                 onClick={handleClose}
                 className="px-6 py-2 bg-red-600 hover:bg-red-700 rounded-md text-white font-medium transition-colors"
