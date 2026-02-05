@@ -86,7 +86,8 @@ export default function PatientDashboardClientLayout({
 
       // Fetch next appointment for status bar
       try {
-        const appointments = await appointmentsApi.getAll();
+        const appointmentsResponse = await appointmentsApi.getAll();
+        const appointments = appointmentsResponse.items || [];
         const now = new Date();
 
         // Parse appointment date and time properly
@@ -147,8 +148,11 @@ export default function PatientDashboardClientLayout({
           // No upcoming appointments
           setAppointmentStatus(null);
         }
-      } catch (err) {
-        console.error('Failed to fetch appointment status:', err);
+      } catch (err: any) {
+        // Silently ignore backend connection errors in development
+        if (!err.message?.includes('Backend server is not running')) {
+          console.error('Failed to fetch appointment status:', err);
+        }
       }
 
       // Fetch notification count
@@ -177,8 +181,9 @@ export default function PatientDashboardClientLayout({
 
     eventSource.addEventListener('notifications.updated', handleUpdate);
     eventSource.addEventListener('message', handleUpdate);
-    eventSource.onerror = (err) => {
-      console.error('SSE connection error (patient layout):', err);
+    eventSource.onerror = () => {
+      // Silently handle SSE errors - backend might be down
+      // Don't spam console with errors
     };
 
     return () => {

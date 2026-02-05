@@ -102,7 +102,8 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
 
   const fetchAppointments = async () => {
     try {
-      const allAppointments = await appointmentsApi.getAll();
+      const appointmentsResponse = await appointmentsApi.getAll();
+      const allAppointments = appointmentsResponse.items || [];
       // Filter for confirmed appointments with this patient
       const patientAppointments = allAppointments.filter(
         (a) => a.patientId === patientId && a.status === 'confirmed'

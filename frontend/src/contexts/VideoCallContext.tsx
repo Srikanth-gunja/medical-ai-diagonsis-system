@@ -192,8 +192,16 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         // SECURITY: API key is now loaded from env, not from backend
         const apiKey = process.env.NEXT_PUBLIC_GETSTREAM_API_KEY;
         
-        if (!apiKey || !tokenData.token) {
-          logger.error('❌ Failed to get video call token - missing api_key or token');
+        if (!apiKey) {
+          logger.error('❌ Video calls disabled: NEXT_PUBLIC_GETSTREAM_API_KEY not set in .env.local');
+          setIsClientReady(false);
+          initializingRef.current = false;
+          return;
+        }
+        
+        if (!tokenData.token) {
+          logger.error('❌ Failed to get video call token from backend');
+          setIsClientReady(false);
           initializingRef.current = false;
           return;
         }

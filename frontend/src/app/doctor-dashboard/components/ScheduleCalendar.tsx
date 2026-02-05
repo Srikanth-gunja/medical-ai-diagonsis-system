@@ -38,11 +38,11 @@ export default function ScheduleCalendar({ onManageSchedule }: ScheduleCalendarP
 
   const fetchData = async () => {
     try {
-      const [appointmentsData, scheduleData] = await Promise.all([
+      const [appointmentsResponse, scheduleData] = await Promise.all([
         appointmentsApi.getAll(),
         schedulesApi.getMySchedule(),
       ]);
-      setAppointments(appointmentsData);
+      setAppointments(appointmentsResponse.items || []);
       setSchedule(scheduleData);
     } catch (error) {
       console.error('Failed to fetch data:', error);

@@ -226,17 +226,25 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
     (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    // Check if it's a network error (backend not running)
+    if (error instanceof TypeError && error.message === 'Failed to fetch') {
+      throw new Error('Backend server is not running. Please start the backend server.');
+    }
+    throw error;
   }
-
-  return response.json();
 }
 
 // Auth API

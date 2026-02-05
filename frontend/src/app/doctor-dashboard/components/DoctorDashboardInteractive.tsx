@@ -272,7 +272,8 @@ export default function DoctorDashboardInteractive() {
 
       // Fetch appointments
       try {
-        const apptData = await appointmentsApi.getAll();
+        const apptResponse = await appointmentsApi.getAll();
+        const apptData = apptResponse.items || [];
         const today = new Date().toISOString().split('T')[0];
         const now = new Date();
         const graceMinutes = 15;
@@ -723,7 +724,8 @@ export default function DoctorDashboardInteractive() {
     if (!isHydrated) return;
     try {
       // Find the patient's latest confirmed appointment
-      const allAppointments = await appointmentsApi.getAll();
+      const appointmentsResponse = await appointmentsApi.getAll();
+      const allAppointments = appointmentsResponse.items || [];
       const patientAppointment = allAppointments.find(
         (a) => a.patientId === patientId && a.status === 'confirmed'
       );

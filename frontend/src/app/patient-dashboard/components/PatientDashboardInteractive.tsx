@@ -128,7 +128,8 @@ const PatientDashboardInteractive = () => {
     try {
       // Fetch appointments
       try {
-        const apptData = await appointmentsApi.getAll();
+        const apptResponse = await appointmentsApi.getAll();
+        const apptData = apptResponse.items || [];
         const formattedAppointments: Appointment[] = apptData
           .filter((a: ApiAppointment) => a.status !== 'cancelled')
           .map((a: ApiAppointment) => ({
@@ -152,13 +153,17 @@ const PatientDashboardInteractive = () => {
             rejectionReason: (a as any).rejectionReason || '',
           }));
         setAppointments(formattedAppointments);
-      } catch (err) {
+      } catch (err: any) {
         logger.error('Failed to fetch appointments:', err);
+        if (err.message?.includes('Backend server is not running')) {
+          setError('Unable to connect to server. Please check your internet connection or try again later.');
+        }
       }
 
       // Fetch doctors
       try {
-        const doctorData = await doctorsApi.getAll();
+        const doctorResponse = await doctorsApi.getAll();
+        const doctorData = doctorResponse.items || [];
         logger.log('Doctors fetched:', doctorData);
 
         let nextAvailableMap = new Map<string, string>();
@@ -510,10 +515,6 @@ const PatientDashboardInteractive = () => {
     [appointments]
   );
 
-  if (!isHydrated || isLoading) {
-    return <DashboardSkeleton />;
-  }
-
   // Filter appointments for upcoming section: confirmed or pending - memoized
   const upcomingAppointments = useMemo(() => 
     appointments.filter(
@@ -524,6 +525,10 @@ const PatientDashboardInteractive = () => {
 
   // Display all appointments
   const displayAppointments = appointments;
+
+  if (!isHydrated || isLoading) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <>
