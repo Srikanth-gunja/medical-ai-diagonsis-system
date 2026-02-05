@@ -90,6 +90,10 @@ def create_call(appointment_id):
 
     # Generate token for current user (this also upserts them to Stream)
     token = video_service.generate_user_token(user_id, user_name, role)
+    if not token:
+        return jsonify(
+            {"error": "Failed to generate token. Service not configured."}
+        ), 503
 
     # Get other participant details and ensure they exist in Stream
     other_user_id = None
@@ -126,8 +130,10 @@ def create_call(appointment_id):
         other_role = "patient"
 
     # Upsert the other participant to Stream so they can receive calls
-    if other_user_id:
-        video_service.upsert_user(other_user_id, other_user_name, other_role)
+    if not other_user_id:
+        return jsonify({"error": "Other participant not found for appointment"}), 404
+
+    video_service.upsert_user(other_user_id, other_user_name, other_role)
 
     # If doctor is joining, we can optionally mark appointment as "in_progress"
     # if it was confirmed

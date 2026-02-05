@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import {
   Call,
   CallControls,
-  CallStatsButton,
   PaginatedGridLayout,
   SpeakerLayout,
   StreamCall,
@@ -20,11 +19,31 @@ interface VideoCallRoomProps {
 }
 
 export default function VideoCallRoom({ call, onLeave }: VideoCallRoomProps) {
+  return (
+    <StreamTheme>
+      <StreamCall call={call}>
+        <VideoCallRoomInner onLeave={onLeave} />
+      </StreamCall>
+    </StreamTheme>
+  );
+}
+
+function VideoCallRoomInner({ onLeave }: { onLeave: () => void }) {
   const { useCallCallingState, useParticipantCount } = useCallStateHooks();
   const callingState = useCallCallingState();
   const participantCount = useParticipantCount();
   const [layout, setLayout] = useState<'speaker' | 'grid'>('speaker');
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const hasHandledEndRef = React.useRef(false);
+
+  useEffect(() => {
+    if (callingState === 'left' || callingState === 'ended') {
+      if (!hasHandledEndRef.current) {
+        hasHandledEndRef.current = true;
+        onLeave();
+      }
+    }
+  }, [callingState, onLeave]);
 
   // Toggle fullscreen
   const toggleFullScreen = () => {
@@ -53,55 +72,57 @@ export default function VideoCallRoom({ call, onLeave }: VideoCallRoomProps) {
   }
 
   return (
-    <StreamTheme>
-      <StreamCall call={call}>
-        <div className={`relative flex h-full w-full flex-col bg-gray-900 ${isFullScreen ? 'fixed inset-0 z-50' : ''}`}>
-          {/* Header */}
-          <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent p-4 text-white">
-            <div className="flex items-center gap-2">
-              <span className="flex h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
-              <span className="font-medium">Live Consultation</span>
-              <span className="text-sm text-gray-300 ml-2">({participantCount} participants)</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setLayout(layout === 'speaker' ? 'grid' : 'speaker')}
-                className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium hover:bg-white/20 transition-colors"
-              >
-                {layout === 'speaker' ? 'Grid View' : 'Speaker View'}
-              </button>
+    <div className={`relative flex h-full w-full flex-col bg-gray-900 ${isFullScreen ? 'fixed inset-0 z-50' : ''}`}>
+      {/* Header */}
+      <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent p-4 text-white">
+        <div className="flex items-center gap-2">
+          <span className="flex h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
+          <span className="font-medium">Live Consultation</span>
+          <span className="text-sm text-gray-300 ml-2">({participantCount} participants)</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setLayout(layout === 'speaker' ? 'grid' : 'speaker')}
+            className="rounded-lg bg-white/10 px-3 py-1.5 text-sm font-medium hover:bg-white/20 transition-colors"
+          >
+            {layout === 'speaker' ? 'Grid View' : 'Speaker View'}
+          </button>
 
-              <button
-                onClick={toggleFullScreen}
-                className="rounded-full bg-white/10 p-2 hover:bg-white/20 transition-colors"
-                title={isFullScreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-              >
-                {isFullScreen ? (
-                  <ArrowsPointingInIcon className="h-5 w-5" />
-                ) : (
-                  <ArrowsPointingOutIcon className="h-5 w-5" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Video Layout */}
-          <div className="flex-1 overflow-hidden">
-            {layout === 'speaker' ? (
-              <SpeakerLayout
-                participantsBarPosition="bottom"
-              />
+          <button
+            onClick={toggleFullScreen}
+            className="rounded-full bg-white/10 p-2 hover:bg-white/20 transition-colors"
+            title={isFullScreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+          >
+            {isFullScreen ? (
+              <ArrowsPointingInIcon className="h-5 w-5" />
             ) : (
-              <PaginatedGridLayout />
+              <ArrowsPointingOutIcon className="h-5 w-5" />
             )}
-          </div>
+          </button>
+        </div>
+      </div>
 
-          {/* Controls */}
-          <div className="bg-gray-900 p-4 pb-8 flex justify-center">
-            <CallControls onLeave={onLeave} />
+      {participantCount < 2 && (
+        <div className="absolute top-16 left-0 right-0 z-10 flex justify-center">
+          <div className="rounded-full bg-black/60 px-4 py-2 text-sm text-gray-200 shadow-lg">
+            Waiting for the other participant to join...
           </div>
         </div>
-      </StreamCall>
-    </StreamTheme>
+      )}
+
+      {/* Video Layout */}
+      <div className="flex-1 overflow-hidden">
+        {layout === 'speaker' ? (
+          <SpeakerLayout participantsBarPosition="bottom" />
+        ) : (
+          <PaginatedGridLayout />
+        )}
+      </div>
+
+      {/* Controls */}
+      <div className="bg-gray-900 p-4 pb-8 flex justify-center">
+        <CallControls onLeave={onLeave} />
+      </div>
+    </div>
   );
 }

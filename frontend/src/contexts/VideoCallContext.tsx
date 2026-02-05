@@ -89,7 +89,31 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   const [isRinging, setIsRinging] = useState(false);
   const [isClientReady, setIsClientReady] = useState(false);
   const [pendingAppointmentId, setPendingAppointmentId] = useState<string | null>(null);
+  const callStartedAtRef = React.useRef<number | null>(null);
   const initializingRef = React.useRef(false);
+  const streamMock =
+    typeof window !== 'undefined' ? (window as any).__STREAM_MOCK__ : null;
+  const isMockMode = !!streamMock;
+
+  const retryWithBackoff = useCallback(async <T,>(
+    fn: () => Promise<T>,
+    retries = 3,
+    baseDelayMs = 300
+  ): Promise<T> => {
+    let attempt = 0;
+    while (true) {
+      try {
+        return await fn();
+      } catch (error) {
+        attempt += 1;
+        if (attempt > retries) {
+          throw error;
+        }
+        const delay = baseDelayMs * Math.pow(2, attempt - 1);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+  }, []);
 
   // Initialize client immediately when user is authenticated (on app load)
   useEffect(() => {
@@ -111,8 +135,20 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     const initClient = async () => {
       initializingRef.current = true;
       try {
+        if (isMockMode) {
+          const mockClient =
+            streamMock?.client ||
+            ({
+              call: () => streamMock?.call || null,
+              disconnectUser: () => {},
+            } as StreamVideoClient);
+          setClient(mockClient);
+          setIsClientReady(true);
+          return;
+        }
+
         console.log('🎥 Initializing video client for user:', user.email);
-        const tokenData = await videoCallsApi.getToken();
+        const tokenData = await retryWithBackoff(() => videoCallsApi.getToken());
 
         if (!tokenData.api_key || !tokenData.token) {
           console.error('❌ Failed to get video call token - missing api_key or token');
@@ -149,7 +185,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     return () => {
       // Cleanup handled by dependency change logic or unmount
     };
-  }, [user]);
+  }, [user, client, isMockMode, retryWithBackoff, streamMock]);
 
   const handleIncomingCall = useCallback((call: Call) => {
     // Extract appointment ID from call custom data
@@ -161,6 +197,9 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       appointmentId,
       callerName,
     });
+    if (appointmentId) {
+      setPendingAppointmentId(appointmentId);
+    }
   }, []);
 
   const handleOutgoingCallEnded = useCallback(() => {
@@ -177,7 +216,11 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
 
     try {
       // Get call details from backend (backend now creates both users in Stream)
-      const callDetails = await videoCallsApi.createCall(appointmentId);
+      const callDetails = await retryWithBackoff(() => videoCallsApi.createCall(appointmentId));
+
+      if (!callDetails.other_user_id) {
+        throw new Error('Other participant not found for this appointment.');
+      }
 
       const call = client.call('default', callDetails.call_id);
 
@@ -199,6 +242,19 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
 
       setActiveCall(call);
       setIsRinging(true);
+
+      if (!isMockMode || !streamMock?.disableAutoJoin) {
+        // Join the call as the caller (stay in ringing UI until callee joins)
+        try {
+          await call.join();
+          setIsRinging(false);
+          if (!callStartedAtRef.current) {
+            callStartedAtRef.current = Date.now();
+          }
+        } catch (joinError) {
+          console.error('Error joining outgoing call:', joinError);
+        }
+      }
     } catch (error) {
       console.error('Error initializing call:', error);
       throw error;
@@ -213,6 +269,9 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       setActiveCall(call);
       setIncomingCall(null);
       setIsRinging(false);
+      if (!callStartedAtRef.current) {
+        callStartedAtRef.current = Date.now();
+      }
     } catch (error) {
       console.error('Error joining call:', error);
       throw error;
@@ -223,6 +282,9 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     if (!incomingCall) return;
 
     try {
+      if (incomingCall.appointmentId) {
+        setPendingAppointmentId(incomingCall.appointmentId);
+      }
       await joinCall(incomingCall.call);
     } catch (error) {
       console.error('Error accepting incoming call:', error);
@@ -236,6 +298,8 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     try {
       await incomingCall.call.leave({ reject: true, reason: 'decline' });
       setIncomingCall(null);
+      setPendingAppointmentId(null);
+      callStartedAtRef.current = null;
     } catch (error) {
       console.error('Error rejecting incoming call:', error);
       throw error;
@@ -244,21 +308,47 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
 
   const leaveCall = async () => {
     if (activeCall) {
+      const appointmentId = pendingAppointmentId;
+      const startedAt = callStartedAtRef.current;
+      const duration = startedAt ? Math.max(0, Math.floor((Date.now() - startedAt) / 1000)) : undefined;
+
+      try {
+        if (appointmentId) {
+          await videoCallsApi.endCall(appointmentId, duration);
+        }
+      } catch (error) {
+        console.error('Error logging call end:', error);
+      }
+
       await activeCall.leave();
       setActiveCall(null);
       setIsRinging(false);
       setPendingAppointmentId(null);
+      callStartedAtRef.current = null;
     }
   };
 
   const endCall = async () => {
     if (activeCall) {
+      const appointmentId = pendingAppointmentId;
+      const startedAt = callStartedAtRef.current;
+      const duration = startedAt ? Math.max(0, Math.floor((Date.now() - startedAt) / 1000)) : undefined;
+
+      try {
+        if (appointmentId) {
+          await videoCallsApi.endCall(appointmentId, duration);
+        }
+      } catch (error) {
+        console.error('Error logging call end:', error);
+      }
+
       // If doctor, end it for everyone
       await activeCall.endCall();
       await activeCall.leave();
       setActiveCall(null);
       setIsRinging(false);
       setPendingAppointmentId(null);
+      callStartedAtRef.current = null;
     }
   };
 
@@ -290,13 +380,17 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <VideoCallContext.Provider value={contextValue}>
-      <StreamVideo client={client}>
-        <CallWatcherWrapper
-          onIncomingCall={handleIncomingCall}
-          onOutgoingCallEnded={handleOutgoingCallEnded}
-        />
-        {children}
-      </StreamVideo>
+      {isMockMode ? (
+        children
+      ) : (
+        <StreamVideo client={client}>
+          <CallWatcherWrapper
+            onIncomingCall={handleIncomingCall}
+            onOutgoingCallEnded={handleOutgoingCallEnded}
+          />
+          {children}
+        </StreamVideo>
+      )}
     </VideoCallContext.Provider>
   );
 }
