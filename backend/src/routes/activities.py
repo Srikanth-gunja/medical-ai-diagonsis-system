@@ -79,10 +79,13 @@ def create_activity():
     from flask import request
     current_user = get_current_user()
     data = request.get_json()
+    target_user_id = data.get('user_id', current_user['id'])
+    if current_user.get('role') != 'admin':
+        target_user_id = current_user['id']
     
     db = get_db()
     activity = {
-        'user_id': ObjectId(data.get('user_id', current_user['id'])),
+        'user_id': ObjectId(target_user_id),
         'type': data.get('type', 'message'),
         'title': data.get('title', ''),
         'description': data.get('description', ''),

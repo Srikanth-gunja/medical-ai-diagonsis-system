@@ -1,12 +1,20 @@
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
+
+
+def _is_truthy(value: str | None) -> bool:
+    if value is None:
+        return False
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-me'
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'jwt-secret-key-change-me'
-    DEBUG = True
-    JWT_TOKEN_LOCATION = ['headers', 'query_string']
-    JWT_QUERY_STRING_NAME = 'token'
+    SECRET_KEY = os.environ.get('SECRET_KEY')
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
+    DEBUG = _is_truthy(os.environ.get('FLASK_DEBUG'))
+    JWT_TOKEN_LOCATION = ['headers']
     
     # MongoDB Configuration
     MONGO_URI = os.environ.get('MONGO_URI') or 'mongodb://127.0.0.1:27017/'

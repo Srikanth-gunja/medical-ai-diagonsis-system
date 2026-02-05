@@ -50,8 +50,13 @@ def get_unread_count():
 def mark_as_read(notification_id):
     """Mark a notification as read."""
     current_user = get_current_user()
+    notification = Notification.find_by_id(notification_id)
+    if not notification:
+        return jsonify({'error': 'Notification not found'}), 404
+    if str(notification.get('user_id')) != current_user['id'] and current_user.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
     Notification.mark_as_read(notification_id)
-    publish_event([current_user['id']], 'notifications.updated', {})
+    publish_event([str(notification['user_id'])], 'notifications.updated', {})
     return jsonify({'success': True})
 
 
@@ -70,6 +75,11 @@ def mark_all_as_read():
 def delete_notification(notification_id):
     """Delete a notification."""
     current_user = get_current_user()
+    notification = Notification.find_by_id(notification_id)
+    if not notification:
+        return jsonify({'error': 'Notification not found'}), 404
+    if str(notification.get('user_id')) != current_user['id'] and current_user.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
     Notification.delete(notification_id)
-    publish_event([current_user['id']], 'notifications.updated', {})
+    publish_event([str(notification['user_id'])], 'notifications.updated', {})
     return jsonify({'success': True})

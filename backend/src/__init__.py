@@ -15,6 +15,9 @@ def create_app(config_class=Config):
     CORS(app)
     JWTManager(app)
 
+    if not app.config.get('SECRET_KEY') or not app.config.get('JWT_SECRET_KEY'):
+        raise RuntimeError("SECRET_KEY and JWT_SECRET_KEY must be set via environment variables.")
+
     # Add CORS headers to ALL responses including error responses
     @app.after_request
     def after_request(response):

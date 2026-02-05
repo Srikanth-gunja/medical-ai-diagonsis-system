@@ -79,15 +79,33 @@ def create_record():
 @patients_bp.route('/records/<record_id>', methods=['PUT'])
 @jwt_required()
 def update_record(record_id):
+    current_user = get_current_user()
+    record = MedicalRecord.find_by_id(record_id)
+    if not record:
+        return jsonify({'error': 'Record not found'}), 404
+    if current_user.get('role') == 'patient':
+        patient = Patient.find_by_user_id(current_user['id'])
+        if not patient or str(record.get('patient_id')) != str(patient['_id']):
+            return jsonify({'error': 'Unauthorized'}), 403
+    elif current_user.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
     data = request.get_json()
     record = MedicalRecord.update(record_id, data)
-    if record:
-        return jsonify(MedicalRecord.to_dict(record))
-    return jsonify({'error': 'Record not found'}), 404
+    return jsonify(MedicalRecord.to_dict(record))
 
 @patients_bp.route('/records/<record_id>', methods=['DELETE'])
 @jwt_required()
 def delete_record(record_id):
+    current_user = get_current_user()
+    record = MedicalRecord.find_by_id(record_id)
+    if not record:
+        return jsonify({'error': 'Record not found'}), 404
+    if current_user.get('role') == 'patient':
+        patient = Patient.find_by_user_id(current_user['id'])
+        if not patient or str(record.get('patient_id')) != str(patient['_id']):
+            return jsonify({'error': 'Unauthorized'}), 403
+    elif current_user.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
     result = MedicalRecord.delete(record_id)
     if result.deleted_count > 0:
         return jsonify({'message': 'Record deleted successfully'})

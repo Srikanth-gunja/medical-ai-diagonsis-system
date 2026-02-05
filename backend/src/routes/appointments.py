@@ -214,7 +214,19 @@ def update_status(appt_id):
 @appointments_bp.route('/<appt_id>', methods=['DELETE'])
 @jwt_required()
 def delete_appointment(appt_id):
+    current_user = get_current_user()
     existing = Appointment.find_by_id(appt_id)
+    if not existing:
+        return jsonify({'error': 'Appointment not found'}), 404
+    if current_user.get('role') == 'patient':
+        if str(existing.get('patient_id')) != current_user['id']:
+            return jsonify({'error': 'Unauthorized'}), 403
+    elif current_user.get('role') == 'doctor':
+        doctor = Doctor.find_by_user_id(current_user['id'])
+        if not doctor or str(doctor.get('_id')) != str(existing.get('doctor_id')):
+            return jsonify({'error': 'Unauthorized'}), 403
+    elif current_user.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
     result = Appointment.delete(appt_id)
     if result.deleted_count > 0:
         target_user_ids = []

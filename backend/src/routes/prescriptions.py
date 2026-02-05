@@ -188,8 +188,7 @@ def get_prescription(prescription_id):
     
     # Verify access
     if current_user['role'] == 'patient':
-        patient = Patient.find_by_user_id(current_user['id'])
-        if not patient or str(prescription['patient_id']) != str(patient['_id']):
+        if str(prescription['patient_id']) != current_user['id']:
             return jsonify({'error': 'Access denied'}), 403
     elif current_user['role'] == 'doctor':
         doctor = Doctor.find_by_user_id(current_user['id'])

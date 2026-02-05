@@ -190,6 +190,9 @@ def get_doctor(doctor_id):
 @doctors_bp.route('', methods=['POST'])
 @jwt_required()
 def create_doctor():
+    current_user = get_current_user()
+    if current_user.get('role') != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
     data = request.get_json()
     doctor = Doctor.create(
         user_id=data.get('user_id'),
@@ -205,6 +208,13 @@ def create_doctor():
 @doctors_bp.route('/<doctor_id>', methods=['PUT'])
 @jwt_required()
 def update_doctor(doctor_id):
+    current_user = get_current_user()
+    if current_user.get('role') not in ['admin', 'doctor']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    if current_user.get('role') == 'doctor':
+        doctor = Doctor.find_by_user_id(current_user['id'])
+        if not doctor or str(doctor.get('_id')) != str(doctor_id):
+            return jsonify({'error': 'Unauthorized'}), 403
     data = request.get_json()
     doctor = Doctor.update(doctor_id, data)
     if doctor:
@@ -214,8 +224,10 @@ def update_doctor(doctor_id):
 @doctors_bp.route('/<doctor_id>', methods=['DELETE'])
 @jwt_required()
 def delete_doctor(doctor_id):
+    current_user = get_current_user()
+    if current_user.get('role') != 'admin':
+        return jsonify({'error': 'Admin access required'}), 403
     result = Doctor.delete(doctor_id)
     if result.deleted_count > 0:
         return jsonify({'message': 'Doctor deleted successfully'})
     return jsonify({'error': 'Doctor not found'}), 404
-

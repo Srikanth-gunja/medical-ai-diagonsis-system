@@ -54,7 +54,10 @@ def create_chat_model():
     api_key = current_app.config.get('GOOGLE_API_KEY') or os.environ.get('GOOGLE_API_KEY')
     
     if not api_key:
-        raise ValueError("GOOGLE_API_KEY is not configured. Please set it in environment variables.")
+        if getattr(current_app, "testing", False):
+            api_key = "test-key"
+        else:
+            raise ValueError("GOOGLE_API_KEY is not configured. Please set it in environment variables.")
     
     return ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",

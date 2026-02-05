@@ -51,6 +51,14 @@ class Notification:
             'user_id': ObjectId(user_id) if isinstance(user_id, str) else user_id,
             'read': False
         })
+
+    @staticmethod
+    def find_by_id(notification_id):
+        """Find a notification by ID."""
+        db = get_db()
+        if isinstance(notification_id, str):
+            notification_id = ObjectId(notification_id)
+        return db[NOTIFICATIONS_COLLECTION].find_one({'_id': notification_id})
     
     @staticmethod
     def mark_as_read(notification_id):
