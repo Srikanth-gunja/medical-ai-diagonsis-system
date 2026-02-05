@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Icon from '@/components/ui/AppIcon';
+import { useToast } from '@/components/ui/Toast';
 import { authApi } from '@/lib/api';
+import { useFormValidation } from '@/hooks/useFormValidation';
 
 interface LoginFormProps {
   onSubmit?: (email: string, password: string) => void;
@@ -12,62 +14,75 @@ interface LoginFormProps {
 
 const LoginForm = ({ onSubmit }: LoginFormProps) => {
   const router = useRouter();
+  const { showToast } = useToast();
   const [isHydrated, setIsHydrated] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [pendingVerification, setPendingVerification] = useState(false);
-  const [errors, setErrors] = useState<{
-    email?: string;
-    password?: string;
-    general?: string;
-  }>({});
+
+  const {
+    errors,
+    handleChange,
+    handleBlur,
+    validateAll,
+    isFieldInvalid,
+    isFieldValid,
+    touched,
+  } = useFormValidation({
+    rules: {
+      email: { required: true, email: true },
+      password: { required: true, minLength: 6 },
+    },
+    validateOnChange: true,
+    validateOnBlur: true,
+  });
 
   useEffect(() => {
     setIsHydrated(true);
   }, []);
 
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+  const handleInputChange = (field: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    handleChange(field, value);
   };
 
-  const validateForm = (): boolean => {
-    const newErrors: typeof errors = {};
-
-    if (!email) {
-      newErrors.email = 'Email is required';
-    } else if (!validateEmail(email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-
-    if (!password) {
-      newErrors.password = 'Password is required';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const handleInputBlur = (field: keyof typeof formData) => {
+    handleBlur(field, formData[field]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    const validationErrors = validateAll(formData);
+    if (Object.keys(validationErrors).length > 0) {
+      showToast({
+        type: 'error',
+        title: 'Validation Error',
+        message: 'Please fix the errors in the form.',
+      });
       return;
     }
 
     setIsLoading(true);
-    setErrors({});
     setPendingVerification(false);
 
     try {
-      const response = await authApi.login(email, password);
+      const response = await authApi.login(formData.email, formData.password);
 
       if (onSubmit) {
-        onSubmit(email, password);
+        onSubmit(formData.email, formData.password);
       }
+
+      showToast({
+        type: 'success',
+        title: 'Welcome Back!',
+        message: 'Successfully signed in.',
+      });
 
       // Redirect based on role
       if (response.user.role === 'admin') {
@@ -80,39 +95,32 @@ const LoginForm = ({ onSubmit }: LoginFormProps) => {
     } catch (error: any) {
       const errorMessage = error.message || '';
 
-      // Check for pending verification
       if (errorMessage.includes('pending_verification') || errorMessage.includes('awaiting')) {
         setPendingVerification(true);
-        setErrors({
-          general: 'Your account is awaiting admin verification. Please check back later.',
+        showToast({
+          type: 'warning',
+          title: 'Verification Pending',
+          message: 'Your account is awaiting admin verification. Please check back later.',
+          duration: 8000,
         });
       } else if (
         errorMessage.includes('verification_rejected') ||
         errorMessage.includes('rejected')
       ) {
-        setErrors({
-          general: 'Your doctor verification was rejected. Please contact support.',
+        showToast({
+          type: 'error',
+          title: 'Verification Rejected',
+          message: 'Your doctor verification was rejected. Please contact support.',
+          duration: 8000,
         });
       } else {
-        setErrors({
-          general: 'Invalid email or password. Please try again.',
+        showToast({
+          type: 'error',
+          title: 'Login Failed',
+          message: 'Invalid email or password. Please try again.',
         });
       }
       setIsLoading(false);
-    }
-  };
-
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEmail(e.target.value);
-    if (errors.email) {
-      setErrors({ ...errors, email: undefined });
-    }
-  };
-
-  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPassword(e.target.value);
-    if (errors.password) {
-      setErrors({ ...errors, password: undefined });
     }
   };
 
@@ -142,35 +150,6 @@ const LoginForm = ({ onSubmit }: LoginFormProps) => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Pending Verification Banner */}
-        {pendingVerification && (
-          <div className="p-4 bg-warning/10 border border-warning/20 rounded-lg">
-            <div className="flex items-start space-x-3">
-              <Icon name="ClockIcon" size={24} className="text-warning flex-shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-warning">Verification Pending</p>
-                <p className="text-xs text-text-secondary mt-1">
-                  Your doctor account is being reviewed by an administrator. You'll be notified once
-                  your account is verified.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {errors.general && !pendingVerification && (
-          <div className="p-4 bg-error/10 border border-error/20 rounded-lg">
-            <div className="flex items-start space-x-3">
-              <Icon
-                name="ExclamationCircleIcon"
-                size={20}
-                className="text-error flex-shrink-0 mt-0.5"
-              />
-              <p className="text-sm text-error">{errors.general}</p>
-            </div>
-          </div>
-        )}
-
         {/* Email Input */}
         <div className="space-y-2">
           <label htmlFor="email" className="block text-sm font-medium text-text-primary">
@@ -183,16 +162,31 @@ const LoginForm = ({ onSubmit }: LoginFormProps) => {
             <input
               id="email"
               type="email"
-              value={email}
-              onChange={handleEmailChange}
+              value={formData.email}
+              onChange={(e) => handleInputChange('email', e.target.value)}
+              onBlur={() => handleInputBlur('email')}
               placeholder="you@example.com"
-              className={`w-full h-12 pl-12 pr-4 bg-background border rounded-lg text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 transition-base ${
-                errors.email ? 'border-error focus:ring-error/30' : 'border-input focus:ring-ring'
+              className={`w-full h-12 pl-12 pr-12 bg-background border rounded-lg text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 transition-base ${
+                isFieldInvalid('email')
+                  ? 'border-error focus:ring-error/30'
+                  : isFieldValid('email')
+                  ? 'border-success focus:ring-success/30'
+                  : 'border-input focus:ring-ring'
               }`}
             />
+            {isFieldValid('email') && (
+              <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+                <Icon name="CheckCircleIcon" size={20} className="text-success" />
+              </div>
+            )}
+            {isFieldInvalid('email') && (
+              <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+                <Icon name="ExclamationCircleIcon" size={20} className="text-error" />
+              </div>
+            )}
           </div>
-          {errors.email && (
-            <p className="text-sm text-error flex items-center space-x-1">
+          {touched.email && errors.email && (
+            <p className="text-sm text-error flex items-center gap-1 animate-fade-in">
               <Icon name="ExclamationCircleIcon" size={14} />
               <span>{errors.email}</span>
             </p>
@@ -211,12 +205,15 @@ const LoginForm = ({ onSubmit }: LoginFormProps) => {
             <input
               id="password"
               type={showPassword ? 'text' : 'password'}
-              value={password}
-              onChange={handlePasswordChange}
+              value={formData.password}
+              onChange={(e) => handleInputChange('password', e.target.value)}
+              onBlur={() => handleInputBlur('password')}
               placeholder="••••••••"
               className={`w-full h-12 pl-12 pr-12 bg-background border rounded-lg text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 transition-base ${
-                errors.password
+                isFieldInvalid('password')
                   ? 'border-error focus:ring-error/30'
+                  : isFieldValid('password')
+                  ? 'border-success focus:ring-success/30'
                   : 'border-input focus:ring-ring'
               }`}
             />
@@ -228,8 +225,8 @@ const LoginForm = ({ onSubmit }: LoginFormProps) => {
               <Icon name={showPassword ? 'EyeSlashIcon' : 'EyeIcon'} size={20} />
             </button>
           </div>
-          {errors.password && (
-            <p className="text-sm text-error flex items-center space-x-1">
+          {touched.password && errors.password && (
+            <p className="text-sm text-error flex items-center gap-1 animate-fade-in">
               <Icon name="ExclamationCircleIcon" size={14} />
               <span>{errors.password}</span>
             </p>

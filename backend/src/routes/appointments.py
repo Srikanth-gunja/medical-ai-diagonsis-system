@@ -9,6 +9,7 @@ from ..models.notification import Notification
 from ..models.schedule import Schedule
 from ..database import get_db
 from ..realtime import publish_event
+from ..utils.pagination import paginate, get_pagination_params
 import json
 from datetime import datetime
 
@@ -51,9 +52,13 @@ def create_activity(
 @appointments_bp.route("", methods=["GET"])
 @jwt_required()
 def get_appointments():
+    """Get appointments with pagination support."""
     current_user = get_current_user()
     user_id = current_user["id"]
     role = current_user["role"]
+
+    # Get pagination parameters
+    page, per_page = get_pagination_params(default_per_page=10, max_per_page=50)
 
     if role == "patient":
         appointments = Appointment.find_by_patient_id(user_id)
@@ -83,7 +88,9 @@ def get_appointments():
                 appt_dict["type"] = appt.get("type", "video")
             result.append(appt_dict)
 
-    return jsonify(result)
+    # Apply pagination
+    paginated_result = paginate(result, page, per_page)
+    return jsonify(paginated_result)
 
 
 @appointments_bp.route("", methods=["POST"])

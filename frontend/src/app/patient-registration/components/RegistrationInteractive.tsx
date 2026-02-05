@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { API_BASE_URL } from '@/lib/api';
 import Icon from '@/components/ui/AppIcon';
+import { useToast } from '@/components/ui/Toast';
+import { useFormValidation } from '@/hooks/useFormValidation';
+import { patientsApi } from '@/lib/api';
 import RegistrationProgress from './RegistrationProgress';
 import PersonalInfoSection from './PersonalInfoSection';
 import ContactDetailsSection from './ContactDetailsSection';
@@ -40,10 +42,13 @@ interface FormData {
 
 const RegistrationInteractive = () => {
   const router = useRouter();
+  const { showToast } = useToast();
   const [isHydrated, setIsHydrated] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState<string>('');
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
+
   const [formData, setFormData] = useState<FormData>({
     firstName: '',
     lastName: '',
@@ -71,86 +76,129 @@ const RegistrationInteractive = () => {
     agreeToMarketing: false,
   });
 
+  // Validation rules for each step
+  const getValidationRules = useCallback((step: number) => {
+    const baseRules: any = {};
+    
+    if (step === 1) {
+      return {
+        firstName: { required: true, minLength: 2 },
+        lastName: { required: true, minLength: 2 },
+        dateOfBirth: { required: true },
+        gender: { required: true },
+      };
+    }
+    
+    if (step === 2) {
+      return {
+        email: { required: true, email: true },
+        phone: { required: true, pattern: /^[\d\s\-\+\(\)]{10,}$/ },
+        address: { required: true, minLength: 5 },
+        city: { required: true, minLength: 2 },
+        state: { required: true, minLength: 2 },
+        zipCode: { required: true, pattern: /^\d{5}(-\d{4})?$/ },
+      };
+    }
+    
+    if (step === 4) {
+      return {
+        password: { 
+          required: true, 
+          minLength: 8,
+          custom: (value: string) => {
+            const hasUpper = /[A-Z]/.test(value);
+            const hasLower = /[a-z]/.test(value);
+            const hasNumber = /\d/.test(value);
+            const hasSpecial = /[^A-Za-z0-9]/.test(value);
+            return hasUpper && hasLower && hasNumber && hasSpecial;
+          }
+        },
+        confirmPassword: { required: true, match: 'password' },
+      };
+    }
+    
+    return baseRules;
+  }, []);
+
+  const {
+    errors,
+    handleChange: validateChange,
+    handleBlur: validateBlur,
+    validateAll,
+    isFieldInvalid,
+    isFieldValid,
+    touched,
+  } = useFormValidation({
+    rules: getValidationRules(currentStep),
+    validateOnChange: true,
+    validateOnBlur: true,
+  });
+
   useEffect(() => {
     setIsHydrated(true);
   }, []);
 
-  if (!isHydrated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin">
-          <Icon name="ArrowPathIcon" size={32} className="text-primary" />
-        </div>
-      </div>
-    );
-  }
-
-  const handleChange = (field: string, value: string | boolean | string[]) => {
+  const handleChange = (field: keyof FormData, value: string | boolean | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[field];
-        return newErrors;
-      });
+    if (typeof value === 'string') {
+      validateChange(field, value);
+    }
+    setSubmitError('');
+  };
+
+  const handleBlur = (field: keyof FormData) => {
+    setTouchedFields((prev) => new Set(prev).add(field));
+    if (typeof formData[field] === 'string') {
+      validateBlur(field, formData[field] as string);
     }
   };
 
   const validateStep = (step: number): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (step === 1) {
-      if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-      if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
-      if (!formData.dateOfBirth) newErrors.dateOfBirth = 'Date of birth is required';
-      if (!formData.gender) newErrors.gender = 'Gender is required';
-    }
-
-    if (step === 2) {
-      if (!formData.email.trim()) {
-        newErrors.email = 'Email is required';
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-        newErrors.email = 'Invalid email format';
+    const rules = getValidationRules(step);
+    const fieldsToValidate: Record<string, string> = {};
+    
+    Object.keys(rules).forEach((field) => {
+      const value = formData[field as keyof FormData];
+      if (typeof value === 'string') {
+        fieldsToValidate[field] = value;
       }
-      if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
-      if (!formData.address.trim()) newErrors.address = 'Address is required';
-      if (!formData.city.trim()) newErrors.city = 'City is required';
-      if (!formData.state.trim()) newErrors.state = 'State is required';
-      if (!formData.zipCode.trim()) newErrors.zipCode = 'ZIP code is required';
-    }
+    });
 
+    const validationErrors = validateAll(fieldsToValidate);
+    
+    // Mark all fields in current step as touched
+    Object.keys(rules).forEach((field) => {
+      setTouchedFields((prev) => new Set(prev).add(field));
+    });
+
+    // Additional validation for step 4
     if (step === 4) {
-      if (!formData.password) {
-        newErrors.password = 'Password is required';
-      } else if (formData.password.length < 8) {
-        newErrors.password = 'Password must be at least 8 characters';
-      } else if (
-        !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(formData.password)
-      ) {
-        newErrors.password =
-          'Password must include uppercase, lowercase, number, and special character';
-      }
-      if (!formData.confirmPassword) {
-        newErrors.confirmPassword = 'Please confirm your password';
-      } else if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = 'Passwords do not match';
-      }
       if (!formData.agreeToTerms) {
-        newErrors.agreeToTerms = 'You must agree to the Terms of Service';
+        validationErrors.agreeToTerms = 'You must agree to the Terms of Service';
       }
       if (!formData.agreeToPrivacy) {
-        newErrors.agreeToPrivacy = 'You must acknowledge the Privacy Practices';
+        validationErrors.agreeToPrivacy = 'You must acknowledge the Privacy Practices';
       }
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return Object.keys(validationErrors).length === 0;
   };
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
       setCurrentStep((prev) => Math.min(prev + 1, 4));
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      showToast({
+        type: 'success',
+        title: `Step ${currentStep} Complete`,
+        message: 'Proceeding to next step...',
+      });
+    } else {
+      showToast({
+        type: 'error',
+        title: 'Validation Error',
+        message: 'Please fix the errors before continuing.',
+      });
     }
   };
 
@@ -163,57 +211,75 @@ const RegistrationInteractive = () => {
     e.preventDefault();
 
     if (!validateStep(4)) {
+      showToast({
+        type: 'error',
+        title: 'Validation Error',
+        message: 'Please fix all errors before submitting.',
+      });
       return;
     }
 
     setIsSubmitting(true);
+    setSubmitError('');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          role: 'patient',
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          phone: formData.phone,
-          address: formData.address,
-          dateOfBirth: formData.dateOfBirth,
-          gender: formData.gender,
-          bloodGroup: formData.bloodGroup,
-          city: formData.city,
-          state: formData.state,
-          zipCode: formData.zipCode,
-          emergencyContactName: formData.emergencyContactName,
-          emergencyContactPhone: formData.emergencyContactPhone,
-          allergies: formData.allergies,
-          currentMedications: formData.currentMedications,
-          chronicConditions: formData.chronicConditions,
-          previousSurgeries: formData.previousSurgeries,
-          insuranceProvider: formData.insuranceProvider,
-          insurancePolicyNumber: formData.insurancePolicyNumber,
-        }),
+      const response = await patientsApi.register({
+        email: formData.email,
+        password: formData.password,
+        role: 'patient',
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        phone: formData.phone,
+        address: formData.address,
+        dateOfBirth: formData.dateOfBirth,
+        gender: formData.gender,
+        bloodGroup: formData.bloodGroup,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+        emergencyContactName: formData.emergencyContactName,
+        emergencyContactPhone: formData.emergencyContactPhone,
+        allergies: formData.allergies,
+        currentMedications: formData.currentMedications,
+        chronicConditions: formData.chronicConditions,
+        previousSurgeries: formData.previousSurgeries,
+        insuranceProvider: formData.insuranceProvider,
+        insurancePolicyNumber: formData.insurancePolicyNumber,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setErrors({ submit: data.error || 'Registration failed' });
-        setIsSubmitting(false);
-        return;
-      }
+      showToast({
+        type: 'success',
+        title: 'Registration Successful!',
+        message: 'Your account has been created. Redirecting to login...',
+        duration: 5000,
+      });
 
       // Registration successful - redirect to login
-      router.push('/login?registered=true');
-    } catch (error) {
-      setErrors({ submit: 'Network error. Please try again.' });
+      setTimeout(() => {
+        router.push('/login?registered=true');
+      }, 1500);
+    } catch (error: any) {
+      const errorMessage = error.message || 'Registration failed';
+      setSubmitError(errorMessage);
+      showToast({
+        type: 'error',
+        title: 'Registration Failed',
+        message: errorMessage,
+        duration: 8000,
+      });
       setIsSubmitting(false);
     }
   };
+
+  if (!isHydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin">
+          <Icon name="ArrowPathIcon" size={32} className="text-primary" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/10 py-8 sm:py-12">
@@ -235,15 +301,36 @@ const RegistrationInteractive = () => {
             <RegistrationProgress currentStep={currentStep} totalSteps={4} />
 
             <form onSubmit={handleSubmit} className="space-y-8">
+              {submitError && (
+                <div className="p-4 bg-error/10 border border-error/20 rounded-lg">
+                  <div className="flex items-start space-x-3">
+                    <Icon name="ExclamationCircleIcon" size={20} className="text-error flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-error">{submitError}</p>
+                  </div>
+                </div>
+              )}
+
               {currentStep === 1 && (
-                <PersonalInfoSection formData={formData} errors={errors} onChange={handleChange} />
+                <PersonalInfoSection 
+                  formData={formData} 
+                  errors={errors} 
+                  touched={touchedFields}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  isFieldValid={isFieldValid}
+                  isFieldInvalid={isFieldInvalid}
+                />
               )}
 
               {currentStep === 2 && (
                 <ContactDetailsSection
                   formData={formData}
                   errors={errors}
+                  touched={touchedFields}
                   onChange={handleChange}
+                  onBlur={handleBlur}
+                  isFieldValid={isFieldValid}
+                  isFieldInvalid={isFieldInvalid}
                 />
               )}
 
@@ -252,7 +339,15 @@ const RegistrationInteractive = () => {
               )}
 
               {currentStep === 4 && (
-                <AccountSetupSection formData={formData} errors={errors} onChange={handleChange} />
+                <AccountSetupSection 
+                  formData={formData} 
+                  errors={errors}
+                  touched={touchedFields}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  isFieldValid={isFieldValid}
+                  isFieldInvalid={isFieldInvalid}
+                />
               )}
 
               <div className="flex flex-col sm:flex-row gap-4 pt-6">
@@ -300,21 +395,8 @@ const RegistrationInteractive = () => {
               </div>
             </form>
 
-            {currentStep === 4 && (
-              <div className="mt-8">
-                <TrustSignals />
-              </div>
-            )}
+            <TrustSignals />
           </div>
-        </div>
-
-        <div className="mt-6 text-center">
-          <p className="text-sm text-text-secondary">
-            Already have an account?{' '}
-            <a href="/login" className="text-primary hover:underline font-medium">
-              Sign in here
-            </a>
-          </p>
         </div>
       </div>
     </div>

@@ -285,4 +285,13 @@
     .animate-slide-up {
         animation: slideUp 300ms ease-out forwards;
     }
+
+    /* Safe area for mobile devices */
+    .h-safe-area-inset-bottom {
+        height: env(safe-area-inset-bottom, 0px);
+    }
+
+    .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
 }

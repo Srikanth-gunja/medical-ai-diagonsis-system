@@ -304,9 +304,28 @@ export const authApi = {
   isAuthenticated: (): boolean => !!getToken(),
 };
 
+// Pagination types
+export interface PaginationInfo {
+  current_page: number;
+  per_page: number;
+  total_pages: number;
+  total_items: number;
+  has_next: boolean;
+  has_prev: boolean;
+  next_page: number | null;
+  prev_page: number | null;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  pagination: PaginationInfo;
+}
+
 // Doctors API
 export const doctorsApi = {
-  getAll: (): Promise<Doctor[]> => fetchApi<Doctor[]>('/doctors'),
+  getAll: (page: number = 1, perPage: number = 12): Promise<PaginatedResponse<Doctor>> =>
+    fetchApi<PaginatedResponse<Doctor>>(`/doctors?page=${page}&per_page=${perPage}`),
+
   getNextAvailable: (): Promise<Record<string, string | null>> =>
     fetchApi<Record<string, string | null>>('/doctors/next-available'),
 
@@ -335,7 +354,8 @@ export const doctorsApi = {
 
 // Appointments API
 export const appointmentsApi = {
-  getAll: (): Promise<Appointment[]> => fetchApi<Appointment[]>('/appointments'),
+  getAll: (page: number = 1, perPage: number = 10): Promise<PaginatedResponse<Appointment>> =>
+    fetchApi<PaginatedResponse<Appointment>>(`/appointments?page=${page}&per_page=${perPage}`),
 
   create: (data: {
     doctorId: string;
