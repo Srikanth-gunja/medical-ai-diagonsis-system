@@ -49,7 +49,7 @@ export interface Appointment {
   doctorImage?: string;
   date: string;
   time: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'in_progress' | 'no_show';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'in_progress' | 'no_show' | 'rejected';
   symptoms?: string;
   type?: 'video' | 'in-person';
   rated?: boolean;
@@ -684,6 +684,19 @@ export interface CallDetails {
   other_user_name: string;
 }
 
+export interface StreamToken {
+  token: string;
+  expires_in: number;
+}
+
+// Events API (SSE)
+export const eventsApi = {
+  getStreamToken: (): Promise<StreamToken> =>
+    fetchApi<StreamToken>('/events/token', {
+      method: 'POST',
+    }),
+};
+
 // Video Calls API
 export const videoCallsApi = {
   getToken: (): Promise<VideoCallToken> => fetchApi<VideoCallToken>('/video-calls/token', {
@@ -716,5 +729,6 @@ export default {
   reports: reportsApi,
   notifications: notificationsApi,
   schedules: schedulesApi,
+  events: eventsApi,
   videoCalls: videoCallsApi,
 };

@@ -31,3 +31,19 @@ class Config:
     # GetStream Configuration
     GETSTREAM_API_KEY = os.environ.get("GETSTREAM_API_KEY") or ""
     GETSTREAM_API_SECRET = os.environ.get("GETSTREAM_API_SECRET") or ""
+
+    # SSE token TTL and realtime queue sizing
+    SSE_TOKEN_TTL_SECONDS = int(os.environ.get("SSE_TOKEN_TTL_SECONDS", "60"))
+    REALTIME_QUEUE_MAXSIZE = int(os.environ.get("REALTIME_QUEUE_MAXSIZE", "200"))
+
+    # Appointment timezone for scheduling and video call validation
+    APPOINTMENT_TIMEZONE = os.environ.get("APPOINTMENT_TIMEZONE", "Asia/Kolkata")
+
+    # Auth rate limiting
+    AUTH_RATE_LIMIT_WINDOW_SECONDS = int(
+        os.environ.get("AUTH_RATE_LIMIT_WINDOW_SECONDS", "60")
+    )
+    AUTH_RATE_LIMIT_MAX_LOGIN = int(os.environ.get("AUTH_RATE_LIMIT_MAX_LOGIN", "20"))
+    AUTH_RATE_LIMIT_MAX_REGISTER = int(
+        os.environ.get("AUTH_RATE_LIMIT_MAX_REGISTER", "10")
+    )

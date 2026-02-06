@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token
 from ..models.user import User
 from ..models.patient import Patient
@@ -7,6 +7,8 @@ from ..models.notification import Notification
 from ..database import get_db
 import json
 import re
+import time
+from collections import defaultdict, deque
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -31,6 +33,28 @@ VALID_SPECIALTIES = [
     'Emergency Medicine'
 ]
 
+_RATE_LIMIT_BUCKETS = defaultdict(deque)
+
+
+def _get_client_id():
+    forwarded = request.headers.get("X-Forwarded-For", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.remote_addr or "unknown"
+
+
+def _is_rate_limited(bucket_key: str, limit: int, window_seconds: int) -> bool:
+    if current_app.testing:
+        return False
+    now = time.time()
+    bucket = _RATE_LIMIT_BUCKETS[bucket_key]
+    while bucket and now - bucket[0] > window_seconds:
+        bucket.popleft()
+    if len(bucket) >= limit:
+        return True
+    bucket.append(now)
+    return False
+
 
 def validate_password(password):
     """Validate password strength."""
@@ -51,7 +75,13 @@ def validate_email(email):
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    data = request.get_json()
+    client_id = _get_client_id()
+    window = current_app.config.get("AUTH_RATE_LIMIT_WINDOW_SECONDS", 60)
+    limit = current_app.config.get("AUTH_RATE_LIMIT_MAX_LOGIN", 20)
+    if _is_rate_limited(f"login:{client_id}", limit, window):
+        return jsonify({'error': 'Too many login attempts. Please try again later.'}), 429
+
+    data = request.get_json() or {}
     email = data.get('email', '').strip().lower()
     password = data.get('password')
 
@@ -87,7 +117,13 @@ def login():
 
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    data = request.get_json()
+    client_id = _get_client_id()
+    window = current_app.config.get("AUTH_RATE_LIMIT_WINDOW_SECONDS", 60)
+    limit = current_app.config.get("AUTH_RATE_LIMIT_MAX_REGISTER", 10)
+    if _is_rate_limited(f"register:{client_id}", limit, window):
+        return jsonify({'error': 'Too many registration attempts. Please try again later.'}), 429
+
+    data = request.get_json() or {}
     email = data.get('email', '').strip().lower()
     password = data.get('password', '')
     role = data.get('role', 'patient')

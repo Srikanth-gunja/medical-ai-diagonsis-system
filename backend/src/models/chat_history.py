@@ -1,10 +1,13 @@
 from bson import ObjectId
 from datetime import datetime
+import os
 from ..database import get_db, CHAT_HISTORY_COLLECTION
 
 
 class ChatHistory:
     """Model for storing chatbot conversation history."""
+
+    _MAX_MESSAGES = int(os.environ.get("CHAT_HISTORY_MAX_MESSAGES", "200"))
     
     @staticmethod
     def find_by_user_id(user_id):
@@ -21,9 +24,10 @@ class ChatHistory:
         if isinstance(user_id, str):
             user_id = ObjectId(user_id)
         
+        capped_messages = (messages or [])[-ChatHistory._MAX_MESSAGES :]
         chat_data = {
             'user_id': user_id,
-            'messages': messages or [],
+            'messages': capped_messages,
             'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow()
         }
@@ -48,7 +52,7 @@ class ChatHistory:
         result = db[CHAT_HISTORY_COLLECTION].update_one(
             {'user_id': user_id},
             {
-                '$push': {'messages': message},
+                '$push': {'messages': {'$each': [message], '$slice': -ChatHistory._MAX_MESSAGES}},
                 '$set': {'updated_at': datetime.utcnow()}
             }
         )

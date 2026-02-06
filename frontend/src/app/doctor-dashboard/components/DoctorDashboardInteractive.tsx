@@ -38,6 +38,7 @@ import {
   authApi,
   notificationsApi,
   schedulesApi,
+  eventsApi,
   API_BASE_URL,
   getToken,
   type DoctorAnalytics,
@@ -530,25 +531,49 @@ export default function DoctorDashboardInteractive() {
 
   useEffect(() => {
     if (!isHydrated) return;
-    const token = getToken();
-    if (!token) return;
+    let active = true;
+    let eventSource: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const streamUrl = `${API_BASE_URL}/events/stream?token=${encodeURIComponent(token)}`;
-    const eventSource = new EventSource(streamUrl, { withCredentials: true });
-    const handleUpdate = () => fetchData({ silent: true });
+    const connect = async () => {
+      if (!active || !getToken()) return;
+      try {
+        const { token } = await eventsApi.getStreamToken();
+        if (!active) return;
+        const streamUrl = `${API_BASE_URL}/events/stream?token=${encodeURIComponent(token)}`;
+        eventSource = new EventSource(streamUrl, { withCredentials: true });
+        const handleUpdate = () => fetchData({ silent: true });
 
-    eventSource.addEventListener('appointments.updated', handleUpdate);
-    eventSource.addEventListener('activities.updated', handleUpdate);
-    eventSource.addEventListener('notifications.updated', handleUpdate);
-    eventSource.addEventListener('prescriptions.updated', handleUpdate);
-    eventSource.addEventListener('messages.updated', handleUpdate);
-    eventSource.addEventListener('message', handleUpdate);
-    eventSource.onerror = (err) => {
-      logger.error('SSE connection error (doctor dashboard):', err);
+        eventSource.addEventListener('appointments.updated', handleUpdate);
+        eventSource.addEventListener('activities.updated', handleUpdate);
+        eventSource.addEventListener('notifications.updated', handleUpdate);
+        eventSource.addEventListener('prescriptions.updated', handleUpdate);
+        eventSource.addEventListener('messages.updated', handleUpdate);
+        eventSource.addEventListener('message', handleUpdate);
+        eventSource.onerror = (err) => {
+          logger.error('SSE connection error (doctor dashboard):', err);
+          if (!active) return;
+          eventSource?.close();
+          eventSource = null;
+          reconnectTimer = setTimeout(connect, 3000);
+        };
+      } catch (err) {
+        if (!active) return;
+        logger.error('Failed to initialize SSE (doctor dashboard):', err);
+        reconnectTimer = setTimeout(connect, 5000);
+      }
     };
 
+    connect();
+
     return () => {
-      eventSource.close();
+      active = false;
+      if (eventSource) {
+        eventSource.close();
+      }
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
     };
   }, [fetchData, isHydrated]);
 

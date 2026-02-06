@@ -7,7 +7,7 @@ from ..models.patient import Patient
 from ..models.medical_record import MedicalRecord
 from ..models.notification import Notification
 from ..models.schedule import Schedule
-from ..database import get_db
+from ..database import get_db, APPOINTMENTS_COLLECTION
 from ..realtime import publish_event
 from ..utils.pagination import paginate, get_pagination_params
 import json
@@ -17,6 +17,26 @@ appointments_bp = Blueprint("appointments", __name__)
 
 ACTIVITIES_COLLECTION = "activities"
 
+ALLOWED_STATUSES = {
+    "pending",
+    "confirmed",
+    "cancelled",
+    "no_show",
+    "rejected",
+    "in_progress",
+    "completed",
+}
+
+ALLOWED_TRANSITIONS = {
+    "pending": {"confirmed", "rejected", "cancelled"},
+    "confirmed": {"in_progress", "cancelled", "no_show"},
+    "in_progress": {"completed", "cancelled", "no_show"},
+    "completed": set(),
+    "rejected": set(),
+    "cancelled": set(),
+    "no_show": set(),
+}
+
 
 def get_current_user():
     """Parse JWT identity and return user dict."""
@@ -24,6 +44,25 @@ def get_current_user():
     if isinstance(identity, str):
         return json.loads(identity)
     return identity
+
+
+def _parse_date(value: str):
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except Exception:
+        return None
+
+
+def _normalize_time(value: str):
+    if not value:
+        return None
+    for fmt in ("%I:%M %p", "%I:%M%p", "%H:%M"):
+        try:
+            parsed = datetime.strptime(value.strip(), fmt)
+            return parsed.strftime("%I:%M %p").lstrip("0")
+        except ValueError:
+            continue
+    return None
 
 
 def create_activity(
@@ -96,18 +135,60 @@ def get_appointments():
 @appointments_bp.route("", methods=["POST"])
 @jwt_required()
 def create_appointment():
-    data = request.get_json()
+    data = request.get_json() or {}
     current_user = get_current_user()
 
-    schedule = Schedule.find_by_doctor_id(data["doctorId"])
+    doctor_id = data.get("doctorId")
+    if not doctor_id:
+        return jsonify({"error": "doctorId is required"}), 400
+
+    try:
+        doctor = Doctor.find_by_id(doctor_id)
+    except Exception:
+        return jsonify({"error": "Invalid doctorId"}), 400
+
+    if not doctor:
+        return jsonify({"error": "Doctor not found"}), 404
+
+    date_str = (data.get("date") or "").strip()
+    time_raw = (data.get("time") or "").strip()
+    if not date_str or not time_raw:
+        return jsonify({"error": "date and time are required"}), 400
+
+    if not _parse_date(date_str):
+        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
+
+    normalized_time = _normalize_time(time_raw)
+    if not normalized_time:
+        return jsonify({"error": "Invalid time format. Use HH:MM or HH:MM AM/PM."}), 400
+
+    available_slots = Schedule.get_available_slots(doctor_id, date_str)
+    if normalized_time not in available_slots:
+        return jsonify({"error": "Selected time slot is not available"}), 409
+
+    # Prevent duplicate bookings for the same slot
+    db = get_db()
+    existing = db[APPOINTMENTS_COLLECTION].find_one(
+        {
+            "doctor_id": doctor["_id"],
+            "date": date_str,
+            "time": normalized_time,
+            "status": {"$nin": ["cancelled", "rejected"]},
+        }
+    )
+    if existing:
+        return jsonify({"error": "Selected time slot is already booked"}), 409
+
+    schedule = Schedule.find_by_doctor_id(doctor_id)
     slot_duration = schedule.get("slot_duration", 30) if schedule else 30
+    doctor_name = doctor.get("name", "Doctor")
 
     appointment = Appointment.create(
         patient_id=current_user["id"],
-        doctor_id=data["doctorId"],
-        doctor_name=data["doctorName"],
-        date=data["date"],
-        time=data["time"],
+        doctor_id=doctor_id,
+        doctor_name=doctor_name,
+        date=date_str,
+        time=normalized_time,
         symptoms=data.get("symptoms", ""),
         slot_duration=slot_duration,
     )
@@ -121,12 +202,12 @@ def create_appointment():
     )
 
     # Create notification for doctor with reference to appointment
-    doctor = Doctor.find_by_id(data["doctorId"])
-    if doctor:
+    doctor_user_id = doctor.get("user_id") if doctor else None
+    if doctor_user_id:
         Notification.create(
-            user_id=doctor["user_id"],
+            user_id=doctor_user_id,
             title="New Appointment Request",
-            message=f"{patient_name} has requested an appointment on {data['date']} at {data['time']}",
+            message=f"{patient_name} has requested an appointment on {date_str} at {normalized_time}",
             notification_type="appointment",
             link="/doctor-dashboard",
             reference_id=f"appointment:{str(appointment['_id'])}",
@@ -137,7 +218,7 @@ def create_appointment():
         user_id=current_user["id"],
         activity_type="appointment",
         title="Appointment Booked",
-        description=f"Requested appointment with {data['doctorName']} on {data['date']} at {data['time']}",
+        description=f"Requested appointment with {doctor_name} on {date_str} at {normalized_time}",
         icon="CalendarIcon",
         color="bg-primary",
     )
@@ -146,8 +227,8 @@ def create_appointment():
 
     # Push real-time updates to patient and doctor
     target_user_ids = [current_user["id"]]
-    if doctor:
-        target_user_ids.append(str(doctor["user_id"]))
+    if doctor_user_id:
+        target_user_ids.append(str(doctor_user_id))
     publish_event(
         target_user_ids,
         "appointments.updated",
@@ -161,13 +242,20 @@ def create_appointment():
 @jwt_required()
 def update_status(appt_id):
     current_user = get_current_user()
-    data = request.get_json()
+    data = request.get_json() or {}
     status = data.get("status")
+    if status not in ALLOWED_STATUSES:
+        return jsonify({"error": "Invalid status value"}), 400
 
     # Get appointment before update for notification
     original_appointment = Appointment.find_by_id(appt_id)
     if not original_appointment:
         return jsonify({"error": "Appointment not found"}), 404
+
+    current_status = original_appointment.get("status", "pending")
+    allowed = ALLOWED_TRANSITIONS.get(current_status, set())
+    if status != current_status and status not in allowed:
+        return jsonify({"error": f"Invalid status transition from {current_status} to {status}"}), 400
 
     # Only the assigned doctor (or admin) can update status
     if current_user.get("role") == "doctor":

@@ -7,6 +7,7 @@ import {
   authApi,
   appointmentsApi,
   notificationsApi,
+  eventsApi,
   API_BASE_URL,
   type Patient,
 } from '@/lib/api';
@@ -172,22 +173,43 @@ export default function PatientDashboardClientLayout({
   }, []);
 
   useEffect(() => {
-    const token = authApi.getToken();
-    if (!token) return;
+    let active = true;
+    let eventSource: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
-    const streamUrl = `${API_BASE_URL}/events/stream?token=${encodeURIComponent(token)}`;
-    const eventSource = new EventSource(streamUrl, { withCredentials: true });
-    const handleUpdate = () => refreshNotificationCount();
+    const connect = async () => {
+      if (!active || !authApi.getToken()) return;
+      try {
+        const { token } = await eventsApi.getStreamToken();
+        if (!active) return;
+        const streamUrl = `${API_BASE_URL}/events/stream?token=${encodeURIComponent(token)}`;
+        eventSource = new EventSource(streamUrl, { withCredentials: true });
+        const handleUpdate = () => refreshNotificationCount();
 
-    eventSource.addEventListener('notifications.updated', handleUpdate);
-    eventSource.addEventListener('message', handleUpdate);
-    eventSource.onerror = () => {
-      // Silently handle SSE errors - backend might be down
-      // Don't spam console with errors
+        eventSource.addEventListener('notifications.updated', handleUpdate);
+        eventSource.addEventListener('message', handleUpdate);
+        eventSource.onerror = () => {
+          if (!active) return;
+          eventSource?.close();
+          eventSource = null;
+          reconnectTimer = setTimeout(connect, 3000);
+        };
+      } catch (err) {
+        if (!active) return;
+        reconnectTimer = setTimeout(connect, 5000);
+      }
     };
 
+    connect();
+
     return () => {
-      eventSource.close();
+      active = false;
+      if (eventSource) {
+        eventSource.close();
+      }
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
     };
   }, []);
 
