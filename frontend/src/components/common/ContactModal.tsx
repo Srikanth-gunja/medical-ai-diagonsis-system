@@ -40,9 +40,9 @@ const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
                         </div>
                         <div>
                             <h4 className="font-semibold text-text-primary">Phone Support</h4>
-                            <p className="text-sm text-text-secondary mb-1">Mon-Fri: 9AM - 6PM EST</p>
-                            <a href="tel:+1-800-MEDICARE" className="text-primary hover:underline font-medium">
-                                +1-800-MEDICARE
+                            <p className="text-sm text-text-secondary mb-1">Mon-Fri: 9AM - 6PM IST</p>
+                            <a href="tel:+91-9876543210" className="text-primary hover:underline font-medium">
+                                +91 98765 43210
                             </a>
                         </div>
                     </div>
@@ -56,8 +56,8 @@ const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
                         <div>
                             <h4 className="font-semibold text-text-primary">Office Location</h4>
                             <p className="text-sm text-text-secondary">
-                                123 Health St, Suite 100<br />
-                                Medical District, NY 10001
+                                Mangalpally<br />
+                                Hyderabad, Telangana 501510
                             </p>
                         </div>
                     </div>
@@ -65,7 +65,7 @@ const ContactModal = ({ isOpen, onClose }: ContactModalProps) => {
 
                 <div className="pt-4 text-center">
                     <p className="text-sm text-text-secondary">
-                        Need immediate medical attention? <span className="text-red-500 font-bold">Dial 911</span>
+                        Need immediate medical attention? <span className="text-red-500 font-bold">Dial 112</span>
                     </p>
                 </div>
             </div>

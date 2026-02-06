@@ -46,6 +46,11 @@ def create_app(config_class=Config):
     # Initialize database
     init_db(app)
 
+    @app.route('/api/health')
+    def health_check():
+        return {"status": "operational"}, 200
+
+
     # Register Blueprints
     from .routes.auth import auth_bp
     from .routes.doctors import doctors_bp

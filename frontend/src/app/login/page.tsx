@@ -1,16 +1,58 @@
-import type { Metadata } from 'next';
+'use client';
+
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import PublicHeader from '@/components/common/PublicHeader';
 import LoginForm from './components/LoginForm';
 import SecurityBadges from './components/SecurityBadges';
 import TrustIndicators from './components/TrustIndicators';
-
-export const metadata: Metadata = {
-  title: 'Login - MediCare',
-  description:
-    'Sign in to your MediCare account to access personalized healthcare services, manage appointments, and connect with verified medical professionals.',
-};
+import ContactModal from '@/components/common/ContactModal';
+import { useToast } from '@/components/ui/Toast';
 
 export default function LoginPage() {
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [systemStatus, setSystemStatus] = useState<'checking' | 'operational' | 'issues'>('checking');
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    const checkSystemStatus = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api';
+        // Remove /api suffix if present to avoid double /api/api
+        const baseUrl = apiUrl.replace(/\/api$/, '');
+        const res = await fetch(`${baseUrl}/api/health`);
+        if (res.ok) {
+          setSystemStatus('operational');
+        } else {
+          setSystemStatus('issues');
+        }
+      } catch (error) {
+        setSystemStatus('issues');
+      }
+    };
+
+    checkSystemStatus();
+    // Poll every 30 seconds
+    const interval = setInterval(checkSystemStatus, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleHelpCenterClick = () => {
+    showToast({
+      type: 'info',
+      title: 'Help Center',
+      message: 'Self-help resources are coming soon! For now, please contact support.',
+    });
+  };
+
+  const getStatusColor = () => {
+    switch (systemStatus) {
+      case 'operational': return 'text-green-500';
+      case 'issues': return 'text-red-500';
+      default: return 'text-yellow-500';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/10 relative overflow-hidden">
       <div className="absolute top-0 right-0 w-[72rem] h-[72rem] bg-accent/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
@@ -39,13 +81,13 @@ export default function LoginPage() {
           <div className="text-center pt-8 pb-4">
             <p className="text-sm text-text-secondary">
               By signing in, you agree to our{' '}
-              <button className="text-primary hover:text-accent transition-base font-medium">
+              <Link href="/terms-of-service" className="text-primary hover:text-accent transition-base font-medium">
                 Terms of Service
-              </button>{' '}
+              </Link>{' '}
               and{' '}
-              <button className="text-primary hover:text-accent transition-base font-medium">
+              <Link href="/privacy-policy" className="text-primary hover:text-accent transition-base font-medium">
                 Privacy Policy
-              </button>
+              </Link>
             </p>
           </div>
         </div>
@@ -58,13 +100,27 @@ export default function LoginPage() {
               &copy; {new Date().getFullYear()} MediCare. All rights reserved.
             </p>
             <div className="flex items-center space-x-6 text-sm text-text-secondary">
-              <button className="hover:text-primary transition-base">Help Center</button>
-              <button className="hover:text-primary transition-base">Contact Support</button>
-              <button className="hover:text-primary transition-base">System Status</button>
+              <button onClick={handleHelpCenterClick} className="hover:text-primary transition-base">
+                Help Center
+              </button>
+              <button onClick={() => setIsContactModalOpen(true)} className="hover:text-primary transition-base">
+                Contact Support
+              </button>
+              <div className="flex items-center space-x-2">
+                <span className={`w-2 h-2 rounded-full ${systemStatus === 'operational' ? 'bg-green-500' : systemStatus === 'issues' ? 'bg-red-500' : 'bg-yellow-500'} animate-pulse`} />
+                <span className={getStatusColor()}>
+                  {systemStatus === 'checking' ? 'Checking Status...' : systemStatus === 'operational' ? 'System Operational' : 'System Issues'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
       </footer>
+
+      <ContactModal
+        isOpen={isContactModalOpen}
+        onClose={() => setIsContactModalOpen(false)}
+      />
     </div>
   );
 }
