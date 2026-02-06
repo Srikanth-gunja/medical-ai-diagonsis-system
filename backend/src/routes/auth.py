@@ -7,8 +7,7 @@ from ..models.notification import Notification
 from ..database import get_db
 import json
 import re
-import time
-from collections import defaultdict, deque
+from ..rate_limit import is_rate_limited
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -33,9 +32,6 @@ VALID_SPECIALTIES = [
     'Emergency Medicine'
 ]
 
-_RATE_LIMIT_BUCKETS = defaultdict(deque)
-
-
 def _get_client_id():
     forwarded = request.headers.get("X-Forwarded-For", "")
     if forwarded:
@@ -46,14 +42,7 @@ def _get_client_id():
 def _is_rate_limited(bucket_key: str, limit: int, window_seconds: int) -> bool:
     if current_app.testing:
         return False
-    now = time.time()
-    bucket = _RATE_LIMIT_BUCKETS[bucket_key]
-    while bucket and now - bucket[0] > window_seconds:
-        bucket.popleft()
-    if len(bucket) >= limit:
-        return True
-    bucket.append(now)
-    return False
+    return is_rate_limited(bucket_key, limit, window_seconds)
 
 
 def validate_password(password):

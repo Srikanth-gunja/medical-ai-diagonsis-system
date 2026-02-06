@@ -32,6 +32,9 @@ class Config:
     GETSTREAM_API_KEY = os.environ.get("GETSTREAM_API_KEY") or ""
     GETSTREAM_API_SECRET = os.environ.get("GETSTREAM_API_SECRET") or ""
 
+    # Redis configuration (optional)
+    REDIS_URL = os.environ.get("REDIS_URL")
+
     # SSE token TTL and realtime queue sizing
     SSE_TOKEN_TTL_SECONDS = int(os.environ.get("SSE_TOKEN_TTL_SECONDS", "60"))
     REALTIME_QUEUE_MAXSIZE = int(os.environ.get("REALTIME_QUEUE_MAXSIZE", "200"))
