@@ -25,11 +25,7 @@ import Icon from '@/components/ui/AppIcon';
 import { useVideoCall } from '@/contexts/VideoCallContext';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
-import {
-  DashboardSkeleton,
-  AppointmentCardSkeleton,
-  StatsCardSkeleton,
-} from '@/components/ui/Skeletons';
+import { DoctorDashboardSkeleton } from '@/components/ui/Skeletons';
 import {
   doctorsApi,
   appointmentsApi,
@@ -817,7 +813,7 @@ export default function DoctorDashboardInteractive() {
   };
 
   if (!isHydrated || isLoading) {
-    return <DashboardSkeleton />;
+    return <DoctorDashboardSkeleton />;
   }
 
   return (

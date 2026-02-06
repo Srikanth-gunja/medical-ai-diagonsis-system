@@ -12,6 +12,7 @@ import {
   type Patient,
 } from '@/lib/api';
 import PatientDashboardHeader from './components/PatientDashboardHeader';
+import { DashboardSkeleton } from '@/components/ui/Skeletons';
 import StatusIndicatorBar from '@/components/common/StatusIndicatorBar';
 import NavigationBreadcrumbs from '@/components/common/NavigationBreadcrumbs';
 
@@ -215,11 +216,8 @@ export default function PatientDashboardClientLayout({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/10 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-text-secondary">Loading your dashboard...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/10">
+        <DashboardSkeleton />
       </div>
     );
   }

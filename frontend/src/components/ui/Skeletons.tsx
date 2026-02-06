@@ -68,12 +68,6 @@ export const StatsCardSkeleton = () => (
 // Dashboard Loading State
 export const DashboardSkeleton = () => (
   <div className="container mx-auto px-4 sm:px-6 py-8 space-y-8">
-    {/* Header */}
-    <div className="space-y-2">
-      <Skeleton className="h-10 w-1/3" />
-      <Skeleton className="h-5 w-1/2" />
-    </div>
-
     {/* Quick Access */}
     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
       {[...Array(4)].map((_, i) => (
@@ -95,6 +89,53 @@ export const DashboardSkeleton = () => (
       <div className="space-y-6">
         <Skeleton className="h-64 rounded-xl" />
         <Skeleton className="h-48 rounded-xl" />
+      </div>
+    </div>
+  </div>
+);
+
+// Doctor Dashboard Loading State
+export const DoctorDashboardSkeleton = () => (
+  <div className="container mx-auto px-4 sm:px-6 py-8 space-y-8">
+    {/* Header */}
+    <div className="space-y-2">
+      <Skeleton className="h-10 w-1/3" />
+      <Skeleton className="h-5 w-1/2" />
+    </div>
+
+    {/* Stats */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {[...Array(4)].map((_, i) => (
+        <StatsCardSkeleton key={i} />
+      ))}
+    </div>
+
+    {/* Chart */}
+    <Skeleton className="h-72 rounded-xl" />
+
+    {/* Schedule */}
+    <Skeleton className="h-64 rounded-xl" />
+
+    {/* Quick Actions */}
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {[...Array(4)].map((_, i) => (
+        <Skeleton key={i} className="h-28 rounded-xl" />
+      ))}
+    </div>
+
+    {/* Appointments + Requests */}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="lg:col-span-2 space-y-4">
+        <Skeleton className="h-8 w-48" />
+        {[...Array(3)].map((_, i) => (
+          <AppointmentCardSkeleton key={i} />
+        ))}
+      </div>
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-40" />
+        {[...Array(3)].map((_, i) => (
+          <Skeleton key={i} className="h-24 rounded-xl" />
+        ))}
       </div>
     </div>
   </div>
@@ -183,6 +224,7 @@ export default {
   AppointmentCardSkeleton,
   StatsCardSkeleton,
   DashboardSkeleton,
+  DoctorDashboardSkeleton,
   FormSkeleton,
   TableSkeleton,
   ChatSkeleton,

@@ -17,7 +17,7 @@ import IncomingCallModal from '@/components/video/IncomingCallModal';
 import Icon from '@/components/ui/AppIcon';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
-import { DashboardSkeleton, AppointmentCardSkeleton } from '@/components/ui/Skeletons';
+import { DashboardSkeleton } from '@/components/ui/Skeletons';
 import { useUser } from '../ClientLayout';
 import { useVideoCall } from '@/contexts/VideoCallContext';
 import {
