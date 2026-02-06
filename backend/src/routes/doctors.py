@@ -131,24 +131,33 @@ def _parse_slot_time(date_str: str, time_str: str):
         return None
 
 
-def _get_next_available_slot_ist(doctor_id: str) -> str | None:
+def _format_next_available_label(date_obj: datetime, slot: str, now: datetime) -> str:
+    if date_obj.date() == now.date():
+        return f"Today, {slot}"
+    if date_obj.date() == (now + timedelta(days=1)).date():
+        return f"Tomorrow, {slot}"
+    return f"{date_obj.strftime('%b %d')}, {slot}"
+
+
+def _get_next_available_slot_ist(doctor_id: str, max_days: int = 90) -> str | None:
     """Return formatted next available slot in IST or None."""
     ist = ZoneInfo("Asia/Kolkata")
     now = datetime.now(ist)
-    today_str = now.strftime("%Y-%m-%d")
-    tomorrow_str = (now + timedelta(days=1)).strftime("%Y-%m-%d")
 
-    today_slots = Schedule.get_available_slots(doctor_id, today_str)
-    for slot in today_slots:
-        dt = _parse_slot_time(today_str, slot)
-        if dt:
+    for offset in range(0, max_days + 1):
+        date_obj = now + timedelta(days=offset)
+        date_str = date_obj.strftime("%Y-%m-%d")
+        slots = Schedule.get_available_slots(doctor_id, date_str)
+        if not slots:
+            continue
+
+        for slot in slots:
+            dt = _parse_slot_time(date_str, slot)
+            if not dt:
+                continue
             dt = dt.replace(tzinfo=ist)
             if dt > now:
-                return f"Today, {slot}"
-
-    tomorrow_slots = Schedule.get_available_slots(doctor_id, tomorrow_str)
-    if tomorrow_slots:
-        return f"Tomorrow, {tomorrow_slots[0]}"
+                return _format_next_available_label(date_obj, slot, now)
 
     return None
 
@@ -170,8 +179,7 @@ def get_doctors():
         doc_dict["availability"] = get_formatted_availability(doc["_id"])
         # Next available slot calculated in IST
         next_available = _get_next_available_slot_ist(str(doc["_id"]))
-        if next_available:
-            doc_dict["nextAvailable"] = next_available
+        doc_dict["nextAvailable"] = next_available
         result.append(doc_dict)
 
     # Apply pagination

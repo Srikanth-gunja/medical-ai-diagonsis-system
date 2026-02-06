@@ -60,16 +60,19 @@ def should_mark_no_show(
     appointment, now=None, tz=DEFAULT_TIMEZONE, grace_minutes=0, eligible_statuses=None
 ):
     if eligible_statuses is None:
-        eligible_statuses = {"confirmed"}
+        eligible_statuses = {"confirmed", "in_progress"}
     status = appointment.get("status")
     if status not in eligible_statuses:
         return False
 
     # If there is any call activity, avoid marking as no-show automatically
-    if appointment.get("call_started_at") or appointment.get("call_duration") or appointment.get(
-        "call_ended_at"
-    ):
-        return False
+    # for confirmed appointments. For in_progress, we still allow expiry to move
+    # the appointment to no_show if the doctor never completes it.
+    if status != "in_progress":
+        if appointment.get("call_started_at") or appointment.get(
+            "call_duration"
+        ) or appointment.get("call_ended_at"):
+            return False
 
     _, end = get_appointment_window(appointment, tz=tz)
     if not end:

@@ -662,6 +662,13 @@ def reschedule_appointment(appt_id):
     if not new_date or not new_time:
         return jsonify({"error": "New date and time are required"}), 400
 
+    if not _parse_date(new_date):
+        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
+
+    normalized_time = _normalize_time(new_time)
+    if not normalized_time:
+        return jsonify({"error": "Invalid time format. Use HH:MM or HH:MM AM/PM."}), 400
+
     # Get the appointment
     appointment = Appointment.find_by_id(appt_id)
     if not appointment:
@@ -676,6 +683,32 @@ def reschedule_appointment(appt_id):
     old_time = appointment.get("time", "")
     doctor_name = appointment.get("doctor_name", "Doctor")
 
+    if new_date == old_date and normalized_time == old_time:
+        return jsonify(
+            {
+                "message": "Appointment already scheduled at the selected time",
+                "appointment": Appointment.to_dict(appointment),
+            }
+        )
+
+    available_slots = Schedule.get_available_slots(appointment["doctor_id"], new_date)
+    if normalized_time not in available_slots:
+        return jsonify({"error": "Selected time slot is not available"}), 409
+
+    # Prevent duplicate bookings for the same slot (exclude this appointment)
+    db = get_db()
+    existing = db[APPOINTMENTS_COLLECTION].find_one(
+        {
+            "doctor_id": appointment["doctor_id"],
+            "date": new_date,
+            "time": normalized_time,
+            "status": {"$nin": ["cancelled", "rejected"]},
+            "_id": {"$ne": appointment["_id"]},
+        }
+    )
+    if existing:
+        return jsonify({"error": "Selected time slot is already booked"}), 409
+
     schedule = Schedule.find_by_doctor_id(appointment["doctor_id"])
     slot_duration = schedule.get("slot_duration", 30) if schedule else 30
 
@@ -684,7 +717,7 @@ def reschedule_appointment(appt_id):
         appt_id,
         {
             "date": new_date,
-            "time": new_time,
+            "time": normalized_time,
             "status": "pending",  # Reset to pending for doctor to confirm
             "slot_duration": slot_duration,
         },

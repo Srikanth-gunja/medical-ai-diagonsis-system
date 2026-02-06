@@ -44,6 +44,17 @@ class Schedule:
         from ..models.appointment import Appointment
         from datetime import datetime as dt, timedelta
         
+        def normalize_time(value):
+            if not value:
+                return None
+            for fmt in ("%I:%M %p", "%I:%M%p", "%H:%M"):
+                try:
+                    parsed = dt.strptime(value.strip(), fmt)
+                    return parsed.strftime("%I:%M %p").lstrip("0")
+                except ValueError:
+                    continue
+            return value.strip()
+        
         schedule = Schedule.find_by_doctor_id(doctor_id)
         if not schedule:
             # Return default slots if no schedule set
@@ -88,7 +99,11 @@ class Schedule:
             'status': {'$nin': ['cancelled', 'rejected']}
         })
         
-        booked_times = [appt['time'] for appt in booked]
+        booked_times = []
+        for appt in booked:
+            normalized = normalize_time(appt.get('time'))
+            if normalized:
+                booked_times.append(normalized)
         
         # Filter out booked slots
         available_slots = [slot for slot in slots if slot not in booked_times]

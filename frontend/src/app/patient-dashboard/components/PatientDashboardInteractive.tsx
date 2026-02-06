@@ -130,28 +130,88 @@ const PatientDashboardInteractive = () => {
       try {
         const apptResponse = await appointmentsApi.getAll();
         const apptData = apptResponse.items || [];
+        const now = new Date();
+
+        const parseAppointmentDateTime = (dateStr: string, timeStr: string): Date | null => {
+          const dateParts = dateStr.split('-').map((value) => Number(value));
+          if (dateParts.length !== 3 || dateParts.some((value) => Number.isNaN(value))) {
+            return null;
+          }
+          const [year, month, day] = dateParts;
+          const date = new Date(year, month - 1, day);
+          if (Number.isNaN(date.getTime())) return null;
+
+          const normalizedTime = timeStr.trim().toUpperCase();
+          const timeMatch = normalizedTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
+          if (timeMatch) {
+            let hours = parseInt(timeMatch[1], 10);
+            const minutes = parseInt(timeMatch[2], 10);
+            const period = timeMatch[3];
+            if (period === 'PM' && hours !== 12) hours += 12;
+            if (period === 'AM' && hours === 12) hours = 0;
+            date.setHours(hours, minutes, 0, 0);
+            return date;
+          }
+
+          const twentyFourMatch = normalizedTime.match(/^(\d{1,2}):(\d{2})$/);
+          if (twentyFourMatch) {
+            const hours = parseInt(twentyFourMatch[1], 10);
+            const minutes = parseInt(twentyFourMatch[2], 10);
+            date.setHours(hours, minutes, 0, 0);
+            return date;
+          }
+
+          return null;
+        };
+
+        const deriveStatus = (appointment: ApiAppointment): Appointment['status'] => {
+          if (
+            appointment.status !== 'pending' &&
+            appointment.status !== 'confirmed' &&
+            appointment.status !== 'in_progress'
+          ) {
+            return appointment.status as Appointment['status'];
+          }
+
+          const start = parseAppointmentDateTime(appointment.date, appointment.time);
+          if (!start) {
+            return appointment.status as Appointment['status'];
+          }
+
+          const durationMinutes = appointment.slotDuration ?? 30;
+          const endTime = new Date(start.getTime() + durationMinutes * 60000);
+
+          if (now.getTime() <= endTime.getTime()) {
+            return appointment.status as Appointment['status'];
+          }
+
+          if (appointment.status === 'pending') return 'rejected';
+          return 'no_show';
+        };
+
         const formattedAppointments: Appointment[] = apptData
           .filter((a: ApiAppointment) => a.status !== 'cancelled')
-          .map((a: ApiAppointment) => ({
-            id: a.id,
-            doctorName: a.doctorName.replace('Dr. ', ''),
-            doctorImage: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400',
-            doctorImageAlt: `Doctor ${a.doctorName}`,
-            specialty: 'General',
-            date: formatDate(a.date),
-            time: a.time,
-            type: (a.type as 'video' | 'in-person') || 'video',
-            status: a.status as
-              | 'confirmed'
-              | 'pending'
-              | 'completed'
-              | 'rejected'
-              | 'in_progress'
-              | 'no_show',
-            doctorId: a.doctorId,
-            rated: (a as any).rated || false,
-            rejectionReason: (a as any).rejectionReason || '',
-          }));
+          .map((a: ApiAppointment) => {
+            const derivedStatus = deriveStatus(a);
+            return {
+              id: a.id,
+              doctorName: a.doctorName.replace('Dr. ', ''),
+              doctorImage: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400',
+              doctorImageAlt: `Doctor ${a.doctorName}`,
+              specialty: 'General',
+              date: formatDate(a.date),
+              time: a.time,
+              type: (a.type as 'video' | 'in-person') || 'video',
+              status: derivedStatus,
+              doctorId: a.doctorId,
+              rated: (a as any).rated || false,
+              rejectionReason:
+                (a as any).rejectionReason ||
+                (derivedStatus === 'rejected' && a.status === 'pending'
+                  ? 'Expired (no response)'
+                  : ''),
+            };
+          });
         setAppointments(formattedAppointments);
       } catch (err: any) {
         logger.error('Failed to fetch appointments:', err);
@@ -166,32 +226,156 @@ const PatientDashboardInteractive = () => {
         const doctorData = doctorResponse.items || [];
         logger.log('Doctors fetched:', doctorData);
 
-        let nextAvailableMap = new Map<string, string>();
+        let nextAvailableMap = new Map<string, string | null>();
         try {
           const nextAvailable = await doctorsApi.getNextAvailable();
-          nextAvailableMap = new Map(
-            Object.entries(nextAvailable).filter(([, v]) => typeof v === 'string') as [
-              string,
-              string
-            ][]
-          );
+          nextAvailableMap = new Map(Object.entries(nextAvailable) as [string, string | null][]);
         } catch (err) {
           logger.error('Failed to fetch next available slots:', err);
         }
 
-        const formattedDoctors: Doctor[] = doctorData.map((d: ApiDoctor) => ({
-          id: d.id,
-          name: d.name.replace('Dr. ', ''),
-          image: d.image || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400',
-          imageAlt: `${d.name} profile photo`,
-          specialty: d.specialty,
-          rating: d.rating ?? 0,
-          reviewCount: d.reviewCount || 0,
-          experience: d.experience || 5,
-          availableToday: d.availableToday ?? false,
-          consultationTypes: d.consultationTypes || ['video', 'in-person'],
-          nextAvailable: nextAvailableMap.get(d.id) || d.nextAvailable || 'Tomorrow',
-        }));
+        const normalizeLabel = (
+          label: string
+        ): { day: 'Today' | 'Tomorrow'; time: string } | null => {
+          const match = label.match(/^(Today|Tomorrow),\s*(.+)$/i);
+          if (!match) return null;
+          const day = match[1].toLowerCase() === 'today' ? 'Today' : 'Tomorrow';
+          return { day, time: match[2].trim() };
+        };
+
+        const normalizeDateLabel = (label: string): string => {
+          const match = label.match(/^([A-Za-z]{3})\s+(\d{1,2}),\s*(.+)$/);
+          if (!match) return label;
+          const monthMap: Record<string, number> = {
+            Jan: 0,
+            Feb: 1,
+            Mar: 2,
+            Apr: 3,
+            May: 4,
+            Jun: 5,
+            Jul: 6,
+            Aug: 7,
+            Sep: 8,
+            Oct: 9,
+            Nov: 10,
+            Dec: 11,
+          };
+          const monthIndex = monthMap[match[1]];
+          if (monthIndex === undefined) return label;
+          const dayValue = parseInt(match[2], 10);
+          if (Number.isNaN(dayValue)) return label;
+          const now = new Date();
+          const date = new Date(now.getFullYear(), monthIndex, dayValue);
+          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const tomorrow = new Date(today);
+          tomorrow.setDate(today.getDate() + 1);
+          if (date.getTime() === today.getTime()) {
+            return `Today, ${match[3].trim()}`;
+          }
+          if (date.getTime() === tomorrow.getTime()) {
+            return `Tomorrow, ${match[3].trim()}`;
+          }
+          return label;
+        };
+
+        const formatDateKey = (date: Date): string => {
+          const year = date.getFullYear();
+          const month = `${date.getMonth() + 1}`.padStart(2, '0');
+          const day = `${date.getDate()}`.padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        };
+
+        const parseTimeToDate = (baseDate: Date, timeStr: string): Date | null => {
+          const normalizedTime = timeStr.trim().toUpperCase();
+          const timeMatch = normalizedTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
+          const date = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+          if (timeMatch) {
+            let hours = parseInt(timeMatch[1], 10);
+            const minutes = parseInt(timeMatch[2], 10);
+            const period = timeMatch[3];
+            if (period === 'PM' && hours !== 12) hours += 12;
+            if (period === 'AM' && hours === 12) hours = 0;
+            date.setHours(hours, minutes, 0, 0);
+            return date;
+          }
+          const twentyFourMatch = normalizedTime.match(/^(\d{1,2}):(\d{2})$/);
+          if (twentyFourMatch) {
+            const hours = parseInt(twentyFourMatch[1], 10);
+            const minutes = parseInt(twentyFourMatch[2], 10);
+            date.setHours(hours, minutes, 0, 0);
+            return date;
+          }
+          return null;
+        };
+
+        const resolveNextAvailable = async (doctorId: string, fallback?: string | null) => {
+          if (!fallback) return 'Not available';
+          const normalizedFallback = normalizeDateLabel(fallback);
+          const parsed = normalizeLabel(normalizedFallback);
+          if (!parsed) return fallback;
+
+          if (parsed.day === 'Today') {
+            const now = new Date();
+            const slotDateTime = parseTimeToDate(now, parsed.time);
+            if (!slotDateTime || slotDateTime.getTime() > now.getTime()) {
+              return fallback;
+            }
+
+            const todayKey = formatDateKey(now);
+            try {
+              const todaySlotsResponse = await schedulesApi.getAvailableSlots(doctorId, todayKey);
+              const upcomingToday = todaySlotsResponse.slots.find((slot) => {
+                const slotTime = parseTimeToDate(now, slot);
+                return slotTime ? slotTime.getTime() > now.getTime() : false;
+              });
+              if (upcomingToday) {
+                return `Today, ${upcomingToday}`;
+              }
+            } catch (err) {
+              logger.error('Failed to refresh today slots:', err);
+            }
+
+            const tomorrow = new Date(now);
+            tomorrow.setDate(now.getDate() + 1);
+            const tomorrowKey = formatDateKey(tomorrow);
+            try {
+              const tomorrowSlotsResponse = await schedulesApi.getAvailableSlots(
+                doctorId,
+                tomorrowKey
+              );
+              if (tomorrowSlotsResponse.slots.length > 0) {
+                return `Tomorrow, ${tomorrowSlotsResponse.slots[0]}`;
+              }
+            } catch (err) {
+              logger.error('Failed to fetch tomorrow slots:', err);
+            }
+
+            return 'Not available';
+          }
+
+          return fallback;
+        };
+
+        const formattedDoctors: Doctor[] = await Promise.all(
+          doctorData.map(async (d: ApiDoctor) => {
+            const mapValue = nextAvailableMap.get(d.id);
+            const fallback = mapValue === undefined ? d.nextAvailable ?? null : mapValue;
+            const nextAvailable = await resolveNextAvailable(d.id, fallback);
+            return {
+              id: d.id,
+              name: d.name.replace('Dr. ', ''),
+              image: d.image || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400',
+              imageAlt: `${d.name} profile photo`,
+              specialty: d.specialty,
+              rating: d.rating ?? 0,
+              reviewCount: d.reviewCount || 0,
+              experience: d.experience || 5,
+              availableToday: d.availableToday ?? false,
+              consultationTypes: d.consultationTypes || ['video', 'in-person'],
+              nextAvailable,
+            };
+          })
+        );
         setDoctors(formattedDoctors);
       } catch (err) {
         logger.error('Failed to fetch doctors:', err);

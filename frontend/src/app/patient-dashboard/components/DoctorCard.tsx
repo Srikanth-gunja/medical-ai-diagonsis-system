@@ -112,7 +112,11 @@ const DoctorCard = ({ doctor, onBook }: DoctorCardProps) => {
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
           <div className="flex items-center gap-1 text-xs text-text-secondary">
             <Icon name="ClockIcon" size={12} />
-            <span>Next: {doctor.nextAvailable}</span>
+            <span>
+              {doctor.nextAvailable === 'Not available'
+                ? 'Not available'
+                : `Next: ${doctor.nextAvailable}`}
+            </span>
           </div>
 
           <button

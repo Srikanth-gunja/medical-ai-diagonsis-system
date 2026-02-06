@@ -60,6 +60,76 @@ export default function PatientHistoryModal({ patientId, onClose }: PatientHisto
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(' ');
 
+  const parseAppointmentDateTime = (dateStr: string, timeStr: string): Date | null => {
+    const dateParts = dateStr.split('-').map((value) => Number(value));
+    if (dateParts.length !== 3 || dateParts.some((value) => Number.isNaN(value))) {
+      return null;
+    }
+    const [year, month, day] = dateParts;
+    const date = new Date(year, month - 1, day);
+    if (Number.isNaN(date.getTime())) return null;
+
+    const normalizedTime = timeStr.trim().toUpperCase();
+    const timeMatch = normalizedTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
+    if (timeMatch) {
+      let hours = parseInt(timeMatch[1], 10);
+      const minutes = parseInt(timeMatch[2], 10);
+      const period = timeMatch[3];
+      if (period === 'PM' && hours !== 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0;
+      date.setHours(hours, minutes, 0, 0);
+      return date;
+    }
+
+    const twentyFourMatch = normalizedTime.match(/^(\d{1,2}):(\d{2})$/);
+    if (twentyFourMatch) {
+      const hours = parseInt(twentyFourMatch[1], 10);
+      const minutes = parseInt(twentyFourMatch[2], 10);
+      date.setHours(hours, minutes, 0, 0);
+      return date;
+    }
+
+    return null;
+  };
+
+  const deriveStatus = (appointment: PatientHistory['appointments'][number]): string => {
+    if (
+      appointment.status !== 'pending' &&
+      appointment.status !== 'confirmed' &&
+      appointment.status !== 'in_progress'
+    ) {
+      return appointment.status;
+    }
+
+    const start = parseAppointmentDateTime(appointment.date, appointment.time);
+    if (!start) {
+      return appointment.status;
+    }
+
+    const durationMinutes = appointment.slotDuration ?? 30;
+    const endTime = new Date(start.getTime() + durationMinutes * 60000);
+    const now = new Date();
+
+    if (now.getTime() <= endTime.getTime()) {
+      return appointment.status;
+    }
+
+    if (appointment.status === 'pending') return 'rejected';
+    return 'no_show';
+  };
+
+  const deriveRejectionReason = (
+    appointment: PatientHistory['appointments'][number],
+    derivedStatus: string
+  ): string => {
+    if (derivedStatus !== 'rejected') {
+      return appointment.rejectionReason || '';
+    }
+    if (appointment.rejectionReason) return appointment.rejectionReason;
+    if (appointment.status === 'pending') return 'Expired (no response)';
+    return '';
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-card border border-border rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -218,40 +288,50 @@ export default function PatientHistoryModal({ patientId, onClose }: PatientHisto
                   {history.appointments.length === 0 ? (
                     <p className="text-center text-text-secondary py-8">No appointments found</p>
                   ) : (
-                    history.appointments.map((appt) => (
-                      <div
-                        key={appt.id}
-                        className="p-4 bg-muted/30 rounded-lg border border-border"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h4 className="font-medium text-text-primary">
-                              {formatDate(appt.date)} at {appt.time}
-                            </h4>
-                            <p className="text-sm text-text-secondary">
-                              {appt.symptoms || 'General consultation'}
-                            </p>
-                          </div>
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              appt.status === 'completed'
-                                ? 'bg-success/10 text-success'
-                                : appt.status === 'confirmed'
-                                  ? 'bg-primary/10 text-primary'
-                                  : appt.status === 'cancelled'
-                                    ? 'bg-error/10 text-error'
-                                    : 'bg-warning/10 text-warning'
-                            }`}
-                          >
-                            {formatStatus(appt.status)}
+                    history.appointments.map((appt) => {
+                      const derivedStatus = deriveStatus(appt);
+                      const rejectionReason = deriveRejectionReason(appt, derivedStatus);
+                      return (
+                        <div
+                          key={appt.id}
+                          className="p-4 bg-muted/30 rounded-lg border border-border"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h4 className="font-medium text-text-primary">
+                                {formatDate(appt.date)} at {appt.time}
+                              </h4>
+                              <p className="text-sm text-text-secondary">
+                                {appt.symptoms || 'General consultation'}
+                              </p>
+                            </div>
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                derivedStatus === 'completed'
+                                  ? 'bg-success/10 text-success'
+                                  : derivedStatus === 'confirmed'
+                                    ? 'bg-primary/10 text-primary'
+                                    : derivedStatus === 'cancelled'
+                                      ? 'bg-error/10 text-error'
+                                      : 'bg-warning/10 text-warning'
+                              }`}
+                            >
+                              {formatStatus(derivedStatus)}
                           </span>
                         </div>
+                        {derivedStatus === 'rejected' && rejectionReason && (
+                          <div className="mt-3 rounded-md border border-error/20 bg-error/5 p-3 text-sm text-text-secondary">
+                            <span className="font-medium text-error">Rejection Reason:</span>{' '}
+                            {rejectionReason}
+                          </div>
+                        )}
                         <div className="mt-2 flex items-center gap-2 text-sm text-text-muted">
                           <Icon name="VideoCameraIcon" size={14} />
                           <span>{appt.type || 'video'}</span>
                         </div>
                       </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               )}
