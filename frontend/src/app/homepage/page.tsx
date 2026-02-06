@@ -4,8 +4,9 @@ import HeroSection from './components/HeroSection';
 import FeaturesSection from './components/FeaturesSection';
 import TrustSignalsSection from './components/TrustSignalsSection';
 import StatsSection from './components/StatsSection';
+import AboutSection from './components/AboutSection';
 import CTASection from './components/CTASection';
-import FooterSection from './components/FooterSection';
+import FooterSection from '@/components/common/FooterSection';
 
 export const metadata: Metadata = {
   title: 'MediCare - Modern Healthcare Made Simple',
@@ -23,6 +24,7 @@ export default function Homepage() {
         <FeaturesSection />
         <TrustSignalsSection />
         <StatsSection />
+        <AboutSection />
         <CTASection />
       </main>
 
