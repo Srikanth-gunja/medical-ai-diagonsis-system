@@ -54,6 +54,12 @@ export default function PatientHistoryModal({ patientId, onClose }: PatientHisto
     return age;
   };
 
+  const formatStatus = (status: string): string =>
+    status
+      .split('_')
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-card border border-border rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -237,7 +243,7 @@ export default function PatientHistoryModal({ patientId, onClose }: PatientHisto
                                     : 'bg-warning/10 text-warning'
                             }`}
                           >
-                            {appt.status.charAt(0).toUpperCase() + appt.status.slice(1)}
+                            {formatStatus(appt.status)}
                           </span>
                         </div>
                         <div className="mt-2 flex items-center gap-2 text-sm text-text-muted">

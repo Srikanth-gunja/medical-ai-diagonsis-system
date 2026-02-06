@@ -285,6 +285,17 @@ const PatientDashboardInteractive = () => {
     };
   }, [fetchData, isHydrated]);
 
+  useEffect(() => {
+    if (!isHydrated) return;
+    const refreshInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchData({ silent: true });
+      }
+    }, 15000);
+
+    return () => clearInterval(refreshInterval);
+  }, [fetchData, isHydrated]);
+
   const formatDate = (dateStr: string): string => {
     try {
       const date = new Date(dateStr);

@@ -1,11 +1,10 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
 from ..models.message import Message
 from ..models.appointment import Appointment
 from ..models.doctor import Doctor
 from ..realtime import publish_event
+from ..utils.appointment_time import is_in_appointment_window
 import json
 
 messages_bp = Blueprint('messages', __name__)
@@ -23,36 +22,7 @@ def is_during_appointment_time(appointment):
     Returns:
         tuple: (is_valid: bool, error_message: str)
     """
-    appt_date = appointment['date']  # Format: "YYYY-MM-DD"
-    appt_time = appointment['time']  # Format: "HH:MM AM/PM" or "H:MM AM/PM"
-
-    # Parse appointment datetime
-    try:
-        time_str = appt_time.upper().strip()
-        appt_datetime = datetime.strptime(f"{appt_date} {time_str}", "%Y-%m-%d %I:%M %p")
-    except ValueError:
-        try:
-            # Fallback: try 24-hour format
-            appt_datetime = datetime.strptime(f"{appt_date} {appt_time}", "%Y-%m-%d %H:%M")
-        except ValueError:
-            return False, "Invalid appointment time format"
-
-    # Set timezone to IST (Indian Standard Time) for the appointment
-    # Assuming appointments are booked in IST
-    ist_tz = ZoneInfo("Asia/Kolkata")
-    appt_datetime = appt_datetime.replace(tzinfo=ist_tz)
-
-    # Get current time in IST
-    now = datetime.now(ist_tz)
-
-    end_time = appt_datetime + timedelta(minutes=30)  # 30-min appointment window
-
-    if now < appt_datetime:
-        return False, f"Chat available from {appt_datetime.strftime('%Y-%m-%d %I:%M %p')}"
-    elif now > end_time:
-        return False, "Appointment time has ended"
-
-    return True, ""
+    return is_in_appointment_window(appointment)
 
 
 def verify_appointment_access(current_user, appointment):

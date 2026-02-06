@@ -311,7 +311,10 @@ export default function DoctorDashboardInteractive() {
             a.status === 'completed'
           );
           const isExpiredNoActivity = Boolean(
-            endTime && now.getTime() > endTime.getTime() + graceMinutes * 60000 && !hasActivity
+            endTime &&
+              now.getTime() > endTime.getTime() + graceMinutes * 60000 &&
+              !hasActivity &&
+              (a.status === 'confirmed' || a.status === 'pending')
           );
 
           // Separate pending appointments as requests

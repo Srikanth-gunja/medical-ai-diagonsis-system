@@ -10,6 +10,11 @@ from ..models.schedule import Schedule
 from ..database import get_db, APPOINTMENTS_COLLECTION
 from ..realtime import publish_event
 from ..utils.pagination import paginate, get_pagination_params
+from ..utils.appointment_time import (
+    mark_expired_appointments,
+    mark_expired_no_show,
+    mark_expired_rejected,
+)
 import json
 from datetime import datetime
 
@@ -101,6 +106,7 @@ def get_appointments():
 
     if role == "patient":
         appointments = Appointment.find_by_patient_id(user_id)
+        appointments = mark_expired_appointments(appointments)
         result = [Appointment.to_dict(appt) for appt in appointments]
     else:
         # For doctors, find by doctor profile's _id and include patient names
@@ -109,6 +115,8 @@ def get_appointments():
             appointments = Appointment.find_by_doctor_id(doctor["_id"])
         else:
             appointments = []
+
+        appointments = mark_expired_appointments(appointments)
 
         # Enrich with patient names
         result = []
@@ -405,6 +413,41 @@ def revoke_appointment(appt_id):
     # Verify ownership
     if str(appointment["patient_id"]) != current_user["id"]:
         return jsonify({"error": "Unauthorized"}), 403
+
+    # If appointment time has ended, auto-mark expired appointments to avoid cancel errors
+    if appointment["status"] in ["pending", "confirmed"]:
+        if appointment["status"] == "confirmed":
+            updated, marked = mark_expired_no_show(appointment)
+            if marked:
+                appointment_dict = Appointment.to_dict(updated)
+                target_user_ids = [current_user["id"]]
+                doctor_id = appointment.get("doctor_id")
+                if doctor_id:
+                    doctor = Doctor.find_by_id(doctor_id)
+                    if doctor:
+                        target_user_ids.append(str(doctor["user_id"]))
+                publish_event(
+                    target_user_ids,
+                    "appointments.updated",
+                    {"appointmentId": appointment_dict["id"]},
+                )
+                return jsonify(appointment_dict)
+        else:
+            updated, marked = mark_expired_rejected(appointment)
+            if marked:
+                appointment_dict = Appointment.to_dict(updated)
+                target_user_ids = [current_user["id"]]
+                doctor_id = appointment.get("doctor_id")
+                if doctor_id:
+                    doctor = Doctor.find_by_id(doctor_id)
+                    if doctor:
+                        target_user_ids.append(str(doctor["user_id"]))
+                publish_event(
+                    target_user_ids,
+                    "appointments.updated",
+                    {"appointmentId": appointment_dict["id"]},
+                )
+                return jsonify(appointment_dict)
 
     # Only pending or confirmed appointments can be cancelled
     if appointment["status"] not in ["pending", "confirmed"]:

@@ -6,6 +6,7 @@ from ..models.medical_record import MedicalRecord
 from ..models.doctor import Doctor
 from ..models.appointment import Appointment
 from ..models.prescription import Prescription
+from ..utils.appointment_time import mark_expired_appointments
 from ..database import get_db
 import json
 
@@ -143,6 +144,7 @@ def get_doctor_patients():
     
     # Get all appointments for this doctor
     appointments = Appointment.find_by_doctor_id(doctor['_id'])
+    appointments = mark_expired_appointments(appointments)
     
     # Build unique patient list
     patient_ids = set()
@@ -187,6 +189,7 @@ def get_patient_history(patient_id):
     
     # Get appointments with this doctor
     all_appointments = Appointment.find_by_patient_id(patient_id)
+    all_appointments = mark_expired_appointments(all_appointments)
     doctor_appointments = [
         Appointment.to_dict(a) for a in all_appointments 
         if str(a.get('doctor_id')) == str(doctor['_id'])
