@@ -68,10 +68,14 @@ def create_call(appointment_id):
     role = current_user["role"]
 
     # Validate appointment and permissions
-    appointment = video_service.validate_call_access(user_id, appointment_id, role)
+    appointment, error_message = video_service.validate_call_access(
+        user_id, appointment_id, role
+    )
 
     if not appointment:
-        return jsonify({"error": "Unauthorized or invalid appointment"}), 403
+        return jsonify(
+            {"error": error_message or "Unauthorized or invalid appointment"}
+        ), 403
 
     # Generate call ID
     call_id = video_service.create_call_id(appointment_id)
@@ -166,10 +170,14 @@ def end_call(appointment_id):
     role = current_user["role"]
 
     # Validate access
-    appointment = video_service.validate_call_access(user_id, appointment_id, role)
+    appointment, error_message = video_service.validate_call_access(
+        user_id, appointment_id, role
+    )
 
     if not appointment:
-        return jsonify({"error": "Unauthorized or invalid appointment"}), 403
+        return jsonify(
+            {"error": error_message or "Unauthorized or invalid appointment"}
+        ), 403
 
     data = request.get_json() or {}
     duration = data.get("duration", 0)

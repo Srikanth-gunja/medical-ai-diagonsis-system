@@ -32,20 +32,33 @@ def _register_and_login_patient(client, email: str):
     return token, user_id
 
 
-def test_video_call_end_logs_metadata(client, app):
+def test_video_call_end_logs_metadata(client, app, db):
     token, user_id = _register_and_login_patient(client, "videocall@test.com")
     headers = {"Authorization": f"Bearer {token}"}
 
-    with app.app_context():
-        appointment = Appointment.create(
-            patient_id=user_id,
-            doctor_id=str(ObjectId()),
-            doctor_name="Test Doctor",
-            date="2026-01-15",
-            time="10:00 AM",
-            symptoms="Cough",
-        )
-        appointment_id = str(appointment["_id"])
+    # Create appointment using the db fixture directly
+    from datetime import datetime, timedelta
+
+    # Use current time + 5 minutes so the appointment is within the valid time window
+    # (The time window allows calls from 30 mins before to 30 mins after the appointment)
+    now = datetime.utcnow()
+    appointment_datetime = now + timedelta(minutes=5)
+    appointment_date = appointment_datetime.strftime("%Y-%m-%d")
+    appointment_time = appointment_datetime.strftime("%I:%M %p")
+
+    appointment_data = {
+        "patient_id": ObjectId(user_id),
+        "doctor_id": ObjectId(),
+        "doctor_name": "Test Doctor",
+        "date": appointment_date,
+        "time": appointment_time,
+        "status": "confirmed",
+        "symptoms": "Cough",
+        "slot_duration": 30,
+        "created_at": datetime.utcnow(),
+    }
+    result = db["appointments"].insert_one(appointment_data)
+    appointment_id = str(result.inserted_id)
 
     response = client.post(
         f"/api/video-calls/call/{appointment_id}/end",
@@ -56,7 +69,8 @@ def test_video_call_end_logs_metadata(client, app):
 
     assert response.status_code == 200, response.data
 
-    with app.app_context():
-        updated = Appointment.find_by_id(appointment_id)
-        assert updated.get("call_ended_at") is not None
-        assert updated.get("call_duration") == 123
+    # Verify the appointment was updated in the database
+    updated = db["appointments"].find_one({"_id": ObjectId(appointment_id)})
+    assert updated is not None
+    assert updated.get("call_ended_at") is not None
+    assert updated.get("call_duration") == 123
