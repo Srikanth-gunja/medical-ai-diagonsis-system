@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import UpcomingAppointmentCard from './UpcomingAppointmentCard';
 import DoctorSearchFilters from './DoctorSearchFilters';
 import DoctorCard from './DoctorCard';
@@ -20,9 +21,9 @@ import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { DashboardSkeleton } from '@/components/ui/Skeletons';
 import { useUser } from '../ClientLayout';
 import { useVideoCall } from '@/contexts/VideoCallContext';
+import { useDoctors, doctorKeys } from '@/hooks/useDoctors';
+import { useAppointments, appointmentKeys, useCreateAppointment, useRevokeAppointment, useRescheduleAppointment } from '@/hooks/useAppointments';
 import {
-  doctorsApi,
-  appointmentsApi,
   activitiesApi,
   type Doctor as ApiDoctor,
   type Appointment as ApiAppointment,
@@ -98,9 +99,15 @@ const PatientDashboardInteractive = () => {
   const { showToast } = useToast();
   const { confirm, ConfirmDialogComponent } = useConfirm();
 
+  // React Query hooks for data fetching
+  const queryClient = useQueryClient();
+  const { data: doctorsData, isLoading: isDoctorsLoading, error: doctorsError } = useDoctors(1, 50);
+  const { data: appointmentsData, isLoading: isAppointmentsLoading, error: appointmentsError } = useAppointments(1, 50);
+  const createAppointmentMutation = useCreateAppointment();
+  const revokeAppointmentMutation = useRevokeAppointment();
+  const rescheduleAppointmentMutation = useRescheduleAppointment();
+
   // Data states
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -118,292 +125,143 @@ const PatientDashboardInteractive = () => {
     'upcoming' | 'pending' | 'completed' | 'rejected'
   >('upcoming');
 
-  const fetchData = useCallback(async (options?: { silent?: boolean }) => {
-    const silent = options?.silent ?? false;
-    if (!silent) {
-      setIsLoading(true);
-    }
-    setError(null);
+  // Process React Query data into component state
+  const appointments = useMemo(() => {
+    if (!appointmentsData?.items) return [];
+    
+    const apptData = appointmentsData.items;
+    const now = new Date();
 
+    const parseAppointmentDateTime = (dateStr: string, timeStr: string): Date | null => {
+      const dateParts = dateStr.split('-').map((value) => Number(value));
+      if (dateParts.length !== 3 || dateParts.some((value) => Number.isNaN(value))) {
+        return null;
+      }
+      const [year, month, day] = dateParts;
+      const date = new Date(year, month - 1, day);
+      if (Number.isNaN(date.getTime())) return null;
+
+      const normalizedTime = timeStr.trim().toUpperCase();
+      const timeMatch = normalizedTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
+      if (timeMatch) {
+        let hours = parseInt(timeMatch[1], 10);
+        const minutes = parseInt(timeMatch[2], 10);
+        const period = timeMatch[3];
+        if (period === 'PM' && hours !== 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        date.setHours(hours, minutes, 0, 0);
+        return date;
+      }
+
+      const twentyFourMatch = normalizedTime.match(/^(\d{1,2}):(\d{2})$/);
+      if (twentyFourMatch) {
+        const hours = parseInt(twentyFourMatch[1], 10);
+        const minutes = parseInt(twentyFourMatch[2], 10);
+        date.setHours(hours, minutes, 0, 0);
+        return date;
+      }
+
+      return null;
+    };
+
+    const deriveStatus = (appointment: ApiAppointment): Appointment['status'] => {
+      if (
+        appointment.status !== 'pending' &&
+        appointment.status !== 'confirmed' &&
+        appointment.status !== 'in_progress'
+      ) {
+        return appointment.status as Appointment['status'];
+      }
+
+      const start = parseAppointmentDateTime(appointment.date, appointment.time);
+      if (!start) {
+        return appointment.status as Appointment['status'];
+      }
+
+      const durationMinutes = appointment.slotDuration ?? 30;
+      const endTime = new Date(start.getTime() + durationMinutes * 60000);
+
+      if (now.getTime() <= endTime.getTime()) {
+        return appointment.status as Appointment['status'];
+      }
+
+      if (appointment.status === 'pending') return 'rejected';
+      return 'no_show';
+    };
+
+    return apptData
+      .filter((a: ApiAppointment) => a.status !== 'cancelled')
+      .map((a: ApiAppointment) => {
+        const derivedStatus = deriveStatus(a);
+        return {
+          id: a.id,
+          doctorName: a.doctorName.replace('Dr. ', ''),
+          doctorImage: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400',
+          doctorImageAlt: `Doctor ${a.doctorName}`,
+          specialty: 'General',
+          date: formatDate(a.date),
+          time: a.time,
+          type: (a.type as 'video' | 'in-person') || 'video',
+          status: derivedStatus,
+          doctorId: a.doctorId,
+          rated: (a as any).rated || false,
+          rejectionReason:
+            (a as any).rejectionReason ||
+            (derivedStatus === 'rejected' && a.status === 'pending'
+              ? 'Expired (no response)'
+              : ''),
+        };
+      });
+  }, [appointmentsData]);
+
+  const doctors = useMemo(() => {
+    if (!doctorsData?.items) return [];
+    
+    return doctorsData.items.map((d: ApiDoctor) => ({
+      id: d.id,
+      name: d.name.replace('Dr. ', ''),
+      image: d.image || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400',
+      imageAlt: `${d.name} profile photo`,
+      specialty: d.specialty,
+      rating: d.rating ?? 0,
+      reviewCount: d.reviewCount || 0,
+      experience: d.experience || 5,
+      availableToday: d.availableToday ?? false,
+      consultationTypes: d.consultationTypes || ['video', 'in-person'],
+      nextAvailable: d.nextAvailable || 'Not available',
+    }));
+  }, [doctorsData]);
+
+  // Fetch activities separately (not in React Query yet)
+  const fetchActivities = useCallback(async () => {
     try {
-      // Fetch appointments
-      try {
-        const apptResponse = await appointmentsApi.getAll();
-        const apptData = apptResponse.items || [];
-        const now = new Date();
-
-        const parseAppointmentDateTime = (dateStr: string, timeStr: string): Date | null => {
-          const dateParts = dateStr.split('-').map((value) => Number(value));
-          if (dateParts.length !== 3 || dateParts.some((value) => Number.isNaN(value))) {
-            return null;
-          }
-          const [year, month, day] = dateParts;
-          const date = new Date(year, month - 1, day);
-          if (Number.isNaN(date.getTime())) return null;
-
-          const normalizedTime = timeStr.trim().toUpperCase();
-          const timeMatch = normalizedTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
-          if (timeMatch) {
-            let hours = parseInt(timeMatch[1], 10);
-            const minutes = parseInt(timeMatch[2], 10);
-            const period = timeMatch[3];
-            if (period === 'PM' && hours !== 12) hours += 12;
-            if (period === 'AM' && hours === 12) hours = 0;
-            date.setHours(hours, minutes, 0, 0);
-            return date;
-          }
-
-          const twentyFourMatch = normalizedTime.match(/^(\d{1,2}):(\d{2})$/);
-          if (twentyFourMatch) {
-            const hours = parseInt(twentyFourMatch[1], 10);
-            const minutes = parseInt(twentyFourMatch[2], 10);
-            date.setHours(hours, minutes, 0, 0);
-            return date;
-          }
-
-          return null;
-        };
-
-        const deriveStatus = (appointment: ApiAppointment): Appointment['status'] => {
-          if (
-            appointment.status !== 'pending' &&
-            appointment.status !== 'confirmed' &&
-            appointment.status !== 'in_progress'
-          ) {
-            return appointment.status as Appointment['status'];
-          }
-
-          const start = parseAppointmentDateTime(appointment.date, appointment.time);
-          if (!start) {
-            return appointment.status as Appointment['status'];
-          }
-
-          const durationMinutes = appointment.slotDuration ?? 30;
-          const endTime = new Date(start.getTime() + durationMinutes * 60000);
-
-          if (now.getTime() <= endTime.getTime()) {
-            return appointment.status as Appointment['status'];
-          }
-
-          if (appointment.status === 'pending') return 'rejected';
-          return 'no_show';
-        };
-
-        const formattedAppointments: Appointment[] = apptData
-          .filter((a: ApiAppointment) => a.status !== 'cancelled')
-          .map((a: ApiAppointment) => {
-            const derivedStatus = deriveStatus(a);
-            return {
-              id: a.id,
-              doctorName: a.doctorName.replace('Dr. ', ''),
-              doctorImage: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400',
-              doctorImageAlt: `Doctor ${a.doctorName}`,
-              specialty: 'General',
-              date: formatDate(a.date),
-              time: a.time,
-              type: (a.type as 'video' | 'in-person') || 'video',
-              status: derivedStatus,
-              doctorId: a.doctorId,
-              rated: (a as any).rated || false,
-              rejectionReason:
-                (a as any).rejectionReason ||
-                (derivedStatus === 'rejected' && a.status === 'pending'
-                  ? 'Expired (no response)'
-                  : ''),
-            };
-          });
-        setAppointments(formattedAppointments);
-      } catch (err: any) {
-        logger.error('Failed to fetch appointments:', err);
-        if (err.message?.includes('Backend server is not running')) {
-          setError('Unable to connect to server. Please check your internet connection or try again later.');
-        }
-      }
-
-      // Fetch doctors
-      try {
-        const doctorResponse = await doctorsApi.getAll();
-        const doctorData = doctorResponse.items || [];
-        logger.log('Doctors fetched:', doctorData);
-
-        let nextAvailableMap = new Map<string, string | null>();
-        try {
-          const nextAvailable = await doctorsApi.getNextAvailable();
-          nextAvailableMap = new Map(Object.entries(nextAvailable) as [string, string | null][]);
-        } catch (err) {
-          logger.error('Failed to fetch next available slots:', err);
-        }
-
-        const normalizeLabel = (
-          label: string
-        ): { day: 'Today' | 'Tomorrow'; time: string } | null => {
-          const match = label.match(/^(Today|Tomorrow),\s*(.+)$/i);
-          if (!match) return null;
-          const day = match[1].toLowerCase() === 'today' ? 'Today' : 'Tomorrow';
-          return { day, time: match[2].trim() };
-        };
-
-        const normalizeDateLabel = (label: string): string => {
-          const match = label.match(/^([A-Za-z]{3})\s+(\d{1,2}),\s*(.+)$/);
-          if (!match) return label;
-          const monthMap: Record<string, number> = {
-            Jan: 0,
-            Feb: 1,
-            Mar: 2,
-            Apr: 3,
-            May: 4,
-            Jun: 5,
-            Jul: 6,
-            Aug: 7,
-            Sep: 8,
-            Oct: 9,
-            Nov: 10,
-            Dec: 11,
-          };
-          const monthIndex = monthMap[match[1]];
-          if (monthIndex === undefined) return label;
-          const dayValue = parseInt(match[2], 10);
-          if (Number.isNaN(dayValue)) return label;
-          const now = new Date();
-          const date = new Date(now.getFullYear(), monthIndex, dayValue);
-          const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          const tomorrow = new Date(today);
-          tomorrow.setDate(today.getDate() + 1);
-          if (date.getTime() === today.getTime()) {
-            return `Today, ${match[3].trim()}`;
-          }
-          if (date.getTime() === tomorrow.getTime()) {
-            return `Tomorrow, ${match[3].trim()}`;
-          }
-          return label;
-        };
-
-        const formatDateKey = (date: Date): string => {
-          const year = date.getFullYear();
-          const month = `${date.getMonth() + 1}`.padStart(2, '0');
-          const day = `${date.getDate()}`.padStart(2, '0');
-          return `${year}-${month}-${day}`;
-        };
-
-        const parseTimeToDate = (baseDate: Date, timeStr: string): Date | null => {
-          const normalizedTime = timeStr.trim().toUpperCase();
-          const timeMatch = normalizedTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);
-          const date = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
-          if (timeMatch) {
-            let hours = parseInt(timeMatch[1], 10);
-            const minutes = parseInt(timeMatch[2], 10);
-            const period = timeMatch[3];
-            if (period === 'PM' && hours !== 12) hours += 12;
-            if (period === 'AM' && hours === 12) hours = 0;
-            date.setHours(hours, minutes, 0, 0);
-            return date;
-          }
-          const twentyFourMatch = normalizedTime.match(/^(\d{1,2}):(\d{2})$/);
-          if (twentyFourMatch) {
-            const hours = parseInt(twentyFourMatch[1], 10);
-            const minutes = parseInt(twentyFourMatch[2], 10);
-            date.setHours(hours, minutes, 0, 0);
-            return date;
-          }
-          return null;
-        };
-
-        const resolveNextAvailable = async (doctorId: string, fallback?: string | null) => {
-          if (!fallback) return 'Not available';
-          const normalizedFallback = normalizeDateLabel(fallback);
-          const parsed = normalizeLabel(normalizedFallback);
-          if (!parsed) return fallback;
-
-          if (parsed.day === 'Today') {
-            const now = new Date();
-            const slotDateTime = parseTimeToDate(now, parsed.time);
-            if (!slotDateTime || slotDateTime.getTime() > now.getTime()) {
-              return fallback;
-            }
-
-            const todayKey = formatDateKey(now);
-            try {
-              const todaySlotsResponse = await schedulesApi.getAvailableSlots(doctorId, todayKey);
-              const upcomingToday = todaySlotsResponse.slots.find((slot) => {
-                const slotTime = parseTimeToDate(now, slot);
-                return slotTime ? slotTime.getTime() > now.getTime() : false;
-              });
-              if (upcomingToday) {
-                return `Today, ${upcomingToday}`;
-              }
-            } catch (err) {
-              logger.error('Failed to refresh today slots:', err);
-            }
-
-            const tomorrow = new Date(now);
-            tomorrow.setDate(now.getDate() + 1);
-            const tomorrowKey = formatDateKey(tomorrow);
-            try {
-              const tomorrowSlotsResponse = await schedulesApi.getAvailableSlots(
-                doctorId,
-                tomorrowKey
-              );
-              if (tomorrowSlotsResponse.slots.length > 0) {
-                return `Tomorrow, ${tomorrowSlotsResponse.slots[0]}`;
-              }
-            } catch (err) {
-              logger.error('Failed to fetch tomorrow slots:', err);
-            }
-
-            return 'Not available';
-          }
-
-          return fallback;
-        };
-
-        const formattedDoctors: Doctor[] = await Promise.all(
-          doctorData.map(async (d: ApiDoctor) => {
-            const mapValue = nextAvailableMap.get(d.id);
-            const fallback = mapValue === undefined ? d.nextAvailable ?? null : mapValue;
-            const nextAvailable = await resolveNextAvailable(d.id, fallback);
-            return {
-              id: d.id,
-              name: d.name.replace('Dr. ', ''),
-              image: d.image || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400',
-              imageAlt: `${d.name} profile photo`,
-              specialty: d.specialty,
-              rating: d.rating ?? 0,
-              reviewCount: d.reviewCount || 0,
-              experience: d.experience || 5,
-              availableToday: d.availableToday ?? false,
-              consultationTypes: d.consultationTypes || ['video', 'in-person'],
-              nextAvailable,
-            };
-          })
-        );
-        setDoctors(formattedDoctors);
-      } catch (err) {
-        logger.error('Failed to fetch doctors:', err);
-      }
-
-      // Fetch activities
-      try {
-        const activityData = await activitiesApi.getRecent();
-        setActivities(activityData);
-      } catch (err) {
-        logger.error('Failed to fetch activities:', err);
-        setActivities([]);
-      }
+      const activityData = await activitiesApi.getRecent();
+      setActivities(activityData);
     } catch (err) {
-      setError('Failed to load dashboard data. Please try again.');
-      logger.error('Dashboard error:', err);
-    } finally {
-      if (!silent) {
-        setIsLoading(false);
-      }
+      logger.error('Failed to fetch activities:', err);
+      setActivities([]);
     }
   }, []);
 
+  // Combined loading and error states
+  useEffect(() => {
+    const loading = isDoctorsLoading || isAppointmentsLoading;
+    setIsLoading(loading);
+    
+    if (doctorsError || appointmentsError) {
+      setError('Failed to load dashboard data. Please try again.');
+      logger.error('Dashboard error:', doctorsError || appointmentsError);
+    } else {
+      setError(null);
+    }
+  }, [isDoctorsLoading, isAppointmentsLoading, doctorsError, appointmentsError]);
+
   useEffect(() => {
     setIsHydrated(true);
-    fetchData();
-  }, [fetchData]);
+    fetchActivities();
+  }, [fetchActivities]);
 
+  // SSE Connection - refetches data on server events
   useEffect(() => {
     if (!isHydrated) return;
     let active = true;
@@ -417,7 +275,12 @@ const PatientDashboardInteractive = () => {
         if (!active) return;
         const streamUrl = `${API_BASE_URL}/events/stream?token=${encodeURIComponent(token)}`;
         eventSource = new EventSource(streamUrl, { withCredentials: true });
-        const handleUpdate = () => fetchData({ silent: true });
+        const handleUpdate = () => {
+          // Invalidate React Query caches to trigger refetch
+          queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
+          queryClient.invalidateQueries({ queryKey: doctorKeys.lists() });
+          fetchActivities();
+        };
 
         eventSource.addEventListener('appointments.updated', handleUpdate);
         eventSource.addEventListener('activities.updated', handleUpdate);
@@ -450,13 +313,15 @@ const PatientDashboardInteractive = () => {
         clearTimeout(reconnectTimer);
       }
     };
-  }, [fetchData, isHydrated]);
+  }, [isHydrated, queryClient, fetchActivities]);
 
+  // Manual refresh on visibility change (optional - React Query handles most cases)
   useEffect(() => {
     if (!isHydrated) return;
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        fetchData({ silent: true });
+        // React Query will automatically refetch stale data
+        fetchActivities();
       }
     };
 
@@ -467,18 +332,9 @@ const PatientDashboardInteractive = () => {
       window.removeEventListener('focus', handleVisibility);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [fetchData, isHydrated]);
+  }, [isHydrated, fetchActivities]);
 
-  useEffect(() => {
-    if (!isHydrated) return;
-    const refreshInterval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        fetchData({ silent: true });
-      }
-    }, 60000);
-
-    return () => clearInterval(refreshInterval);
-  }, [fetchData, isHydrated]);
+  // Removed manual polling - React Query handles background refetching automatically
 
   const formatDate = (dateStr: string): string => {
     try {
@@ -536,10 +392,9 @@ const PatientDashboardInteractive = () => {
 
   const handleConfirmReschedule = async (id: string, date: string, time: string) => {
     try {
-      await appointmentsApi.reschedule(id, { date, time });
+      await rescheduleAppointmentMutation.mutateAsync({ id, data: { date, time } });
       setIsRescheduleModalOpen(false);
       setSelectedAppointmentForReschedule(null);
-      fetchData(); // Refresh appointments
     } catch (err) {
       logger.error('Failed to reschedule appointment:', err);
       alert('Failed to reschedule appointment. Please try again.');
@@ -585,8 +440,7 @@ const PatientDashboardInteractive = () => {
 
       if (confirmed) {
         try {
-          await appointmentsApi.revoke(id);
-          setAppointments((prev) => prev.filter((a) => a.id !== id));
+          await revokeAppointmentMutation.mutateAsync(id);
           showToast({
             type: 'success',
             title: 'Appointment Cancelled',
@@ -620,12 +474,8 @@ const PatientDashboardInteractive = () => {
   };
 
   const handleReviewSuccess = () => {
-    // Mark the appointment as rated in local state
-    if (selectedAppointment) {
-      setAppointments((prev) =>
-        prev.map((a) => (a.id === selectedAppointment.id ? { ...a, rated: true } : a))
-      );
-    }
+    // Invalidate appointments query to refetch updated data from server
+    queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
     setIsReviewModalOpen(false);
   };
 
@@ -651,7 +501,7 @@ const PatientDashboardInteractive = () => {
   const handleConfirmBooking = async (date: string, time: string, type: string) => {
     if (isHydrated && selectedDoctorForBooking) {
       try {
-        await appointmentsApi.create({
+        await createAppointmentMutation.mutateAsync({
           doctorId: selectedDoctorForBooking.id,
           doctorName: `Dr. ${selectedDoctorForBooking.name}`,
           date,
@@ -661,8 +511,6 @@ const PatientDashboardInteractive = () => {
         setShowSuccessMessage(true);
         setIsBookingModalOpen(false);
         setTimeout(() => setShowSuccessMessage(false), 3000);
-        // Refresh appointments
-        fetchData();
       } catch (err) {
         alert('Failed to book appointment. Please try again.');
       }

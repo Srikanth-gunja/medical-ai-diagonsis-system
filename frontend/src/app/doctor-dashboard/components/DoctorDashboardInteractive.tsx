@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import AuthenticatedHeader from '@/components/common/AuthenticatedHeader';
 import NavigationBreadcrumbs from '@/components/common/NavigationBreadcrumbs';
 import StatusIndicatorBar from '@/components/common/StatusIndicatorBar';
@@ -26,13 +27,15 @@ import { useVideoCall } from '@/contexts/VideoCallContext';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { DoctorDashboardSkeleton } from '@/components/ui/Skeletons';
+import { useDoctorProfile } from '@/hooks/useDoctors';
+import { useAppointments, appointmentKeys, useUpdateAppointmentStatus, useCompleteAppointment, useRejectAppointment } from '@/hooks/useAppointments';
+import { useMySchedule } from '@/hooks/useSchedules';
+import { useDoctorPatients, patientKeys } from '@/hooks/usePatients';
+import { useDoctorAnalytics, useDoctorChartData, analyticsKeys } from '@/hooks/useAnalytics';
+import { useUnreadNotificationCount } from '@/hooks/useNotifications';
 import {
-  doctorsApi,
   appointmentsApi,
-  analyticsApi,
-  patientsApi,
   authApi,
-  notificationsApi,
   schedulesApi,
   eventsApi,
   API_BASE_URL,
@@ -191,7 +194,6 @@ export default function DoctorDashboardInteractive() {
   const [historyPatientId, setHistoryPatientId] = useState<string>('');
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showStatusBar, setShowStatusBar] = useState(true);
-  const [notificationCount, setNotificationCount] = useState(0);
   const [showChatModal, setShowChatModal] = useState(false);
   const [chatAppointment, setChatAppointment] = useState<Appointment | null>(null);
   const [showChatPanel, setShowChatPanel] = useState(false);
@@ -227,278 +229,239 @@ export default function DoctorDashboardInteractive() {
   // Toast and confirmation dialogs
   const { showToast } = useToast();
   const { confirm, ConfirmDialogComponent } = useConfirm();
+  const queryClient = useQueryClient();
 
-  // Data states
-  const [doctorProfile, setDoctorProfile] = useState<ApiDoctor | null>(null);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [completedAppointments, setCompletedAppointments] = useState<Appointment[]>([]);
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [patientsWithActiveAppointments, setPatientsWithActiveAppointments] = useState<Set<string>>(
-    new Set()
-  );
-  const [requests, setRequests] = useState<AppointmentRequest[]>([]);
-  const [analytics, setAnalytics] = useState<DoctorAnalytics | null>(null);
-  const [chartData, setChartData] = useState<ChartData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // React Query hooks for data fetching
+  const { data: doctorProfile, isLoading: isProfileLoading } = useDoctorProfile();
+  const { data: appointmentsData, isLoading: isAppointmentsLoading } = useAppointments(1, 50);
+  const { data: patientsData, isLoading: isPatientsLoading } = useDoctorPatients();
+  const { data: analytics, isLoading: isAnalyticsLoading } = useDoctorAnalytics();
+  const { data: chartData, isLoading: isChartDataLoading } = useDoctorChartData();
+  const { data: scheduleData, isLoading: isScheduleLoading } = useMySchedule();
+  const { data: notificationCountData } = useUnreadNotificationCount();
+
+  // Mutations
+  const updateAppointmentStatusMutation = useUpdateAppointmentStatus();
+  const completeAppointmentMutation = useCompleteAppointment();
+  const rejectAppointmentMutation = useRejectAppointment();
+
+  // Derived state
   const [slotDuration, setSlotDuration] = useState(30);
-  const [nextAppointment, setNextAppointment] = useState<{
-    patientName: string;
-    time: string;
-  } | null>(null);
 
-  const fetchData = useCallback(async (options?: { silent?: boolean }) => {
-    const silent = options?.silent ?? false;
-    if (!silent) {
-      setIsLoading(true);
+  // Memoized derived data
+  const slotDurationFromSchedule = useMemo(() => {
+    return scheduleData?.slotDuration ?? 30;
+  }, [scheduleData]);
+
+  // Update slot duration when schedule loads
+  useEffect(() => {
+    if (slotDurationFromSchedule) {
+      setSlotDuration(slotDurationFromSchedule);
     }
-    try {
-      // Fetch doctor profile
-      try {
-        const profile = await doctorsApi.getProfile();
-        setDoctorProfile(profile);
-      } catch (err) {
-        logger.error('Failed to fetch doctor profile:', err);
+  }, [slotDurationFromSchedule]);
+
+  // Combined loading state
+  const isLoading = isProfileLoading || isAppointmentsLoading || isPatientsLoading || isAnalyticsLoading || isChartDataLoading || isScheduleLoading;
+
+  // Notification count from React Query
+  const notificationCount = notificationCountData?.count ?? 0;
+
+  // Process appointments data with useMemo
+  const { appointments, completedAppointments, requests, patientsWithActiveAppointments, nextAppointment } = useMemo(() => {
+    if (!appointmentsData?.items) {
+      return { appointments: [], completedAppointments: [], requests: [], patientsWithActiveAppointments: new Set<string>(), nextAppointment: null };
+    }
+
+    const apptData = appointmentsData.items;
+    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const graceMinutes = 15;
+
+    const formattedAppointments: Appointment[] = [];
+    const pendingRequests: AppointmentRequest[] = [];
+    const expiredNoActivity: Appointment[] = [];
+
+    for (const a of apptData) {
+      const durationMinutes = a.slotDuration ?? slotDuration;
+      const typeFormatted = (
+        a.type === 'video' ? 'Video' : a.type === 'in-person' ? 'In-Person' : 'Video'
+      ) as 'Video' | 'In-Person' | 'Phone';
+      const statusFormatted = (
+        a.status === 'in_progress'
+          ? 'In Progress'
+          : a.status === 'no_show'
+            ? 'No Show'
+            : a.status.charAt(0).toUpperCase() + a.status.slice(1)
+      ) as 'Confirmed' | 'Pending' | 'Completed' | 'Cancelled' | 'In Progress' | 'No Show';
+
+      const startTime = parseDateTime(a.date, a.time);
+      const endTime = startTime
+        ? new Date(startTime.getTime() + durationMinutes * 60000)
+        : null;
+      const hasActivity = Boolean(
+        a.call_started_at ||
+        a.call_duration ||
+        a.status === 'in_progress' ||
+        a.status === 'completed'
+      );
+      const isExpiredNoActivity = Boolean(
+        endTime &&
+          now.getTime() > endTime.getTime() + graceMinutes * 60000 &&
+          !hasActivity &&
+          (a.status === 'confirmed' || a.status === 'pending')
+      );
+
+      // Separate pending appointments as requests
+      if (a.status === 'pending') {
+        pendingRequests.push({
+          id: a.id,
+          patientName: a.patientName || 'Unknown Patient',
+          patientImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
+          patientImageAlt: `${a.patientName || 'Patient'} profile`,
+          requestedDate: formatDate(a.date),
+          requestedTime: a.time,
+          type: typeFormatted,
+          reason: a.symptoms || 'General consultation',
+          urgency: 'Routine',
+        });
       }
 
-      // Fetch schedule to get slot duration
-      let durationMinutes = slotDuration;
-      try {
-        const schedule = await schedulesApi.getMySchedule();
-        durationMinutes = schedule?.slotDuration ?? slotDuration;
-        setSlotDuration(durationMinutes);
-      } catch (err) {
-        logger.error('Failed to fetch schedule:', err);
-      }
-
-      // Fetch appointments
-      try {
-        const apptResponse = await appointmentsApi.getAll();
-        const apptData = apptResponse.items || [];
-        const today = new Date().toISOString().split('T')[0];
-        const now = new Date();
-        const graceMinutes = 15;
-
-        // Format appointments
-        const formattedAppointments: Appointment[] = [];
-        const pendingRequests: AppointmentRequest[] = [];
-        const expiredNoActivity: Appointment[] = [];
-
-        for (const a of apptData) {
-          const durationMinutes = a.slotDuration ?? slotDuration;
-          const typeFormatted = (
-            a.type === 'video' ? 'Video' : a.type === 'in-person' ? 'In-Person' : 'Video'
-          ) as 'Video' | 'In-Person' | 'Phone';
-          const statusFormatted = (
-            a.status === 'in_progress'
-              ? 'In Progress'
-              : a.status === 'no_show'
-                ? 'No Show'
-                : a.status.charAt(0).toUpperCase() + a.status.slice(1)
-          ) as 'Confirmed' | 'Pending' | 'Completed' | 'Cancelled' | 'In Progress' | 'No Show';
-
-          const startTime = parseDateTime(a.date, a.time);
-          const endTime = startTime
-            ? new Date(startTime.getTime() + durationMinutes * 60000)
-            : null;
-          const hasActivity = Boolean(
-            a.call_started_at ||
-            a.call_duration ||
-            a.status === 'in_progress' ||
-            a.status === 'completed'
-          );
-          const isExpiredNoActivity = Boolean(
-            endTime &&
-              now.getTime() > endTime.getTime() + graceMinutes * 60000 &&
-              !hasActivity &&
-              (a.status === 'confirmed' || a.status === 'pending')
-          );
-
-          // Separate pending appointments as requests
-          if (a.status === 'pending') {
-            pendingRequests.push({
-              id: a.id,
-              patientName: a.patientName || 'Unknown Patient',
-              patientImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
-              patientImageAlt: `${a.patientName || 'Patient'} profile`,
-              requestedDate: formatDate(a.date),
-              requestedTime: a.time,
-              type: typeFormatted,
-              reason: a.symptoms || 'General consultation',
-              urgency: 'Routine',
-            });
-          }
-
-          // Today's appointments
-          if (a.date === today && a.status !== 'cancelled' && !isExpiredNoActivity) {
-            formattedAppointments.push({
-              id: a.id,
-              patientName: a.patientName || 'Unknown Patient',
-              patientImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
-              patientImageAlt: `${a.patientName || 'Patient'} profile`,
-              time: `${a.time} - ${addMinutesToTime(a.time, durationMinutes)}`,
-              date: a.date,
-              rawTime: a.time,
-              patientId: a.patientId || '',
-              type: typeFormatted,
-              status: statusFormatted,
-              reason: a.symptoms || 'General consultation',
-              isExpiredNoActivity,
-              uiStatus: isExpiredNoActivity ? 'No Show' : statusFormatted,
-            });
-          } else if (isExpiredNoActivity) {
-            expiredNoActivity.push({
-              id: a.id,
-              patientName: a.patientName || 'Unknown Patient',
-              patientImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
-              patientImageAlt: `${a.patientName || 'Patient'} profile`,
-              time: `${a.time} - ${addMinutesToTime(a.time, durationMinutes)}`,
-              date: a.date,
-              rawTime: a.time,
-              patientId: a.patientId || '',
-              type: typeFormatted,
-              status: 'No Show',
-              reason: a.symptoms || 'General consultation',
-              isExpiredNoActivity,
-              uiStatus: 'No Show',
-            });
-          }
-        }
-
-        // Collect completed appointments
-        const completedAppts: Appointment[] = apptData
-          .filter((a) => a.status === 'completed' || a.status === 'no_show')
-          .map((a) => {
-            const durationMinutes = a.slotDuration ?? slotDuration;
-            const typeFormatted = (
-              a.type === 'video' ? 'Video' : a.type === 'in-person' ? 'In-Person' : 'Video'
-            ) as 'Video' | 'In-Person' | 'Phone';
-            return {
-              id: a.id,
-              patientName: a.patientName || 'Unknown Patient',
-              patientImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
-              patientImageAlt: `${a.patientName || 'Patient'} profile`,
-              time: `${a.time} - ${addMinutesToTime(a.time, durationMinutes)}`,
-              date: a.date,
-              rawTime: a.time,
-              patientId: a.patientId || '',
-              type: typeFormatted,
-              status: a.status === 'no_show' ? ('No Show' as const) : ('Completed' as const),
-              reason: a.symptoms || 'General consultation',
-            };
-          });
-
-        setAppointments(formattedAppointments);
-        setCompletedAppointments([...expiredNoActivity, ...completedAppts]);
-        setRequests(pendingRequests);
-
-        // Track patients with confirmed appointments
-        const activePatientIds = new Set<string>(
-          apptData.filter((a) => a.status === 'confirmed' && a.patientId).map((a) => a.patientId!)
-        );
-        setPatientsWithActiveAppointments(activePatientIds);
-
-        // Set next appointment for status bar - calculate actual time difference
-        const currentTime = new Date();
-        const confirmedFuture = formattedAppointments
-          .filter((a) => a.status === 'Confirmed')
-          .map((a) => {
-            // Parse the time to get full datetime
-            const appointmentDate = new Date(a.date);
-            const timeMatch = a.rawTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-            if (timeMatch) {
-              let hours = parseInt(timeMatch[1], 10);
-              const minutes = parseInt(timeMatch[2], 10);
-              const period = timeMatch[3].toUpperCase();
-              if (period === 'PM' && hours !== 12) hours += 12;
-              if (period === 'AM' && hours === 12) hours = 0;
-              appointmentDate.setHours(hours, minutes, 0, 0);
-            }
-            return { ...a, appointmentDateTime: appointmentDate };
-          })
-          .filter((a) => a.appointmentDateTime.getTime() > currentTime.getTime())
-          .sort((a, b) => a.appointmentDateTime.getTime() - b.appointmentDateTime.getTime())[0];
-
-        if (confirmedFuture) {
-          const diffMs = confirmedFuture.appointmentDateTime.getTime() - currentTime.getTime();
-          const diffMinutes = Math.round(diffMs / (1000 * 60));
-          const diffHours = Math.round(diffMs / (1000 * 60 * 60));
-
-          let timeStr = '';
-          if (diffMinutes < 60) {
-            timeStr = `in ${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''}`;
-          } else if (diffHours <= 24) {
-            timeStr = `in ${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
-          } else {
-            timeStr = 'soon';
-          }
-
-          setNextAppointment({
-            patientName: confirmedFuture.patientName,
-            time: timeStr,
-          });
-        } else {
-          setNextAppointment(null);
-        }
-      } catch (err) {
-        logger.error('Failed to fetch appointments:', err);
-      }
-
-      // Fetch patients directly
-      try {
-        const patientsData = await patientsApi.getDoctorPatients();
-        const formattedPatients: Patient[] = patientsData.map((p) => ({
-          id: p.userId, // Use userId for history lookup
-          name: `${p.firstName} ${p.lastName}`,
-          image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
-          imageAlt: `${p.firstName} ${p.lastName}`,
-          age: calculateAge(p.dateOfBirth),
-          lastVisit: 'Recently', // TODO: Get from backend
-          condition:
-            p.chronicConditions && p.chronicConditions.length > 0
-              ? p.chronicConditions[0]
-              : 'General Care',
-          status: 'Active',
-        }));
-        setPatients(formattedPatients);
-      } catch (err) {
-        logger.error('Failed to fetch patients:', err);
-      }
-
-      // Fetch analytics
-      try {
-        const analyticsData = await analyticsApi.getDoctor();
-        setAnalytics(analyticsData);
-      } catch (err) {
-        logger.error('Failed to fetch analytics:', err);
-      }
-
-      // Fetch chart data
-      try {
-        const chartDataResp = await analyticsApi.getDoctorChartData();
-        setChartData(chartDataResp);
-      } catch (err) {
-        logger.error('Failed to fetch chart data:', err);
-      }
-
-      // Fetch notification count
-      try {
-        const countData = await notificationsApi.getUnreadCount();
-        setNotificationCount(countData.count);
-      } catch (err) {
-        logger.error('Failed to fetch notification count:', err);
-      }
-    } catch (err) {
-      logger.error('Dashboard error:', err);
-    } finally {
-      if (!silent) {
-        setIsLoading(false);
+      // Today's appointments
+      if (a.date === today && a.status !== 'cancelled' && !isExpiredNoActivity) {
+        formattedAppointments.push({
+          id: a.id,
+          patientName: a.patientName || 'Unknown Patient',
+          patientImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
+          patientImageAlt: `${a.patientName || 'Patient'} profile`,
+          time: `${a.time} - ${addMinutesToTime(a.time, durationMinutes)}`,
+          date: a.date,
+          rawTime: a.time,
+          patientId: a.patientId || '',
+          type: typeFormatted,
+          status: statusFormatted,
+          reason: a.symptoms || 'General consultation',
+          isExpiredNoActivity,
+          uiStatus: isExpiredNoActivity ? 'No Show' : statusFormatted,
+        });
+      } else if (isExpiredNoActivity) {
+        expiredNoActivity.push({
+          id: a.id,
+          patientName: a.patientName || 'Unknown Patient',
+          patientImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
+          patientImageAlt: `${a.patientName || 'Patient'} profile`,
+          time: `${a.time} - ${addMinutesToTime(a.time, durationMinutes)}`,
+          date: a.date,
+          rawTime: a.time,
+          patientId: a.patientId || '',
+          type: typeFormatted,
+          status: 'No Show',
+          reason: a.symptoms || 'General consultation',
+          isExpiredNoActivity,
+          uiStatus: 'No Show',
+        });
       }
     }
-  }, []);
 
+    // Collect completed appointments
+    const completedAppts: Appointment[] = apptData
+      .filter((a) => a.status === 'completed' || a.status === 'no_show')
+      .map((a) => {
+        const durationMinutes = a.slotDuration ?? slotDuration;
+        const typeFormatted = (
+          a.type === 'video' ? 'Video' : a.type === 'in-person' ? 'In-Person' : 'Video'
+        ) as 'Video' | 'In-Person' | 'Phone';
+        return {
+          id: a.id,
+          patientName: a.patientName || 'Unknown Patient',
+          patientImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
+          patientImageAlt: `${a.patientName || 'Patient'} profile`,
+          time: `${a.time} - ${addMinutesToTime(a.time, durationMinutes)}`,
+          date: a.date,
+          rawTime: a.time,
+          patientId: a.patientId || '',
+          type: typeFormatted,
+          status: a.status === 'no_show' ? ('No Show' as const) : ('Completed' as const),
+          reason: a.symptoms || 'General consultation',
+        };
+      });
+
+    // Track patients with confirmed appointments
+    const activePatientIds = new Set<string>(
+      apptData.filter((a) => a.status === 'confirmed' && a.patientId).map((a) => a.patientId!)
+    );
+
+    // Set next appointment for status bar - calculate actual time difference
+    const currentTime = new Date();
+    const confirmedFuture = formattedAppointments
+      .filter((a) => a.status === 'Confirmed')
+      .map((a) => {
+        const appointmentDate = new Date(a.date);
+        const timeMatch = a.rawTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+        if (timeMatch) {
+          let hours = parseInt(timeMatch[1], 10);
+          const minutes = parseInt(timeMatch[2], 10);
+          const period = timeMatch[3].toUpperCase();
+          if (period === 'PM' && hours !== 12) hours += 12;
+          if (period === 'AM' && hours === 12) hours = 0;
+          appointmentDate.setHours(hours, minutes, 0, 0);
+        }
+        return { ...a, appointmentDateTime: appointmentDate };
+      })
+      .filter((a) => a.appointmentDateTime.getTime() > currentTime.getTime())
+      .sort((a, b) => a.appointmentDateTime.getTime() - b.appointmentDateTime.getTime())[0];
+
+    let nextAppt = null;
+    if (confirmedFuture) {
+      const diffMs = confirmedFuture.appointmentDateTime.getTime() - currentTime.getTime();
+      const diffMinutes = Math.round(diffMs / (1000 * 60));
+      const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+
+      let timeStr = '';
+      if (diffMinutes < 60) {
+        timeStr = `in ${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''}`;
+      } else if (diffHours <= 24) {
+        timeStr = `in ${diffHours} hour${diffHours !== 1 ? 's' : ''}`;
+      } else {
+        timeStr = 'soon';
+      }
+
+      nextAppt = {
+        patientName: confirmedFuture.patientName,
+        time: timeStr,
+      };
+    }
+
+    return {
+      appointments: formattedAppointments,
+      completedAppointments: [...expiredNoActivity, ...completedAppts],
+      requests: pendingRequests,
+      patientsWithActiveAppointments: activePatientIds,
+      nextAppointment: nextAppt,
+    };
+  }, [appointmentsData, slotDuration]);
+
+  // Process patients data
+  const patients = useMemo(() => {
+    if (!patientsData) return [];
+
+    return patientsData.map((p) => ({
+      id: p.userId,
+      name: `${p.firstName} ${p.lastName}`,
+      image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
+      imageAlt: `${p.firstName} ${p.lastName}`,
+      age: calculateAge(p.dateOfBirth),
+      lastVisit: 'Recently',
+      condition:
+        p.chronicConditions && p.chronicConditions.length > 0
+          ? p.chronicConditions[0]
+          : 'General Care',
+      status: 'Active' as const,
+    }));
+  }, [patientsData]);
+
+  // Hydration effect
   useEffect(() => {
     setIsHydrated(true);
-    fetchData();
 
     // Handle hash-based navigation on mount
     const hash = window.location.hash.replace('#', '');
@@ -514,20 +477,9 @@ export default function DoctorDashboardInteractive() {
         }
       }, 500);
     }
+  }, []);
 
-    // Set up notification polling every 30 seconds
-    const notificationInterval = setInterval(async () => {
-      try {
-        const countData = await notificationsApi.getUnreadCount();
-        setNotificationCount(countData.count);
-      } catch (err) {
-        logger.error('Failed to poll notification count:', err);
-      }
-    }, 30000);
-
-    return () => clearInterval(notificationInterval);
-  }, [fetchData]);
-
+  // SSE Connection for real-time updates
   useEffect(() => {
     if (!isHydrated) return;
     let active = true;
@@ -541,7 +493,12 @@ export default function DoctorDashboardInteractive() {
         if (!active) return;
         const streamUrl = `${API_BASE_URL}/events/stream?token=${encodeURIComponent(token)}`;
         eventSource = new EventSource(streamUrl, { withCredentials: true });
-        const handleUpdate = () => fetchData({ silent: true });
+        const handleUpdate = () => {
+          // Invalidate React Query caches
+          queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
+          queryClient.invalidateQueries({ queryKey: patientKeys.doctor() });
+          queryClient.invalidateQueries({ queryKey: analyticsKeys.doctor() });
+        };
 
         eventSource.addEventListener('appointments.updated', handleUpdate);
         eventSource.addEventListener('activities.updated', handleUpdate);
@@ -574,13 +531,14 @@ export default function DoctorDashboardInteractive() {
         clearTimeout(reconnectTimer);
       }
     };
-  }, [fetchData, isHydrated]);
+  }, [isHydrated, queryClient]);
 
+  // Manual refresh on visibility change
   useEffect(() => {
     if (!isHydrated) return;
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        fetchData({ silent: true });
+        // React Query automatically handles stale data refetching
       }
     };
 
@@ -591,35 +549,14 @@ export default function DoctorDashboardInteractive() {
       window.removeEventListener('focus', handleVisibility);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [fetchData, isHydrated]);
+  }, [isHydrated]);
 
-  useEffect(() => {
-    if (!isHydrated) return;
-    const refreshInterval = setInterval(() => {
-      fetchData({ silent: true });
-    }, 60000);
 
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        fetchData({ silent: true });
-      }
-    };
-
-    window.addEventListener('focus', handleVisibility);
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    return () => {
-      clearInterval(refreshInterval);
-      window.removeEventListener('focus', handleVisibility);
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
-  }, [fetchData, isHydrated]);
 
   const handleConfirmAppointment = async (id: string) => {
     if (!isHydrated) return;
     try {
-      await appointmentsApi.updateStatus(id, 'confirmed');
-      fetchData();
+      await updateAppointmentStatusMutation.mutateAsync({ id, status: 'confirmed' });
     } catch (err) {
       logger.error('Failed to confirm appointment:', err);
     }
@@ -628,8 +565,7 @@ export default function DoctorDashboardInteractive() {
   const handleMarkNoShow = async (id: string) => {
     if (!isHydrated) return;
     try {
-      await appointmentsApi.updateStatus(id, 'no_show');
-      fetchData();
+      await updateAppointmentStatusMutation.mutateAsync({ id, status: 'no_show' });
     } catch (err) {
       logger.error('Failed to mark no-show:', err);
     }
@@ -685,8 +621,7 @@ export default function DoctorDashboardInteractive() {
   const handleApproveRequest = async (id: string) => {
     if (!isHydrated) return;
     try {
-      await appointmentsApi.updateStatus(id, 'confirmed');
-      fetchData();
+      await updateAppointmentStatusMutation.mutateAsync({ id, status: 'confirmed' });
     } catch (err) {
       logger.error('Failed to approve request:', err);
     }
@@ -704,10 +639,9 @@ export default function DoctorDashboardInteractive() {
 
   const handleConfirmReject = async (id: string, reason: string) => {
     try {
-      await appointmentsApi.reject(id, reason);
+      await rejectAppointmentMutation.mutateAsync({ id, reason });
       setShowRejectModal(false);
       setPendingRejectRequest(null);
-      fetchData();
     } catch (err) {
       logger.error('Failed to reject request:', err);
     }
@@ -781,10 +715,12 @@ export default function DoctorDashboardInteractive() {
 
     setIsCompletingAppointment(true);
     try {
-      await appointmentsApi.complete(pendingFinishAppointment.id, data);
+      await completeAppointmentMutation.mutateAsync({
+        id: pendingFinishAppointment.id,
+        data,
+      });
       setShowConsultationModal(false);
       setPendingFinishAppointment(null);
-      fetchData();
     } catch (err) {
       logger.error('Failed to complete appointment:', err);
     } finally {
@@ -800,7 +736,8 @@ export default function DoctorDashboardInteractive() {
 
   const handlePrescriptionSubmit = (success: boolean) => {
     if (success) {
-      fetchData();
+      // Invalidate appointments query to refresh data
+      queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
     }
     setShowPrescriptionForm(false);
     setSelectedPatientId('');
