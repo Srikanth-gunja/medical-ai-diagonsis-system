@@ -475,7 +475,7 @@ const PatientDashboardInteractive = () => {
       if (document.visibilityState === 'visible') {
         fetchData({ silent: true });
       }
-    }, 15000);
+    }, 60000);
 
     return () => clearInterval(refreshInterval);
   }, [fetchData, isHydrated]);

@@ -597,7 +597,7 @@ export default function DoctorDashboardInteractive() {
     if (!isHydrated) return;
     const refreshInterval = setInterval(() => {
       fetchData({ silent: true });
-    }, 15000);
+    }, 60000);
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {

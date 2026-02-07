@@ -164,27 +164,296 @@ def _get_next_available_slot_ist(doctor_id: str, max_days: int = 90) -> str | No
 
 @doctors_bp.route("", methods=["GET"])
 def get_doctors():
-    """Get all doctors with pagination support."""
+    """Get all doctors with pagination support - optimized to avoid N+1 queries."""
+    from ..database import get_db, DOCTORS_COLLECTION, SCHEDULES_COLLECTION
+    from bson import ObjectId
+
     # Get pagination parameters
     page, per_page = get_pagination_params(default_per_page=12, max_per_page=50)
+    skip = (page - 1) * per_page
 
-    doctors = Doctor.find_all()
+    db = get_db()
+
+    # Use aggregation pipeline to fetch doctors with schedules in one query
+    pipeline = [
+        {"$match": {}},  # Add any filters here if needed
+        {"$sort": {"_id": -1}},  # Sort by newest first
+        {"$skip": skip},
+        {"$limit": per_page},
+        {
+            "$lookup": {
+                "from": SCHEDULES_COLLECTION,
+                "localField": "_id",
+                "foreignField": "doctor_id",
+                "as": "schedule",
+            }
+        },
+        {"$addFields": {"schedule": {"$arrayElemAt": ["$schedule", 0]}}},
+    ]
+
+    doctors = list(db[DOCTORS_COLLECTION].aggregate(pipeline))
+
+    # Get total count for pagination
+    total_count = db[DOCTORS_COLLECTION].count_documents({})
+
+    # Pre-compute current time info (do once, not per doctor)
+    now = datetime.now()
+    today_str = now.strftime("%Y-%m-%d")
+    day_name = now.strftime("%A").lower()
+    current_hour = now.hour
+    ist = ZoneInfo("Asia/Kolkata")
+    now_ist = datetime.now(ist)
+
     result = []
     for doc in doctors:
         doc_dict = Doctor.to_dict(doc)
-        is_available, status_message = check_doctor_availability(doc["_id"])
+        schedule = doc.get("schedule")
+
+        # Calculate availability in-memory (no DB query)
+        is_available, status_message = _calculate_availability_from_schedule(
+            schedule, now, today_str, day_name, current_hour
+        )
         doc_dict["isAvailable"] = is_available
         doc_dict["availabilityStatus"] = status_message
-        # Use schedule-based availability instead of old static field
-        doc_dict["availability"] = get_formatted_availability(doc["_id"])
-        # Next available slot calculated in IST
-        next_available = _get_next_available_slot_ist(str(doc["_id"]))
+
+        # Format availability from schedule (no DB query)
+        doc_dict["availability"] = _format_availability_from_schedule(schedule)
+
+        # Calculate next available slot (optimized, no DB query per iteration)
+        next_available = _get_next_available_from_schedule(
+            schedule, now_ist, str(doc["_id"])
+        )
         doc_dict["nextAvailable"] = next_available
+
         result.append(doc_dict)
 
-    # Apply pagination
-    paginated_result = paginate(result, page, per_page)
+    # Build paginated response
+    total_pages = (total_count + per_page - 1) // per_page
+    paginated_result = {
+        "items": result,
+        "pagination": {
+            "page": page,
+            "per_page": per_page,
+            "total": total_count,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1,
+        },
+    }
+
     return jsonify(paginated_result)
+
+
+def _calculate_availability_from_schedule(
+    schedule, now, today_str, day_name, current_hour
+):
+    """Calculate availability status from schedule data (in-memory, no DB query)."""
+    if not schedule:
+        # No schedule set - assume available during business hours (9 AM - 5 PM)
+        if 9 <= current_hour < 17:
+            return True, "Available"
+        return False, "Outside business hours"
+
+    # Check if today is blocked
+    if today_str in schedule.get("blocked_dates", []):
+        return False, "Not available today"
+
+    weekly = schedule.get("weekly_schedule", {})
+    day_schedule = weekly.get(day_name, {})
+
+    if not day_schedule.get("enabled", False):
+        return False, "Not available today"
+
+    # Check if current time is within working hours
+    start_time = day_schedule.get("start", "09:00")
+    end_time = day_schedule.get("end", "17:00")
+
+    try:
+        start = datetime.strptime(start_time, "%H:%M").time()
+        end = datetime.strptime(end_time, "%H:%M").time()
+        current_time = now.time()
+
+        if start <= current_time <= end:
+            return True, "Available now"
+        elif current_time < start:
+            return (
+                False,
+                f"Available from {datetime.strptime(start_time, '%H:%M').strftime('%I:%M %p')}",
+            )
+        else:
+            return False, "Closed for today"
+    except ValueError:
+        return True, "Available"
+
+
+def _format_availability_from_schedule(schedule):
+    """Format availability strings from schedule data (in-memory, no DB query)."""
+    if not schedule:
+        # Return default if no schedule set
+        return [
+            "Mon 9:00 AM - 5:00 PM",
+            "Tue 9:00 AM - 5:00 PM",
+            "Wed 9:00 AM - 5:00 PM",
+            "Thu 9:00 AM - 5:00 PM",
+            "Fri 9:00 AM - 5:00 PM",
+        ]
+
+    weekly = schedule.get("weekly_schedule", {})
+    day_abbrev = {
+        "monday": "Mon",
+        "tuesday": "Tue",
+        "wednesday": "Wed",
+        "thursday": "Thu",
+        "friday": "Fri",
+        "saturday": "Sat",
+        "sunday": "Sun",
+    }
+
+    availability = []
+    for day in [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+    ]:
+        day_schedule = weekly.get(day, {})
+        if day_schedule.get("enabled", False):
+            start = day_schedule.get("start", "09:00")
+            end = day_schedule.get("end", "17:00")
+
+            # Convert 24h to 12h format
+            try:
+                start_formatted = (
+                    datetime.strptime(start, "%H:%M").strftime("%I:%M %p").lstrip("0")
+                )
+                end_formatted = (
+                    datetime.strptime(end, "%H:%M").strftime("%I:%M %p").lstrip("0")
+                )
+                availability.append(
+                    f"{day_abbrev[day]} {start_formatted} - {end_formatted}"
+                )
+            except ValueError:
+                availability.append(f"{day_abbrev[day]} {start} - {end}")
+
+    return availability if availability else ["No availability set"]
+
+
+def _get_next_available_from_schedule(schedule, now_ist, doctor_id):
+    """Get next available slot from schedule data (optimized, minimal DB queries)."""
+    max_days = 30  # Reduced from 90 for performance
+
+    for offset in range(0, max_days + 1):
+        date_obj = now_ist + timedelta(days=offset)
+        date_str = date_obj.strftime("%Y-%m-%d")
+
+        # Get slots from schedule data (no DB query if we have schedule)
+        slots = _get_slots_from_schedule(schedule, date_str, doctor_id)
+        if not slots:
+            continue
+
+        for slot in slots:
+            dt = _parse_slot_time(date_str, slot)
+            if not dt:
+                continue
+            dt = dt.replace(tzinfo=ZoneInfo("Asia/Kolkata"))
+            if dt > now_ist:
+                return _format_next_available_label(date_obj, slot, now_ist)
+
+    return None
+
+
+def _get_slots_from_schedule(schedule, date_str, doctor_id):
+    """Get available slots for a date from schedule (faster than Schedule model method)."""
+    from ..models.appointment import Appointment
+    from datetime import datetime as dt
+
+    if not schedule:
+        # Return default slots
+        default_slots = [
+            "9:00 AM",
+            "9:30 AM",
+            "10:00 AM",
+            "10:30 AM",
+            "11:00 AM",
+            "2:00 PM",
+            "2:30 PM",
+            "3:00 PM",
+            "3:30 PM",
+            "4:00 PM",
+        ]
+        return _filter_past_slots_fast(default_slots, date_str)
+
+    # Check if date is blocked
+    if date_str in schedule.get("blocked_dates", []):
+        return []
+
+    # Get day of week
+    date_obj = dt.strptime(date_str, "%Y-%m-%d")
+    day_name = date_obj.strftime("%A").lower()
+
+    weekly = schedule.get("weekly_schedule", {})
+    day_schedule = weekly.get(day_name, {})
+
+    if not day_schedule.get("enabled", False):
+        return []
+
+    # Generate time slots
+    start_time = day_schedule.get("start", "09:00")
+    end_time = day_schedule.get("end", "17:00")
+    slot_duration = schedule.get("slot_duration", 30)
+
+    slots = _generate_time_slots_fast(start_time, end_time, slot_duration)
+
+    # Filter out past slots
+    slots = _filter_past_slots_fast(slots, date_str)
+
+    return slots
+
+
+def _generate_time_slots_fast(start_time, end_time, duration_minutes):
+    """Fast slot generation without DB dependencies."""
+    from datetime import datetime as dt, timedelta
+
+    slots = []
+    start = dt.strptime(start_time, "%H:%M")
+    end = dt.strptime(end_time, "%H:%M")
+
+    current = start
+    while current < end:
+        slots.append(current.strftime("%-I:%M %p").replace(" 0", " "))
+        current += timedelta(minutes=duration_minutes)
+
+    return slots
+
+
+def _filter_past_slots_fast(slots, date_str):
+    """Fast past slot filtering without DB dependencies."""
+    from datetime import datetime as dt, timedelta
+
+    requested_date = dt.strptime(date_str, "%Y-%m-%d").date()
+    today = dt.now().date()
+
+    if requested_date != today:
+        return slots
+
+    now = dt.now()
+    min_booking_time = now + timedelta(minutes=30)
+
+    filtered_slots = []
+    for slot in slots:
+        try:
+            slot_time = dt.strptime(slot, "%I:%M %p")
+            slot_datetime = dt.combine(today, slot_time.time())
+
+            if slot_datetime > min_booking_time:
+                filtered_slots.append(slot)
+        except ValueError:
+            filtered_slots.append(slot)
+
+    return filtered_slots
 
 
 @doctors_bp.route("/next-available", methods=["GET"])

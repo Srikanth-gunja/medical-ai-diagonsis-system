@@ -49,6 +49,13 @@ def _create_indexes(db):
     db[APPOINTMENTS_COLLECTION].create_index(
         [("patient_id", ASCENDING), ("status", ASCENDING)]
     )
+    # Compound indexes for common query patterns (fixes N+1 queries)
+    db[APPOINTMENTS_COLLECTION].create_index(
+        [("doctor_id", ASCENDING), ("status", ASCENDING), ("date", ASCENDING)]
+    )
+    db[APPOINTMENTS_COLLECTION].create_index(
+        [("patient_id", ASCENDING), ("doctor_id", ASCENDING), ("status", ASCENDING)]
+    )
 
     # Medical records indexes
     db[MEDICAL_RECORDS_COLLECTION].create_index([("patient_id", ASCENDING)])
@@ -60,6 +67,14 @@ def _create_indexes(db):
 
     # Schedules indexes
     db[SCHEDULES_COLLECTION].create_index([("doctor_id", ASCENDING)], unique=True)
+
+    # Prescriptions indexes - compound for common queries
+    db[PRESCRIPTIONS_COLLECTION].create_index(
+        [("patient_id", ASCENDING), ("created_at", ASCENDING)]
+    )
+    db[PRESCRIPTIONS_COLLECTION].create_index(
+        [("doctor_id", ASCENDING), ("created_at", ASCENDING)]
+    )
 
     # Notifications indexes
     db[NOTIFICATIONS_COLLECTION].create_index([("user_id", ASCENDING)])
