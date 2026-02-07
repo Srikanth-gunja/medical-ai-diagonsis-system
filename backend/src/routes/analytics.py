@@ -1,6 +1,5 @@
 from flask import Blueprint, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from bson import ObjectId
 from ..models.doctor import Doctor
 from ..models.patient import Patient
 from ..models.appointment import Appointment
@@ -37,48 +36,62 @@ def get_doctor_analytics():
     doctor_id = doctor['_id']
     db = get_db()
     
-    # Get all appointments for this doctor
-    appointments = list(db[APPOINTMENTS_COLLECTION].find({'doctor_id': doctor_id}))
-    
-    # Calculate stats
-    total_appointments = len(appointments)
-    pending = sum(1 for a in appointments if a['status'] == 'pending')
-    confirmed = sum(1 for a in appointments if a['status'] == 'confirmed')
-    completed = sum(1 for a in appointments if a['status'] == 'completed')
-    cancelled = sum(1 for a in appointments if a['status'] == 'cancelled')
-    
-    # Get unique patients
-    unique_patients = len(set(str(a['patient_id']) for a in appointments))
-    
-    # Get this month's appointments
     now = datetime.utcnow()
     first_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    this_month_appointments = sum(
-        1 for a in appointments 
-        if a.get('created_at') and a['created_at'] >= first_of_month
-    )
-    
+    today = now.strftime('%Y-%m-%d')
+
+    pipeline = [
+        {'$match': {'doctor_id': doctor_id}},
+        {
+            '$group': {
+                '_id': None,
+                'total': {'$sum': 1},
+                'pending': {'$sum': {'$cond': [{'$eq': ['$status', 'pending']}, 1, 0]}},
+                'confirmed': {'$sum': {'$cond': [{'$eq': ['$status', 'confirmed']}, 1, 0]}},
+                'completed': {'$sum': {'$cond': [{'$eq': ['$status', 'completed']}, 1, 0]}},
+                'cancelled': {'$sum': {'$cond': [{'$eq': ['$status', 'cancelled']}, 1, 0]}},
+                'uniquePatients': {'$addToSet': '$patient_id'},
+                'thisMonthAppointments': {
+                    '$sum': {
+                        '$cond': [
+                            {
+                                '$and': [
+                                    {'$gte': ['$created_at', first_of_month]},
+                                    {'$ne': ['$created_at', None]}
+                                ]
+                            },
+                            1,
+                            0
+                        ]
+                    }
+                },
+                'todayAppointments': {
+                    '$sum': {'$cond': [{'$eq': ['$date', today]}, 1, 0]}
+                },
+            }
+        },
+    ]
+
+    agg_result = list(db[APPOINTMENTS_COLLECTION].aggregate(pipeline))
+    stats = agg_result[0] if agg_result else {}
+
     # Get rating stats
     rating_stats = Rating.calculate_average(doctor_id)
     
     # Get prescriptions count
     prescriptions = Prescription.find_by_doctor_id(doctor_id)
-    
-    # Today's appointments
-    today = datetime.utcnow().strftime('%Y-%m-%d')
-    today_appointments = sum(1 for a in appointments if a.get('date') == today)
-    
+
     return jsonify({
-        'totalAppointments': total_appointments,
+        'totalAppointments': stats.get('total', 0),
         'appointmentsByStatus': {
-            'pending': pending,
-            'confirmed': confirmed,
-            'completed': completed,
-            'cancelled': cancelled
+            'pending': stats.get('pending', 0),
+            'confirmed': stats.get('confirmed', 0),
+            'completed': stats.get('completed', 0),
+            'cancelled': stats.get('cancelled', 0)
         },
-        'uniquePatients': unique_patients,
-        'thisMonthAppointments': this_month_appointments,
-        'todayAppointments': today_appointments,
+        'uniquePatients': len(stats.get('uniquePatients', [])),
+        'thisMonthAppointments': stats.get('thisMonthAppointments', 0),
+        'todayAppointments': stats.get('todayAppointments', 0),
         'rating': rating_stats['average'],
         'ratingCount': rating_stats['count'],
         'prescriptionsWritten': len(prescriptions)
@@ -151,41 +164,54 @@ def get_doctor_chart_data():
     doctor_id = doctor['_id']
     db = get_db()
     
-    # Get all appointments for this doctor
-    appointments = list(db[APPOINTMENTS_COLLECTION].find({'doctor_id': doctor_id}))
-    
-    # Calculate appointments for the last 7 days
+    # Appointments for the last 7 days
+    today = datetime.utcnow().date()
+    start_date = today - timedelta(days=6)
+    start_str = start_date.strftime('%Y-%m-%d')
+    end_str = today.strftime('%Y-%m-%d')
+
+    chart_pipeline = [
+        {'$match': {'doctor_id': doctor_id, 'date': {'$gte': start_str, '$lte': end_str}}},
+        {'$group': {'_id': '$date', 'appointments': {'$sum': 1}}},
+        {'$sort': {'_id': 1}}
+    ]
+    chart_result = {doc['_id']: doc['appointments'] for doc in db[APPOINTMENTS_COLLECTION].aggregate(chart_pipeline)}
+
     day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
     appointments_data = []
-    
     for i in range(6, -1, -1):
-        day = datetime.utcnow() - timedelta(days=i)
+        day = today - timedelta(days=i)
         day_str = day.strftime('%Y-%m-%d')
         day_name = day_names[day.weekday()]
-        count = sum(1 for a in appointments if a.get('date') == day_str)
         appointments_data.append({
             'day': day_name,
-            'appointments': count
+            'appointments': chart_result.get(day_str, 0)
         })
-    
-    # Calculate status breakdown
-    pending = sum(1 for a in appointments if a['status'] == 'pending')
-    confirmed = sum(1 for a in appointments if a['status'] == 'confirmed')
-    completed = sum(1 for a in appointments if a['status'] == 'completed')
-    total = pending + confirmed + completed
-    
-    if total > 0:
-        status_data = [
-            {'name': 'Confirmed', 'value': round(confirmed / total * 100), 'color': '#3B82F6'},
-            {'name': 'Pending', 'value': round(pending / total * 100), 'color': '#F59E0B'},
-            {'name': 'Completed', 'value': round(completed / total * 100), 'color': '#10B981'},
-        ]
-    else:
-        status_data = [
-            {'name': 'Confirmed', 'value': 0, 'color': '#3B82F6'},
-            {'name': 'Pending', 'value': 0, 'color': '#F59E0B'},
-            {'name': 'Completed', 'value': 0, 'color': '#10B981'},
-        ]
+
+    # Status breakdown percentages
+    status_pipeline = [
+        {'$match': {'doctor_id': doctor_id}},
+        {
+            '$group': {
+                '_id': None,
+                'pending': {'$sum': {'$cond': [{'$eq': ['$status', 'pending']}, 1, 0]}},
+                'confirmed': {'$sum': {'$cond': [{'$eq': ['$status', 'confirmed']}, 1, 0]}},
+                'completed': {'$sum': {'$cond': [{'$eq': ['$status', 'completed']}, 1, 0]}},
+            }
+        },
+    ]
+    status_result = list(db[APPOINTMENTS_COLLECTION].aggregate(status_pipeline))
+    status_counts = status_result[0] if status_result else {}
+    total = sum(status_counts.get(k, 0) for k in ('pending', 'confirmed', 'completed'))
+
+    def pct(val):
+        return round(val / total * 100) if total else 0
+
+    status_data = [
+        {'name': 'Confirmed', 'value': pct(status_counts.get('confirmed', 0)), 'color': '#3B82F6'},
+        {'name': 'Pending', 'value': pct(status_counts.get('pending', 0)), 'color': '#F59E0B'},
+        {'name': 'Completed', 'value': pct(status_counts.get('completed', 0)), 'color': '#10B981'},
+    ]
     
     return jsonify({
         'appointmentsData': appointments_data,
@@ -198,19 +224,15 @@ def get_public_stats():
     """Get public stats for homepage - no auth required."""
     db = get_db()
     
-    # Count patients
     patients_count = db.patients.count_documents({})
-    
-    # Count doctors (only verified ones)
     doctors_count = db.doctors.count_documents({'verified': True})
-    
-    # Count total completed appointments
     completed_appointments = db.appointments.count_documents({'status': 'completed'})
-    
-    # Calculate average satisfaction (from ratings)
-    ratings = list(db.ratings.find({}, {'score': 1}))
-    if ratings:
-        avg_rating = sum(r['score'] for r in ratings) / len(ratings)
+
+    rating_stats = list(db.ratings.aggregate([
+        {'$group': {'_id': None, 'avgRating': {'$avg': '$score'}, 'count': {'$sum': 1}}}
+    ]))
+    if rating_stats:
+        avg_rating = rating_stats[0].get('avgRating') or 0
         satisfaction_percent = round(avg_rating / 5 * 100)
         average_rating = round(avg_rating, 1)
     else:
@@ -224,4 +246,3 @@ def get_public_stats():
         'satisfactionRate': satisfaction_percent,
         'averageRating': average_rating
     })
-

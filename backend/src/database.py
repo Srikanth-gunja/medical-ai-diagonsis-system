@@ -89,6 +89,14 @@ def _create_indexes(db):
     db[RATINGS_COLLECTION].create_index([("doctor_id", ASCENDING)])
     db[RATINGS_COLLECTION].create_index([("appointment_id", ASCENDING)])
 
+    # Messages indexes (chat performance)
+    db[MESSAGES_COLLECTION].create_index(
+        [("appointment_id", ASCENDING), ("created_at", ASCENDING)]
+    )
+    db[MESSAGES_COLLECTION].create_index(
+        [("appointment_id", ASCENDING), ("sender_role", ASCENDING), ("read", ASCENDING)]
+    )
+
 
 # Collection names
 USERS_COLLECTION = "users"
@@ -101,3 +109,4 @@ RATINGS_COLLECTION = "ratings"
 PRESCRIPTIONS_COLLECTION = "prescriptions"
 SCHEDULES_COLLECTION = "schedules"
 NOTIFICATIONS_COLLECTION = "notifications"
+MESSAGES_COLLECTION = "messages"
