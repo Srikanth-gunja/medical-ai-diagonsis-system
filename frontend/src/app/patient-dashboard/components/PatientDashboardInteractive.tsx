@@ -336,14 +336,14 @@ const PatientDashboardInteractive = () => {
 
   // Removed manual polling - React Query handles background refetching automatically
 
-  const formatDate = (dateStr: string): string => {
+  function formatDate(dateStr: string): string {
     try {
       const date = new Date(dateStr);
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     } catch {
       return dateStr;
     }
-  };
+  }
 
   const quickAccessItems = [
     {
