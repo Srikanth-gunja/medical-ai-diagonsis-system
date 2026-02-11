@@ -14,10 +14,12 @@ const mockCall = {
 jest.mock('../AuthContext', () => ({
   useAuth: () => ({
     user: { id: 'u1', email: 'patient@test.com', role: 'patient' },
+    isLoading: false,
   }),
 }));
 
 jest.mock('../../lib/api', () => ({
+  getToken: jest.fn(() => 'mock-jwt'),
   videoCallsApi: {
     getToken: jest.fn(),
     createCall: jest.fn(),
@@ -69,16 +71,15 @@ function TestConsumer() {
 describe('VideoCallContext', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env.NEXT_PUBLIC_GETSTREAM_API_KEY = 'test-stream-key';
     videoCallsApi.getToken.mockResolvedValue({
       token: 'token',
-      api_key: 'api_key',
       user_id: 'u1',
       user_name: 'Patient',
     });
     videoCallsApi.createCall.mockResolvedValue({
       call_id: 'call1',
       token: 'token',
-      api_key: 'api_key',
       user_id: 'u1',
       user_name: 'Patient',
       appointment: {},

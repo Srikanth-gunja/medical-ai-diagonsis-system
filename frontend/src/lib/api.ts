@@ -69,6 +69,8 @@ export interface Appointment {
   call_started_at?: string;
   call_ended_at?: string;
   call_duration?: number;
+  rejectionReason?: string;
+  rejection_reason?: string;
 }
 
 export interface Patient {
@@ -300,6 +302,24 @@ export const authApi = {
     name?: string;
     specialty?: string;
     location?: string;
+    phone?: string;
+    address?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    bloodGroup?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    allergies?: string;
+    currentMedications?: string;
+    chronicConditions?: string[];
+    previousSurgeries?: string;
+    insuranceProvider?: string;
+    insurancePolicyNumber?: string;
+    security_question?: string;
+    security_answer?: string;
   }): Promise<AuthResponse | { message: string; pending_verification?: boolean }> => {
     const response = await fetchApi<{
       message: string;
@@ -684,7 +704,6 @@ export const schedulesApi = {
 // Video Call Types
 export interface VideoCallToken {
   token: string;
-  api_key: string;
   user_id: string;
   user_name: string;
 }
@@ -692,7 +711,6 @@ export interface VideoCallToken {
 export interface CallDetails {
   call_id: string;
   token: string;
-  api_key: string;
   user_id: string;
   user_name: string;
   appointment: Appointment;

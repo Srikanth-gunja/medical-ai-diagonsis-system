@@ -202,6 +202,18 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     activeCallRef.current = activeCall;
   }, [activeCall]);
 
+  useEffect(() => {
+    return () => {
+      if (clientRef.current) {
+        try {
+          clientRef.current.disconnectUser();
+        } catch (e) {
+          logger.error('Error disconnecting client on unmount:', e);
+        }
+      }
+    };
+  }, []);
+
   // Clear all timers
   const clearAllTimers = useCallback(() => {
     if (connectionTimerRef.current) {
@@ -287,7 +299,11 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     const token = getToken();
     if (!user || !token) {
       if (client) {
-        client.disconnectUser();
+        try {
+          client.disconnectUser();
+        } catch (e) {
+          logger.error('Error disconnecting client:', e);
+        }
         setClient(null);
         setIsClientReady(false);
       }
@@ -329,6 +345,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
             setIsClientReady(true);
             setIsClientInitializing(false);
           }
+          initializingRef.current = false;
           clearTimeout(initTimeout);
           return;
         }
@@ -337,6 +354,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         const tokenData = await retryWithBackoff(() => videoCallsApi.getToken());
 
         if (!mountedRef.current) {
+          initializingRef.current = false;
           clearTimeout(initTimeout);
           return;
         }
@@ -406,6 +424,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
           setIsClientInitializing(false);
           logger.log('✅ Video client initialized successfully - ready for calls');
         }
+        initializingRef.current = false;
 
         clearTimeout(initTimeout);
       } catch (error) {
@@ -425,14 +444,6 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mountedRef.current = false;
-      // Clean up client on unmount
-      if (clientRef.current) {
-        try {
-          clientRef.current.disconnectUser();
-        } catch (e) {
-          logger.error('Error disconnecting client on unmount:', e);
-        }
-      }
     };
   }, [user, isAuthLoading, client, isMockMode, retryWithBackoff, streamMock]);
 

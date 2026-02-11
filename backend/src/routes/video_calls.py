@@ -171,7 +171,11 @@ def end_call(appointment_id):
 
     # Validate access
     appointment, error_message = video_service.validate_call_access(
-        user_id, appointment_id, role
+        user_id,
+        appointment_id,
+        role,
+        enforce_status_checks=False,
+        enforce_time_window=False,
     )
 
     if not appointment:
@@ -180,15 +184,21 @@ def end_call(appointment_id):
         ), 403
 
     data = request.get_json() or {}
-    duration = data.get("duration", 0)
+    duration = data.get("duration")
+    parsed_duration = 0
+    if duration is not None:
+        try:
+            parsed_duration = max(0, int(duration))
+        except (TypeError, ValueError):
+            parsed_duration = 0
 
     # Update appointment metadata
     updates = {
         "call_ended_at": datetime.utcnow(),
     }
 
-    if duration:
-        updates["call_duration"] = duration
+    if parsed_duration:
+        updates["call_duration"] = parsed_duration
 
     # Only update status to completed if doctor ends it?
     # Or let the "Finish Consultation" button handle that.

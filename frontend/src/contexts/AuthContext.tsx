@@ -18,6 +18,24 @@ interface AuthContextType {
     name?: string;
     specialty?: string;
     location?: string;
+    phone?: string;
+    address?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    bloodGroup?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    allergies?: string;
+    currentMedications?: string;
+    chronicConditions?: string[];
+    previousSurgeries?: string;
+    insuranceProvider?: string;
+    insurancePolicyNumber?: string;
+    security_question?: string;
+    security_answer?: string;
   }) => Promise<void>;
 }
 
@@ -57,9 +75,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     name?: string;
     specialty?: string;
     location?: string;
+    phone?: string;
+    address?: string;
+    dateOfBirth?: string;
+    gender?: string;
+    bloodGroup?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    emergencyContactName?: string;
+    emergencyContactPhone?: string;
+    allergies?: string;
+    currentMedications?: string;
+    chronicConditions?: string[];
+    previousSurgeries?: string;
+    insuranceProvider?: string;
+    insurancePolicyNumber?: string;
+    security_question?: string;
+    security_answer?: string;
   }) => {
     const response = await authApi.register(data);
-    setUser(response.user);
+    if ('user' in response) {
+      setUser(response.user);
+    }
   };
 
   return (

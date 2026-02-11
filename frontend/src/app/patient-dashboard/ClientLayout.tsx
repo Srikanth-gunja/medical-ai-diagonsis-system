@@ -18,6 +18,7 @@ import NavigationBreadcrumbs from '@/components/common/NavigationBreadcrumbs';
 
 interface UserContextType {
   user: {
+    id: string;
     name: string;
     firstName: string;
     lastName: string;
@@ -76,6 +77,7 @@ export default function PatientDashboardClientLayout({
 
       const profile = await patientsApi.getProfile();
       setUser({
+        id: profile.id,
         name: `${profile.firstName} ${profile.lastName}`,
         firstName: profile.firstName,
         lastName: profile.lastName,

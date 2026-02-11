@@ -34,6 +34,7 @@ export default function AppointmentCard({
   onChat,
   onFinish,
   onJoinCall,
+  onMarkNoShow,
 }: AppointmentCardProps) {
   const [isExpanded, setIsExpanded] = useState(
     appointment.status === 'In Progress' || appointment.isExpiredNoActivity === true

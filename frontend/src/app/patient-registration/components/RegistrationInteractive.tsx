@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
 import { useToast } from '@/components/ui/Toast';
 import { useFormValidation } from '@/hooks/useFormValidation';
-import { patientsApi } from '@/lib/api';
+import { authApi } from '@/lib/api';
 import RegistrationProgress from './RegistrationProgress';
 import PersonalInfoSection from './PersonalInfoSection';
 import ContactDetailsSection from './ContactDetailsSection';
@@ -138,18 +138,22 @@ const RegistrationInteractive = () => {
     setIsHydrated(true);
   }, []);
 
-  const handleChange = (field: keyof FormData, value: string | boolean | string[]) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const handleChange = (field: string, value: string | boolean | string[]) => {
+    if (!(field in formData)) return;
+    const typedField = field as keyof FormData;
+    setFormData((prev) => ({ ...prev, [typedField]: value }));
     if (typeof value === 'string') {
       validateChange(field, value);
     }
     setSubmitError('');
   };
 
-  const handleBlur = (field: keyof FormData) => {
+  const handleBlur = (field: string) => {
+    if (!(field in formData)) return;
+    const typedField = field as keyof FormData;
     setTouchedFields((prev) => new Set(prev).add(field));
-    if (typeof formData[field] === 'string') {
-      validateBlur(field, formData[field] as string);
+    if (typeof formData[typedField] === 'string') {
+      validateBlur(field, formData[typedField] as string);
     }
   };
 
@@ -223,7 +227,7 @@ const RegistrationInteractive = () => {
     setSubmitError('');
 
     try {
-      const response = await patientsApi.register({
+      await authApi.register({
         email: formData.email,
         password: formData.password,
         role: 'patient',
@@ -326,11 +330,7 @@ const RegistrationInteractive = () => {
                 <ContactDetailsSection
                   formData={formData}
                   errors={errors}
-                  touched={touchedFields}
                   onChange={handleChange}
-                  onBlur={handleBlur}
-                  isFieldValid={isFieldValid}
-                  isFieldInvalid={isFieldInvalid}
                 />
               )}
 
@@ -342,11 +342,7 @@ const RegistrationInteractive = () => {
                 <AccountSetupSection 
                   formData={formData} 
                   errors={errors}
-                  touched={touchedFields}
                   onChange={handleChange}
-                  onBlur={handleBlur}
-                  isFieldValid={isFieldValid}
-                  isFieldInvalid={isFieldInvalid}
                 />
               )}
 

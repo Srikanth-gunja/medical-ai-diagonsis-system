@@ -86,7 +86,13 @@ class VideoCallService:
         return f"appointment_{appointment_id}"
 
     def validate_call_access(
-        self, user_id: str, appointment_id: str, role: str
+        self,
+        user_id: str,
+        appointment_id: str,
+        role: str,
+        enforce_status_checks: bool = True,
+        enforce_time_window: bool = True,
+        allowed_statuses: list[str] | None = None,
     ) -> tuple[dict | None, str | None]:
         """
         Validate user can access the video call.
@@ -144,20 +150,21 @@ class VideoCallService:
             return None, "You are not a participant in this appointment"
 
         # Check appointment status - allow pending or confirmed for now
-        # Ideally only confirmed, but for testing pending might be useful
+        # Ideally only confirmed, but for testing pending might be useful.
         appt_status = appointment.get("status")
-        if appt_status not in ["confirmed", "pending", "in_progress"]:
-            logger.error(f"Access denied - invalid appointment status: {appt_status}")
-            return (
-                None,
-                f"Appointment status is '{appt_status}'. Only confirmed or pending appointments can start video calls",
-            )
-
-        logger.info(f"Appointment status check passed: {appt_status}")
+        if enforce_status_checks:
+            valid_statuses = allowed_statuses or ["confirmed", "pending", "in_progress"]
+            if appt_status not in valid_statuses:
+                logger.error(f"Access denied - invalid appointment status: {appt_status}")
+                return (
+                    None,
+                    f"Appointment status is '{appt_status}'. Only confirmed or pending appointments can start video calls",
+                )
+            logger.info(f"Appointment status check passed: {appt_status}")
 
         # Validate time window - allow calls 30 mins before to 30 mins after appointment
         # Skip time validation for in_progress appointments (already started)
-        if appointment.get("status") != "in_progress":
+        if enforce_time_window and appointment.get("status") != "in_progress":
             appt_date_str = appointment.get("date")
             appt_time_str = appointment.get("time")
 
