@@ -185,7 +185,7 @@ class VideoCallService:
                 logger.error(f"Invalid time format: {appt_time_str}")
                 return None, "Invalid appointment time format"
 
-            tz_name = os.environ.get("APPOINTMENT_TIMEZONE", "UTC")
+            tz_name = os.environ.get("APPOINTMENT_TIMEZONE", "Asia/Kolkata")
             try:
                 tz = ZoneInfo(tz_name) if ZoneInfo else timezone.utc
             except Exception:

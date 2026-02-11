@@ -33,6 +33,7 @@ import {
   API_BASE_URL,
   getToken,
 } from '@/lib/api';
+import { checkVideoCallWindow } from '@/lib/videoCallWindow';
 import { logger } from '@/lib/logger';
 
 interface Appointment {
@@ -93,7 +94,7 @@ const PatientDashboardInteractive = () => {
   const [videoCallDoctorName, setVideoCallDoctorName] = useState<string>('Doctor');
 
   // Video call context for ringing support
-  const { incomingCall, initializeCall, isClientReady } = useVideoCall();
+  const { incomingCall, isClientReady } = useVideoCall();
 
   // Toast notifications and confirmation dialogs
   const { showToast } = useToast();
@@ -410,22 +411,30 @@ const PatientDashboardInteractive = () => {
       return;
     }
 
+    const rawAppointment = appointmentsData?.items?.find((a: ApiAppointment) => a.id === id);
+    if (rawAppointment) {
+      const callWindow = checkVideoCallWindow({
+        date: rawAppointment.date,
+        time: rawAppointment.time,
+        status: rawAppointment.status,
+      });
+      if (!callWindow.allowed) {
+        showToast({
+          type: 'warning',
+          title: 'Call Not Available Yet',
+          message: callWindow.reason || 'Video call can only be joined near the appointment time.',
+        });
+        return;
+      }
+    }
+
     // Find the appointment to get doctor details for UI
     const appointment = appointments.find((a) => a.id === id);
     if (!appointment) return;
 
     setVideoCallAppointmentId(id);
     setVideoCallDoctorName(appointment.doctorName);
-
-    try {
-      // Initialize ringing call first - backend handles user creation
-      await initializeCall(id);
-      // Only open modal after successful initialization
-      setIsVideoCallModalOpen(true);
-    } catch (error) {
-      logger.error('Failed to start video call:', error);
-      alert('Failed to start video call. Please try again.');
-    }
+    setIsVideoCallModalOpen(true);
   };
 
   const handleCancelAppointment = async (id: string) => {

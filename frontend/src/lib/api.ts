@@ -11,6 +11,18 @@ export interface ApiError {
   message?: string;
 }
 
+export class ApiRequestError extends Error {
+  status: number;
+  details?: unknown;
+
+  constructor(message: string, status: number, details?: unknown) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.status = status;
+    this.details = details;
+  }
+}
+
 export interface User {
   id: string;
   email: string;
@@ -234,7 +246,11 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      throw new ApiRequestError(
+        errorData.error || errorData.message || `HTTP error! status: ${response.status}`,
+        response.status,
+        errorData
+      );
     }
 
     return response.json();

@@ -44,6 +44,7 @@ import {
   type Appointment as ApiAppointment,
   type Doctor as ApiDoctor,
 } from '@/lib/api';
+import { checkVideoCallWindow } from '@/lib/videoCallWindow';
 import { logger } from '@/lib/logger';
 
 interface Appointment {
@@ -224,7 +225,7 @@ export default function DoctorDashboardInteractive() {
   const [videoCallPatientName, setVideoCallPatientName] = useState<string>('Patient');
 
   // Video call context for ringing support
-  const { incomingCall, initializeCall, isClientReady } = useVideoCall();
+  const { incomingCall, isClientReady } = useVideoCall();
 
   // Toast and confirmation dialogs
   const { showToast } = useToast();
@@ -660,26 +661,30 @@ export default function DoctorDashboardInteractive() {
       return;
     }
 
+    const rawAppointment = appointmentsData?.items?.find((a: ApiAppointment) => a.id === id);
+    if (rawAppointment) {
+      const callWindow = checkVideoCallWindow({
+        date: rawAppointment.date,
+        time: rawAppointment.time,
+        status: rawAppointment.status,
+      });
+      if (!callWindow.allowed) {
+        showToast({
+          type: 'warning',
+          title: 'Call Not Available Yet',
+          message: callWindow.reason || 'Video call can only be joined near the appointment time.',
+        });
+        return;
+      }
+    }
+
     // Find the appointment to get patient details for UI
     const appointment = appointments.find((a) => a.id === id);
     if (!appointment) return;
 
     setVideoCallAppointmentId(id);
     setVideoCallPatientName(appointment.patientName);
-
-    try {
-      // Initialize ringing call first - backend handles user creation
-      await initializeCall(id);
-      // Only open modal after successful initialization
-      setIsVideoCallModalOpen(true);
-    } catch (error) {
-      logger.error('Failed to start video call:', error);
-      showToast({
-        type: 'error',
-        title: 'Video Call Failed',
-        message: 'Failed to start video call. Please try again.',
-      });
-    }
+    setIsVideoCallModalOpen(true);
   };
 
   const handleFinishPatientAppointment = async (patientId: string) => {

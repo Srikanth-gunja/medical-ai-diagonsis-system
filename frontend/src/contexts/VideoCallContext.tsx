@@ -10,8 +10,7 @@ import {
   useCalls,
 } from '@stream-io/video-react-sdk';
 import { useAuth } from './AuthContext';
-import { getToken } from '@/lib/api';
-import { videoCallsApi } from '../lib/api';
+import { ApiRequestError, getToken, videoCallsApi } from '@/lib/api';
 import { logger } from '@/lib/logger';
 
 // WhatsApp-like timeouts
@@ -116,6 +115,17 @@ const getFriendlyError = (error: unknown): string => {
 
   if (!message) return 'Something went wrong with the call.';
   const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes('video call can only be started') ||
+    normalized.includes('this appointment has already passed') ||
+    normalized.includes('you are not a participant in this appointment') ||
+    normalized.includes('appointment status is') ||
+    normalized.includes('appointment not found') ||
+    normalized.includes('invalid appointment')
+  ) {
+    return message;
+  }
 
   if (normalized.includes('getusermedia') || normalized.includes('media devices')) {
     return 'Camera or microphone access is blocked. Please allow permissions and try again.';
@@ -245,6 +255,15 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         try {
           return await fn();
         } catch (error) {
+          if (
+            error instanceof ApiRequestError &&
+            error.status >= 400 &&
+            error.status < 500 &&
+            error.status !== 429
+          ) {
+            throw error;
+          }
+
           attempt += 1;
           if (attempt > retries) {
             throw error;

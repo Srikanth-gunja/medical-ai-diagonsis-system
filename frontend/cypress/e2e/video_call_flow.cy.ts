@@ -2,6 +2,14 @@ describe('Video Call Flow', () => {
   const appointmentId = 'appt-123';
 
   beforeEach(() => {
+    const now = new Date();
+    const appointmentDate = now.toISOString().split('T')[0];
+    const appointmentTime = now.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+
     cy.intercept('GET', '**/api/appointments', {
       statusCode: 200,
       body: [
@@ -9,8 +17,8 @@ describe('Video Call Flow', () => {
           id: appointmentId,
           doctorId: 'doc-1',
           doctorName: 'Dr. Jane Smith',
-          date: '2026-01-15',
-          time: '10:00 AM',
+          date: appointmentDate,
+          time: appointmentTime,
           status: 'confirmed',
           type: 'video',
         },
@@ -93,5 +101,32 @@ describe('Video Call Flow', () => {
     cy.contains('Cancel Call').click();
 
     cy.wait('@endVideoCall');
+  });
+
+  it('does not retry create call on 403 and shows backend reason', () => {
+    let deniedCount = 0;
+    const backendError =
+      'Video call can only be started 30 minutes before the appointment. Please wait 5 more minutes.';
+
+    cy.intercept('POST', `**/api/video-calls/call/${appointmentId}`, (req) => {
+      deniedCount += 1;
+      req.reply({
+        statusCode: 403,
+        body: { error: backendError },
+      });
+    }).as('createVideoCallDenied');
+
+    cy.wait('@getAppointments');
+    cy.wait('@getDoctors');
+
+    cy.contains('Join').click();
+    cy.wait('@createVideoCallDenied');
+
+    cy.contains('Call Failed').should('be.visible');
+    cy.contains(backendError).should('be.visible');
+
+    cy.wait(1500).then(() => {
+      expect(deniedCount).to.eq(1);
+    });
   });
 });
