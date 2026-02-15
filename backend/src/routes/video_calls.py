@@ -69,7 +69,10 @@ def create_call(appointment_id):
 
     # Validate appointment and permissions
     appointment, error_message = video_service.validate_call_access(
-        user_id, appointment_id, role
+        user_id,
+        appointment_id,
+        role,
+        enforce_time_window=False,
     )
 
     if not appointment:

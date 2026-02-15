@@ -671,8 +671,8 @@ export default function DoctorDashboardInteractive() {
       if (!callWindow.allowed) {
         showToast({
           type: 'warning',
-          title: 'Call Not Available Yet',
-          message: callWindow.reason || 'Video call can only be joined near the appointment time.',
+          title: 'Call Not Available',
+          message: callWindow.reason || 'Video call cannot be started for this appointment.',
         });
         return;
       }

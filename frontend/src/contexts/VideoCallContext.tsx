@@ -664,6 +664,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       logger.error('❌ Error initializing call:', error);
+
       setCallError(getFriendlyError(error));
       setIsConnecting(false);
       stopConnectionTimer();

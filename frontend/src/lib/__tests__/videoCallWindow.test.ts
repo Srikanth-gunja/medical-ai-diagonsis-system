@@ -6,44 +6,39 @@ describe('checkVideoCallWindow', () => {
       date: '2026-02-11',
       time: '10:00 AM',
       status: 'in_progress',
-      now: new Date('2026-02-11T20:00:00'),
     });
 
     expect(result.allowed).toBe(true);
   });
 
-  it('blocks calls that are too early', () => {
+  it('allows confirmed appointments at any time for testing', () => {
     const result = checkVideoCallWindow({
       date: '2026-02-11',
       time: '10:00 AM',
       status: 'confirmed',
-      now: new Date('2026-02-11T08:00:00'),
-    });
-
-    expect(result.allowed).toBe(false);
-    expect(result.reason).toContain('Video call can only be started 30 minutes before');
-  });
-
-  it('blocks calls that are too late', () => {
-    const result = checkVideoCallWindow({
-      date: '2026-02-11',
-      time: '10:00 AM',
-      status: 'confirmed',
-      now: new Date('2026-02-11T12:00:00'),
-    });
-
-    expect(result.allowed).toBe(false);
-    expect(result.reason).toContain('already passed');
-  });
-
-  it('allows calls within the 30-minute window', () => {
-    const result = checkVideoCallWindow({
-      date: '2026-02-11',
-      time: '10:00 AM',
-      status: 'confirmed',
-      now: new Date('2026-02-11T09:45:00'),
     });
 
     expect(result.allowed).toBe(true);
+  });
+
+  it('allows calls even when date/time is missing', () => {
+    const result = checkVideoCallWindow({
+      date: '',
+      time: '',
+      status: 'confirmed',
+    });
+
+    expect(result.allowed).toBe(true);
+  });
+
+  it('blocks disallowed statuses', () => {
+    const result = checkVideoCallWindow({
+      date: '2026-02-11',
+      time: '10:00 AM',
+      status: 'completed',
+    });
+
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toContain("Appointment status is 'completed'");
   });
 });
