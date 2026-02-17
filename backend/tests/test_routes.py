@@ -1,6 +1,7 @@
 import pytest
 import json
-from src.models.user import User
+from bson import ObjectId
+from unittest.mock import patch
 
 def test_auth_routes(client):
     """Test user registration and login."""
@@ -31,9 +32,8 @@ def test_auth_routes(client):
     assert response.status_code == 200
     data = json.loads(response.data)
     assert 'access_token' in data
-    return data['access_token']
 
-def test_appointment_booking_flow(client, app):
+def test_appointment_booking_flow(client):
     """Test full booking flow."""
     # 1. Register logic is handled in test_auth_routes, but we need fresh data here
     # or we can use a fixture. Let's just create a user quickly.
@@ -56,40 +56,35 @@ def test_appointment_booking_flow(client, app):
     token = json.loads(res.data)['access_token']
     headers = {'Authorization': f'Bearer {token}'}
     
-    # Register Doctor (Need a doctor to book with)
-    # The system might require doctor registration or use existing ones.
-    # We can create a doctor via model for simplicity or route.
-    from src.models.doctor import Doctor
-    # Directly creating doctor via model to bypass verification flow complexities if any
-    with app.app_context():
-        # Clean previous
-        from src.database import get_db, DOCTORS_COLLECTION
-        db = get_db()
-        # Create dummy doctor
-        doc_data = {
-            "name": "Test Doctor",
-            "email": "doc@test.com",
-            "specialty": "General",
-            "rating": 5.0
-        }
-        res_doc = db[DOCTORS_COLLECTION].insert_one(doc_data)
-        doctor_id = str(res_doc.inserted_id)
+    doctor_id = str(ObjectId())
 
     # 2. Book Appointment
     booking_data = {
         "doctorId": doctor_id,
         "doctorName": "Test Doctor",
-        "date": "2025-12-31",
+        "date": "2099-12-31",
         "time": "10:00 AM",
         "symptoms": "Cough"
     }
-    
-    response = client.post('/api/appointments',
-                          headers=headers,
-                          data=json.dumps(booking_data),
-                          content_type='application/json')
-                          
-    assert response.status_code == 201
+
+    with patch(
+        'src.routes.appointments.Doctor.find_by_id',
+        return_value={'_id': ObjectId(doctor_id), 'name': 'Test Doctor'},
+    ), patch(
+        'src.routes.appointments.Schedule.get_available_slots',
+        return_value=['10:00 AM'],
+    ), patch(
+        'src.routes.appointments.Schedule.find_by_doctor_id',
+        return_value={'slot_duration': 30},
+    ):
+        response = client.post(
+            '/api/appointments',
+            headers=headers,
+            data=json.dumps(booking_data),
+            content_type='application/json',
+        )
+
+    assert response.status_code == 201, response.data
     data = json.loads(response.data)
     assert data['status'] == 'pending'
     assert data['doctorName'] == "Test Doctor"

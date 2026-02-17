@@ -47,3 +47,27 @@ class Config:
     AUTH_RATE_LIMIT_MAX_REGISTER = int(
         os.environ.get("AUTH_RATE_LIMIT_MAX_REGISTER", "10")
     )
+    AUTH_RATE_LIMIT_MAX_BUCKETS = int(
+        os.environ.get("AUTH_RATE_LIMIT_MAX_BUCKETS", "5000")
+    )
+    TRUST_PROXY_HEADERS = _is_truthy(os.environ.get("TRUST_PROXY_HEADERS"))
+
+    # Chatbot protections
+    CHATBOT_RATE_LIMIT_WINDOW_SECONDS = int(
+        os.environ.get("CHATBOT_RATE_LIMIT_WINDOW_SECONDS", "60")
+    )
+    CHATBOT_RATE_LIMIT_MAX_MESSAGES = int(
+        os.environ.get("CHATBOT_RATE_LIMIT_MAX_MESSAGES", "30")
+    )
+    CHATBOT_MAX_MESSAGE_LENGTH = int(
+        os.environ.get("CHATBOT_MAX_MESSAGE_LENGTH", "2000")
+    )
+
+    # API query bounds
+    NOTIFICATIONS_MAX_LIMIT = int(os.environ.get("NOTIFICATIONS_MAX_LIMIT", "100"))
+
+    # Realtime token bounds
+    REALTIME_MAX_SSE_TOKENS = int(os.environ.get("REALTIME_MAX_SSE_TOKENS", "10000"))
+    SSE_TOKEN_CLEANUP_INTERVAL_SECONDS = int(
+        os.environ.get("SSE_TOKEN_CLEANUP_INTERVAL_SECONDS", "60")
+    )

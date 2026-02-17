@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..models.notification import Notification
 from ..realtime import publish_event
@@ -22,7 +22,12 @@ def get_notifications():
     current_user = get_current_user()
     
     unread_only = request.args.get('unread_only', 'false').lower() == 'true'
-    limit = int(request.args.get('limit', 20))
+    try:
+        limit = int(request.args.get('limit', 20))
+    except (TypeError, ValueError):
+        limit = 20
+    max_limit = int(current_app.config.get('NOTIFICATIONS_MAX_LIMIT', 100))
+    limit = max(1, min(limit, max_limit))
     
     notifications = Notification.find_by_user(
         current_user['id'], 

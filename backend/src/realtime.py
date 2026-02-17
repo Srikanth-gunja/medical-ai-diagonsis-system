@@ -13,6 +13,11 @@ _SSE_TOKENS: Dict[str, dict] = {}
 _TOKEN_LOCK = threading.Lock()
 _QUEUE_MAXSIZE = int(os.environ.get("REALTIME_QUEUE_MAXSIZE", "200"))
 _SSE_TOKEN_TTL_SECONDS = int(os.environ.get("SSE_TOKEN_TTL_SECONDS", "60"))
+_MAX_SSE_TOKENS = int(os.environ.get("REALTIME_MAX_SSE_TOKENS", "10000"))
+_TOKEN_CLEANUP_INTERVAL_SECONDS = int(
+    os.environ.get("SSE_TOKEN_CLEANUP_INTERVAL_SECONDS", "60")
+)
+_LAST_TOKEN_CLEANUP = 0.0
 
 
 def subscribe(user_id: str) -> queue.Queue:
@@ -63,11 +68,32 @@ def format_sse_message(payload: dict) -> str:
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
 
+def _cleanup_sse_tokens(now: float) -> None:
+    global _LAST_TOKEN_CLEANUP
+    if now - _LAST_TOKEN_CLEANUP < _TOKEN_CLEANUP_INTERVAL_SECONDS:
+        return
+    _LAST_TOKEN_CLEANUP = now
+
+    for key in list(_SSE_TOKENS.keys()):
+        data = _SSE_TOKENS.get(key)
+        if not data or data.get("expires_at", 0) < now:
+            _SSE_TOKENS.pop(key, None)
+
+    overflow = len(_SSE_TOKENS) - _MAX_SSE_TOKENS
+    if overflow > 0:
+        oldest = sorted(
+            _SSE_TOKENS.items(), key=lambda item: item[1].get("expires_at", 0.0)
+        )
+        for token, _ in oldest[:overflow]:
+            _SSE_TOKENS.pop(token, None)
+
+
 def issue_sse_token(user_id: str, ttl_seconds: Optional[int] = None) -> str:
     ttl = _SSE_TOKEN_TTL_SECONDS if ttl_seconds is None else ttl_seconds
     token = secrets.token_urlsafe(32)
     expires_at = time.time() + ttl
     with _TOKEN_LOCK:
+        _cleanup_sse_tokens(time.time())
         _SSE_TOKENS[token] = {"user_id": user_id, "expires_at": expires_at}
     return token
 
@@ -75,6 +101,7 @@ def issue_sse_token(user_id: str, ttl_seconds: Optional[int] = None) -> str:
 def consume_sse_token(token: str, single_use: bool = True) -> Optional[str]:
     now = time.time()
     with _TOKEN_LOCK:
+        _cleanup_sse_tokens(now)
         data = _SSE_TOKENS.get(token)
         if not data:
             return None

@@ -628,17 +628,6 @@ export const reportsApi = {
       if (!res.ok) throw new Error('Failed to download medical record');
       return res.blob();
     }),
-
-  generate: (appointmentId?: string): Promise<Blob> =>
-    fetch(
-      `${API_BASE_URL}/reports/generate${appointmentId ? `?appointmentId=${appointmentId}` : ''}`,
-      {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${getToken()}`,
-        },
-      }
-    ).then((res) => res.blob()),
 };
 
 // Notifications API

@@ -2,6 +2,7 @@
 from flask import Blueprint, jsonify, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import json
+import logging
 
 from ..models.prescription import Prescription
 from ..models.patient import Patient
@@ -11,6 +12,7 @@ from ..models.medical_record import MedicalRecord
 from ..services.report_service import generate_prescription_pdf, generate_medical_record_pdf
 
 reports_bp = Blueprint('reports', __name__)
+logger = logging.getLogger(__name__)
 
 
 def get_current_user():
@@ -85,8 +87,9 @@ def generate_prescription_report(prescription_id):
             download_name=filename
         )
         
-    except Exception as e:
-        return jsonify({'error': f'Failed to generate report: {str(e)}'}), 500
+    except Exception:
+        logger.exception("Failed to generate prescription report")
+        return jsonify({'error': 'Failed to generate report. Please try again.'}), 500
 
 
 @reports_bp.route('/medical-record/<record_id>', methods=['GET'])
@@ -142,5 +145,6 @@ def generate_medical_record_report(record_id):
             download_name=filename
         )
         
-    except Exception as e:
-        return jsonify({'error': f'Failed to generate report: {str(e)}'}), 500
+    except Exception:
+        logger.exception("Failed to generate medical record report")
+        return jsonify({'error': 'Failed to generate report. Please try again.'}), 500

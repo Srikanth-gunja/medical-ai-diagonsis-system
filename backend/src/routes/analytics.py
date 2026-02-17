@@ -107,7 +107,6 @@ def get_patient_analytics():
     if current_user['role'] != 'patient':
         return jsonify({'error': 'Only patients can access this endpoint'}), 403
     
-    patient = Patient.find_by_user_id(current_user['id'])
     db = get_db()
     
     # Get all appointments for this patient
@@ -119,10 +118,7 @@ def get_patient_analytics():
     completed = sum(1 for a in appointments if a['status'] == 'completed')
     
     # Get prescriptions
-    if patient:
-        prescriptions = Prescription.find_by_patient_id(patient['_id'])
-    else:
-        prescriptions = []
+    prescriptions = Prescription.find_by_patient_id(current_user['id'])
     
     # Get unique doctors visited
     unique_doctors = len(set(str(a['doctor_id']) for a in appointments if a['status'] == 'completed'))

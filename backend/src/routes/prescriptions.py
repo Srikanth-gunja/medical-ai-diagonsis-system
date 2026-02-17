@@ -80,6 +80,8 @@ def create_prescription():
     doctor = Doctor.find_by_user_id(current_user['id'])
     if not doctor:
         return jsonify({'error': 'Doctor profile not found'}), 404
+    if str(appointment.get('doctor_id')) != str(doctor.get('_id')):
+        return jsonify({'error': 'Access denied'}), 403
     
     # Create prescription
     prescription = Prescription.create(

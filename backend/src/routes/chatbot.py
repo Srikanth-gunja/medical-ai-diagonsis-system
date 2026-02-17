@@ -1,6 +1,9 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import json
+import time
+import logging
+from collections import defaultdict, deque
 
 from ..services.chatbot_service import (
     process_message,
@@ -9,6 +12,8 @@ from ..services.chatbot_service import (
 )
 
 chatbot_bp = Blueprint('chatbot', __name__)
+logger = logging.getLogger(__name__)
+_CHATBOT_RATE_BUCKETS = defaultdict(deque)
 
 
 def get_current_user():
@@ -19,6 +24,17 @@ def get_current_user():
     return identity
 
 
+def _is_chatbot_rate_limited(user_id: str, limit: int, window_seconds: int) -> bool:
+    now = time.time()
+    bucket = _CHATBOT_RATE_BUCKETS[user_id]
+    while bucket and now - bucket[0] > window_seconds:
+        bucket.popleft()
+    if len(bucket) >= limit:
+        return True
+    bucket.append(now)
+    return False
+
+
 @chatbot_bp.route('/message', methods=['POST'])
 @jwt_required()
 def send_message():
@@ -27,11 +43,18 @@ def send_message():
         current_user = get_current_user()
         user_id = current_user['id']
         
-        data = request.get_json()
+        data = request.get_json() or {}
         message = data.get('message', '').strip()
+        max_length = int(current_app.config.get('CHATBOT_MAX_MESSAGE_LENGTH', 2000))
+        rate_window = int(current_app.config.get('CHATBOT_RATE_LIMIT_WINDOW_SECONDS', 60))
+        rate_limit = int(current_app.config.get('CHATBOT_RATE_LIMIT_MAX_MESSAGES', 30))
         
         if not message:
             return jsonify({'error': 'Message is required'}), 400
+        if len(message) > max_length:
+            return jsonify({'error': f'Message too long. Maximum {max_length} characters.'}), 400
+        if _is_chatbot_rate_limited(user_id, rate_limit, rate_window):
+            return jsonify({'error': 'Too many chatbot requests. Please try again later.'}), 429
         
         # Process message and get AI response
         response = process_message(user_id, message)
@@ -42,10 +65,12 @@ def send_message():
             'success': True
         })
     
-    except ValueError as e:
-        return jsonify({'error': str(e)}), 500
-    except Exception as e:
-        return jsonify({'error': f'Failed to process message: {str(e)}'}), 500
+    except ValueError:
+        logger.exception("Chatbot configuration/validation error")
+        return jsonify({'error': 'Chatbot service is temporarily unavailable.'}), 503
+    except Exception:
+        logger.exception("Failed to process chatbot message")
+        return jsonify({'error': 'Failed to process message. Please try again.'}), 500
 
 
 @chatbot_bp.route('/history', methods=['GET'])
@@ -63,8 +88,9 @@ def get_history():
             'success': True
         })
     
-    except Exception as e:
-        return jsonify({'error': f'Failed to get history: {str(e)}'}), 500
+    except Exception:
+        logger.exception("Failed to get chatbot history")
+        return jsonify({'error': 'Failed to get history. Please try again.'}), 500
 
 
 @chatbot_bp.route('/history', methods=['DELETE'])
@@ -82,5 +108,6 @@ def delete_history():
             'success': True
         })
     
-    except Exception as e:
-        return jsonify({'error': f'Failed to clear history: {str(e)}'}), 500
+    except Exception:
+        logger.exception("Failed to clear chatbot history")
+        return jsonify({'error': 'Failed to clear history. Please try again.'}), 500

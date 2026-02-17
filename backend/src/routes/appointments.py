@@ -17,6 +17,7 @@ from ..utils.appointment_time import (
 )
 import json
 from datetime import datetime
+from pymongo.errors import DuplicateKeyError
 
 appointments_bp = Blueprint("appointments", __name__)
 
@@ -145,6 +146,8 @@ def get_appointments():
 def create_appointment():
     data = request.get_json() or {}
     current_user = get_current_user()
+    if current_user.get("role") != "patient":
+        return jsonify({"error": "Only patients can create appointments"}), 403
 
     doctor_id = data.get("doctorId")
     if not doctor_id:
@@ -191,15 +194,18 @@ def create_appointment():
     slot_duration = schedule.get("slot_duration", 30) if schedule else 30
     doctor_name = doctor.get("name", "Doctor")
 
-    appointment = Appointment.create(
-        patient_id=current_user["id"],
-        doctor_id=doctor_id,
-        doctor_name=doctor_name,
-        date=date_str,
-        time=normalized_time,
-        symptoms=data.get("symptoms", ""),
-        slot_duration=slot_duration,
-    )
+    try:
+        appointment = Appointment.create(
+            patient_id=current_user["id"],
+            doctor_id=doctor_id,
+            doctor_name=doctor_name,
+            date=date_str,
+            time=normalized_time,
+            symptoms=data.get("symptoms", ""),
+            slot_duration=slot_duration,
+        )
+    except DuplicateKeyError:
+        return jsonify({"error": "Selected time slot is already booked"}), 409
 
     # Get patient name for notification
     patient = Patient.find_by_user_id(current_user["id"])
@@ -526,12 +532,16 @@ def complete_appointment(appt_id):
     if not appointment:
         return jsonify({"error": "Appointment not found"}), 404
 
-    # Update appointment status to completed
-    Appointment.update_status(appt_id, "completed")
-
     # Get doctor info
     doctor = Doctor.find_by_user_id(current_user["id"])
-    doctor_name = doctor["name"] if doctor else "Unknown Doctor"
+    if not doctor:
+        return jsonify({"error": "Doctor profile not found"}), 404
+    if str(appointment.get("doctor_id")) != str(doctor.get("_id")):
+        return jsonify({"error": "Unauthorized"}), 403
+
+    # Update appointment status to completed
+    Appointment.update_status(appt_id, "completed")
+    doctor_name = doctor.get("name", "Unknown Doctor")
 
     # Get patient info to get patient._id for medical record
     patient_user_id = str(appointment["patient_id"])
@@ -600,14 +610,18 @@ def reject_appointment(appt_id):
     if not appointment:
         return jsonify({"error": "Appointment not found"}), 404
 
+    # Get doctor info
+    doctor = Doctor.find_by_user_id(current_user["id"])
+    if not doctor:
+        return jsonify({"error": "Doctor profile not found"}), 404
+    if str(appointment.get("doctor_id")) != str(doctor.get("_id")):
+        return jsonify({"error": "Unauthorized"}), 403
+    doctor_name = doctor.get("name", "Doctor")
+
     # Update appointment status to rejected with reason
     updated = Appointment.update(
         appt_id, {"status": "rejected", "rejection_reason": reason}
     )
-
-    # Get doctor info
-    doctor = Doctor.find_by_user_id(current_user["id"])
-    doctor_name = doctor["name"] if doctor else "Doctor"
 
     # Get appointment info
     patient_id = appointment["patient_id"]
@@ -678,6 +692,12 @@ def reschedule_appointment(appt_id):
     if current_user["role"] == "patient":
         if str(appointment["patient_id"]) != current_user["id"]:
             return jsonify({"error": "Unauthorized"}), 403
+    elif current_user["role"] == "doctor":
+        doctor_actor = Doctor.find_by_user_id(current_user["id"])
+        if not doctor_actor or str(appointment["doctor_id"]) != str(doctor_actor["_id"]):
+            return jsonify({"error": "Unauthorized"}), 403
+    elif current_user.get("role") != "admin":
+        return jsonify({"error": "Unauthorized"}), 403
 
     old_date = appointment.get("date", "")
     old_time = appointment.get("time", "")
@@ -713,15 +733,18 @@ def reschedule_appointment(appt_id):
     slot_duration = schedule.get("slot_duration", 30) if schedule else 30
 
     # Update appointment with new date/time
-    updated = Appointment.update(
-        appt_id,
-        {
-            "date": new_date,
-            "time": normalized_time,
-            "status": "pending",  # Reset to pending for doctor to confirm
-            "slot_duration": slot_duration,
-        },
-    )
+    try:
+        updated = Appointment.update(
+            appt_id,
+            {
+                "date": new_date,
+                "time": normalized_time,
+                "status": "pending",  # Reset to pending for doctor to confirm
+                "slot_duration": slot_duration,
+            },
+        )
+    except DuplicateKeyError:
+        return jsonify({"error": "Selected time slot is already booked"}), 409
 
     # Get patient info for notification
     patient = Patient.find_by_user_id(str(appointment["patient_id"]))

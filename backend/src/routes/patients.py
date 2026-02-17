@@ -19,6 +19,17 @@ def get_current_user():
         return json.loads(identity)
     return identity
 
+
+def _doctor_has_patient_access(doctor_id, patient_user_id):
+    db = get_db()
+    try:
+        patient_oid = ObjectId(patient_user_id)
+    except Exception:
+        return False
+    return (
+        db.appointments.find_one({'doctor_id': doctor_id, 'patient_id': patient_oid}) is not None
+    )
+
 @patients_bp.route('/profile', methods=['GET'])
 @jwt_required()
 def get_profile():
@@ -121,9 +132,15 @@ def get_patient_by_id(patient_id):
     # Allow doctors to view patient details
     if current_user['role'] != 'doctor':
         return jsonify({'error': 'Unauthorized'}), 403
+
+    doctor = Doctor.find_by_user_id(current_user['id'])
+    if not doctor:
+        return jsonify({'error': 'Doctor profile not found'}), 404
     
     patient = Patient.find_by_user_id(patient_id)
     if patient:
+        if not _doctor_has_patient_access(doctor['_id'], patient_id):
+            return jsonify({'error': 'Access denied'}), 403
         return jsonify(Patient.to_dict(patient))
     return jsonify({'error': 'Patient not found'}), 404
 
@@ -183,6 +200,8 @@ def get_patient_history(patient_id):
     doctor = Doctor.find_by_user_id(current_user['id'])
     if not doctor:
         return jsonify({'error': 'Doctor profile not found'}), 404
+    if not _doctor_has_patient_access(doctor['_id'], patient_id):
+        return jsonify({'error': 'Access denied'}), 403
     
     # Get medical records
     records = MedicalRecord.find_by_patient_user_id(patient_id)

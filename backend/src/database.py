@@ -1,5 +1,9 @@
 from pymongo import MongoClient, ASCENDING
 from flask import current_app, g
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_db():
@@ -46,6 +50,18 @@ def _create_indexes(db):
     db[APPOINTMENTS_COLLECTION].create_index([("doctor_id", ASCENDING)])
     db[APPOINTMENTS_COLLECTION].create_index([("status", ASCENDING)])
     db[APPOINTMENTS_COLLECTION].create_index([("date", ASCENDING)])
+    # Enforce one active booking per doctor/date/time to prevent race-condition double-booking.
+    try:
+        db[APPOINTMENTS_COLLECTION].create_index(
+            [("doctor_id", ASCENDING), ("date", ASCENDING), ("time", ASCENDING)],
+            unique=True,
+            partialFilterExpression={
+                "status": {"$in": ["pending", "confirmed", "in_progress", "completed", "no_show"]}
+            },
+            name="uniq_active_doctor_slot",
+        )
+    except Exception as exc:
+        logger.warning("Could not create uniq_active_doctor_slot index: %s", exc)
     db[APPOINTMENTS_COLLECTION].create_index(
         [("patient_id", ASCENDING), ("status", ASCENDING)]
     )
