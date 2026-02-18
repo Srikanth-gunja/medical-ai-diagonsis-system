@@ -188,9 +188,16 @@ export default function PatientDashboardClientLayout({
         if (!active) return;
         const streamUrl = `${API_BASE_URL}/events/stream?token=${encodeURIComponent(token)}`;
         eventSource = new EventSource(streamUrl, { withCredentials: true });
-        const handleUpdate = () => refreshNotificationCount();
+        const handleUpdate = () => {
+          refreshNotificationCount();
+          window.dispatchEvent(new CustomEvent('medicare:sse-update'));
+        };
 
+        eventSource.addEventListener('appointments.updated', handleUpdate);
+        eventSource.addEventListener('activities.updated', handleUpdate);
         eventSource.addEventListener('notifications.updated', handleUpdate);
+        eventSource.addEventListener('prescriptions.updated', handleUpdate);
+        eventSource.addEventListener('messages.updated', handleUpdate);
         eventSource.addEventListener('message', handleUpdate);
         eventSource.onerror = () => {
           if (!active) return;

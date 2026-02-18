@@ -14,7 +14,7 @@ interface BookingModalProps {
   doctorId: string;
   doctorName: string;
   onClose: () => void;
-  onConfirm: (date: string, time: string, type: string) => void;
+  onConfirm: (date: string, time: string, type: 'video' | 'in-person') => Promise<void> | void;
 }
 
 const getLocalDateString = (date: Date): string => {
@@ -30,6 +30,7 @@ const BookingModal = ({ isOpen, doctorId, doctorName, onClose, onConfirm }: Book
   const [consultationType, setConsultationType] = useState<'video' | 'in-person'>('video');
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -65,10 +66,13 @@ const BookingModal = ({ isOpen, doctorId, doctorName, onClose, onConfirm }: Book
     setSelectedDate(date);
   };
 
-  const handleConfirm = () => {
-    if (selectedTime) {
-      onConfirm(selectedDate, selectedTime, consultationType);
-      onClose();
+  const handleConfirm = async () => {
+    if (!selectedTime || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onConfirm(selectedDate, selectedTime, consultationType);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -200,16 +204,24 @@ const BookingModal = ({ isOpen, doctorId, doctorName, onClose, onConfirm }: Book
         <div className="sticky bottom-0 bg-card border-t border-border p-6 flex items-center justify-end space-x-3">
           <button
             onClick={onClose}
+            disabled={isSubmitting}
             className="px-6 py-2.5 text-text-secondary hover:bg-muted rounded-lg transition-base font-medium"
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!selectedTime}
+            disabled={!selectedTime || isSubmitting}
             className="px-6 py-2.5 bg-primary text-primary-foreground rounded-lg hover:shadow-elevation-2 active:scale-[0.97] transition-base font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Confirm Booking
+            {isSubmitting ? (
+              <span className="inline-flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                Booking...
+              </span>
+            ) : (
+              'Confirm Booking'
+            )}
           </button>
         </div>
       </div>

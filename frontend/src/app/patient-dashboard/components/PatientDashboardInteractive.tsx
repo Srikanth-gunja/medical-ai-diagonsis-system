@@ -28,10 +28,6 @@ import {
   type Doctor as ApiDoctor,
   type Appointment as ApiAppointment,
   type Activity,
-  schedulesApi,
-  eventsApi,
-  API_BASE_URL,
-  getToken,
 } from '@/lib/api';
 import { checkVideoCallWindow } from '@/lib/videoCallWindow';
 import { logger } from '@/lib/logger';
@@ -262,57 +258,19 @@ const PatientDashboardInteractive = () => {
     fetchActivities();
   }, [fetchActivities]);
 
-  // SSE Connection - refetches data on server events
+  // Listen for shared SSE updates from the patient dashboard layout
   useEffect(() => {
     if (!isHydrated) return;
-    let active = true;
-    let eventSource: EventSource | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const connect = async () => {
-      if (!active || !getToken()) return;
-      try {
-        const { token } = await eventsApi.getStreamToken();
-        if (!active) return;
-        const streamUrl = `${API_BASE_URL}/events/stream?token=${encodeURIComponent(token)}`;
-        eventSource = new EventSource(streamUrl, { withCredentials: true });
-        const handleUpdate = () => {
-          // Invalidate React Query caches to trigger refetch
-          queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
-          queryClient.invalidateQueries({ queryKey: doctorKeys.lists() });
-          fetchActivities();
-        };
-
-        eventSource.addEventListener('appointments.updated', handleUpdate);
-        eventSource.addEventListener('activities.updated', handleUpdate);
-        eventSource.addEventListener('notifications.updated', handleUpdate);
-        eventSource.addEventListener('prescriptions.updated', handleUpdate);
-        eventSource.addEventListener('messages.updated', handleUpdate);
-        eventSource.addEventListener('message', handleUpdate);
-        eventSource.onerror = (err) => {
-          logger.error('SSE connection error (patient dashboard):', err);
-          if (!active) return;
-          eventSource?.close();
-          eventSource = null;
-          reconnectTimer = setTimeout(connect, 3000);
-        };
-      } catch (err) {
-        if (!active) return;
-        logger.error('Failed to initialize SSE (patient dashboard):', err);
-        reconnectTimer = setTimeout(connect, 5000);
-      }
+    const handleRealtimeUpdate: EventListener = () => {
+      queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: doctorKeys.lists() });
+      fetchActivities();
     };
 
-    connect();
+    window.addEventListener('medicare:sse-update', handleRealtimeUpdate);
 
     return () => {
-      active = false;
-      if (eventSource) {
-        eventSource.close();
-      }
-      if (reconnectTimer) {
-        clearTimeout(reconnectTimer);
-      }
+      window.removeEventListener('medicare:sse-update', handleRealtimeUpdate);
     };
   }, [isHydrated, queryClient, fetchActivities]);
 
@@ -398,7 +356,11 @@ const PatientDashboardInteractive = () => {
       setSelectedAppointmentForReschedule(null);
     } catch (err) {
       logger.error('Failed to reschedule appointment:', err);
-      alert('Failed to reschedule appointment. Please try again.');
+      showToast({
+        type: 'error',
+        title: 'Reschedule Failed',
+        message: 'Failed to reschedule appointment. Please try again.',
+      });
     }
   };
 
@@ -407,7 +369,11 @@ const PatientDashboardInteractive = () => {
 
     // Check if video client is ready
     if (!isClientReady) {
-      alert('Video call service is still initializing. Please wait a moment and try again.');
+      showToast({
+        type: 'warning',
+        title: 'Video Service Initializing',
+        message: 'Video call service is still initializing. Please wait a moment and try again.',
+      });
       return;
     }
 
@@ -507,7 +473,7 @@ const PatientDashboardInteractive = () => {
     }
   };
 
-  const handleConfirmBooking = async (date: string, time: string, type: string) => {
+  const handleConfirmBooking = async (date: string, time: string, type: 'video' | 'in-person') => {
     if (isHydrated && selectedDoctorForBooking) {
       try {
         await createAppointmentMutation.mutateAsync({
@@ -515,13 +481,18 @@ const PatientDashboardInteractive = () => {
           doctorName: `Dr. ${selectedDoctorForBooking.name}`,
           date,
           time,
+          type,
           symptoms: '',
         });
         setShowSuccessMessage(true);
         setIsBookingModalOpen(false);
         setTimeout(() => setShowSuccessMessage(false), 3000);
       } catch (err) {
-        alert('Failed to book appointment. Please try again.');
+        showToast({
+          type: 'error',
+          title: 'Booking Failed',
+          message: 'Failed to book appointment. Please try again.',
+        });
       }
     }
   };

@@ -67,6 +67,8 @@ const ConsultationModal = ({
           <button
             onClick={onClose}
             className="p-2 text-text-secondary hover:text-text-primary hover:bg-muted rounded-lg transition-base"
+            aria-label="Close consultation modal"
+            title="Close"
           >
             <Icon name="XMarkIcon" size={20} />
           </button>

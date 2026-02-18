@@ -406,6 +406,7 @@ export const appointmentsApi = {
     doctorName: string;
     date: string;
     time: string;
+    type?: 'video' | 'in-person';
     symptoms?: string;
   }): Promise<Appointment> =>
     fetchApi<Appointment>('/appointments', {

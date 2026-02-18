@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Icon from '@/components/ui/AppIcon';
+import { useToast } from '@/components/ui/Toast';
 import { schedulesApi } from '@/lib/api';
+import { logger } from '@/lib/logger';
 
 interface RescheduleModalProps {
   isOpen: boolean;
@@ -42,6 +44,8 @@ export default function RescheduleModal({
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [slotsWarning, setSlotsWarning] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   // Generate available dates (next 14 days, excluding past dates)
   const getAvailableDates = () => {
@@ -73,6 +77,7 @@ export default function RescheduleModal({
 
   const fetchTimeSlots = async () => {
     setIsLoadingSlots(true);
+    setSlotsWarning(null);
     try {
       const data = await schedulesApi.getAvailableSlots(doctorId, selectedDate);
       setTimeSlots(
@@ -82,7 +87,7 @@ export default function RescheduleModal({
         }))
       );
     } catch (err) {
-      console.error('Failed to fetch time slots:', err);
+      logger.error('Failed to fetch time slots:', err);
       // Fallback to default slots if API fails
       const defaultSlots = [
         '09:00 AM',
@@ -99,6 +104,12 @@ export default function RescheduleModal({
         '04:30 PM',
       ];
       setTimeSlots(defaultSlots.map((time) => ({ time, available: true })));
+      setSlotsWarning('Live availability is unavailable. Showing default time slots.');
+      showToast({
+        type: 'warning',
+        title: 'Live Slots Unavailable',
+        message: 'Showing default slots for now. Please confirm timing with your doctor.',
+      });
     } finally {
       setIsLoadingSlots(false);
     }
@@ -189,25 +200,32 @@ export default function RescheduleModal({
                   <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 </div>
               ) : timeSlots.length > 0 ? (
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                  {timeSlots.map((slot) => (
-                    <button
-                      key={slot.time}
-                      type="button"
-                      onClick={() => slot.available && setSelectedTime(slot.time)}
-                      disabled={!slot.available}
-                      className={`px-3 py-2 text-sm rounded-lg border transition-base ${
-                        selectedTime === slot.time
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : slot.available
-                            ? 'bg-background text-text-secondary border-border hover:border-primary/50'
-                            : 'bg-muted text-text-tertiary border-border cursor-not-allowed opacity-50'
-                      }`}
-                    >
-                      {slot.time}
-                    </button>
-                  ))}
-                </div>
+                <>
+                  {slotsWarning && (
+                    <div className="mb-3 rounded-lg border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
+                      {slotsWarning}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {timeSlots.map((slot) => (
+                      <button
+                        key={slot.time}
+                        type="button"
+                        onClick={() => slot.available && setSelectedTime(slot.time)}
+                        disabled={!slot.available}
+                        className={`px-3 py-2 text-sm rounded-lg border transition-base ${
+                          selectedTime === slot.time
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : slot.available
+                              ? 'bg-background text-text-secondary border-border hover:border-primary/50'
+                              : 'bg-muted text-text-tertiary border-border cursor-not-allowed opacity-50'
+                        }`}
+                      >
+                        {slot.time}
+                      </button>
+                    ))}
+                  </div>
+                </>
               ) : (
                 <div className="text-center py-4 text-text-secondary">
                   No available time slots for this date

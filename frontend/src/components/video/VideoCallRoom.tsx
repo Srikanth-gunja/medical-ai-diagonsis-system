@@ -19,6 +19,8 @@ import {
 } from '@heroicons/react/24/outline';
 import '@stream-io/video-react-sdk/dist/css/styles.css';
 import { useVideoCall } from '@/contexts/VideoCallContext';
+import { useToast } from '@/components/ui/Toast';
+import { logger } from '@/lib/logger';
 
 interface VideoCallRoomProps {
   call: Call;
@@ -37,6 +39,7 @@ export default function VideoCallRoom({ call, onLeave }: VideoCallRoomProps) {
 
 function VideoCallRoomInner({ onLeave }: { onLeave: () => void }) {
   const { callError } = useVideoCall();
+  const { showToast } = useToast();
   const { useCallCallingState, useParticipantCount, useRemoteParticipants } = useCallStateHooks();
 
   const callingState = useCallCallingState();
@@ -67,7 +70,12 @@ function VideoCallRoomInner({ onLeave }: { onLeave: () => void }) {
       setConnectionQuality('reconnecting');
       // Set a timeout to leave if reconnection takes too long
       reconnectTimeoutRef.current = setTimeout(() => {
-        console.error('Reconnection timeout - leaving call');
+        logger.error('Reconnection timeout - leaving call');
+        showToast({
+          type: 'error',
+          title: 'Call Disconnected',
+          message: 'Reconnection timed out. Please rejoin the call.',
+        });
         onLeave();
       }, 30000); // 30 second reconnection timeout
     } else if (callingState === CallingState.JOINED) {
@@ -83,7 +91,7 @@ function VideoCallRoomInner({ onLeave }: { onLeave: () => void }) {
         clearTimeout(reconnectTimeoutRef.current);
       }
     };
-  }, [callingState, onLeave]);
+  }, [callingState, onLeave, showToast]);
 
   // Start wait timer
   useEffect(() => {
@@ -135,7 +143,12 @@ function VideoCallRoomInner({ onLeave }: { onLeave: () => void }) {
   const toggleFullScreen = useCallback(() => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch((e) => {
-        console.error(`Error attempting to enable fullscreen mode: ${e.message} (${e.name})`);
+        logger.error(`Error attempting to enable fullscreen mode: ${e.message} (${e.name})`);
+        showToast({
+          type: 'warning',
+          title: 'Fullscreen Unavailable',
+          message: 'Your browser blocked fullscreen mode.',
+        });
       });
       setIsFullScreen(true);
     } else {
@@ -144,7 +157,7 @@ function VideoCallRoomInner({ onLeave }: { onLeave: () => void }) {
         setIsFullScreen(false);
       }
     }
-  }, []);
+  }, [showToast]);
 
   // Handle leave with cleanup
   const handleLeave = useCallback(() => {
@@ -273,6 +286,7 @@ function VideoCallRoomInner({ onLeave }: { onLeave: () => void }) {
           <button
             onClick={toggleFullScreen}
             className="rounded-full bg-white/10 p-2 hover:bg-white/20 transition-colors"
+            aria-label={isFullScreen ? 'Exit fullscreen' : 'Enter fullscreen'}
             title={isFullScreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
           >
             {isFullScreen ? (

@@ -20,6 +20,8 @@ interface AuthenticatedHeaderProps {
   className?: string;
 }
 
+const NOTIFICATION_PAGE_SIZE = 10;
+
 const AuthenticatedHeader = ({
   user,
   notificationCount = 0,
@@ -33,6 +35,9 @@ const AuthenticatedHeader = ({
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [localNotificationCount, setLocalNotificationCount] = useState(notificationCount);
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
+  const [isLoadingMoreNotifications, setIsLoadingMoreNotifications] = useState(false);
+  const [notificationsLimit, setNotificationsLimit] = useState(NOTIFICATION_PAGE_SIZE);
+  const [hasMoreNotifications, setHasMoreNotifications] = useState(false);
   const [, setTimeTick] = useState(0);
   const notificationsRef = useRef<HTMLDivElement>(null);
 
@@ -71,13 +76,20 @@ const AuthenticatedHeader = ({
     setIsNotificationsOpen(false);
   };
 
+  const fetchNotifications = async (limit: number) => {
+    const data = await notificationsApi.getAll(limit);
+    setNotifications(data.notifications);
+    setLocalNotificationCount(data.unreadCount);
+    setHasMoreNotifications(data.notifications.length >= limit);
+  };
+
   const toggleNotifications = async () => {
     if (!isNotificationsOpen) {
+      const initialLimit = NOTIFICATION_PAGE_SIZE;
+      setNotificationsLimit(initialLimit);
       setIsLoadingNotifications(true);
       try {
-        const data = await notificationsApi.getAll(10);
-        setNotifications(data.notifications);
-        setLocalNotificationCount(data.unreadCount);
+        await fetchNotifications(initialLimit);
       } catch (err) {
         console.error('Failed to fetch notifications:', err);
       } finally {
@@ -86,6 +98,20 @@ const AuthenticatedHeader = ({
     }
     setIsNotificationsOpen(!isNotificationsOpen);
     setIsProfileMenuOpen(false);
+  };
+
+  const handleLoadMoreNotifications = async () => {
+    if (isLoadingNotifications || isLoadingMoreNotifications) return;
+    const nextLimit = notificationsLimit + NOTIFICATION_PAGE_SIZE;
+    setIsLoadingMoreNotifications(true);
+    try {
+      await fetchNotifications(nextLimit);
+      setNotificationsLimit(nextLimit);
+    } catch (err) {
+      console.error('Failed to load more notifications:', err);
+    } finally {
+      setIsLoadingMoreNotifications(false);
+    }
   };
 
   const handleMarkAsRead = async (notificationId: string) => {
@@ -275,38 +301,51 @@ const AuthenticatedHeader = ({
                         <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
                       </div>
                     ) : notifications.length > 0 ? (
-                      notifications.map((notification) => (
-                        <div
-                          key={notification.id}
-                          onClick={() => !notification.read && handleMarkAsRead(notification.id)}
-                          className={`px-4 py-3 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer transition-base ${!notification.read ? 'bg-primary/5' : ''}`}
-                        >
-                          <div className="flex items-start space-x-3">
-                            <div className={`mt-0.5 ${getNotificationColor(notification.type)}`}>
-                              <Icon
-                                name={getNotificationIcon(notification.type) as any}
-                                size={18}
-                              />
+                      <>
+                        {notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            onClick={() => !notification.read && handleMarkAsRead(notification.id)}
+                            className={`px-4 py-3 border-b border-border last:border-0 hover:bg-muted/50 cursor-pointer transition-base ${!notification.read ? 'bg-primary/5' : ''}`}
+                          >
+                            <div className="flex items-start space-x-3">
+                              <div className={`mt-0.5 ${getNotificationColor(notification.type)}`}>
+                                <Icon
+                                  name={getNotificationIcon(notification.type) as any}
+                                  size={18}
+                                />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p
+                                  className={`text-sm ${!notification.read ? 'font-medium text-text-primary' : 'text-text-secondary'}`}
+                                >
+                                  {notification.title}
+                                </p>
+                                <p className="text-xs text-text-tertiary mt-0.5 line-clamp-2">
+                                  {notification.message}
+                                </p>
+                                <p className="text-xs text-text-tertiary mt-1">
+                                  {formatTimeAgo(notification.createdAt)}
+                                </p>
+                              </div>
+                              {!notification.read && (
+                                <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-2" />
+                              )}
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p
-                                className={`text-sm ${!notification.read ? 'font-medium text-text-primary' : 'text-text-secondary'}`}
-                              >
-                                {notification.title}
-                              </p>
-                              <p className="text-xs text-text-tertiary mt-0.5 line-clamp-2">
-                                {notification.message}
-                              </p>
-                              <p className="text-xs text-text-tertiary mt-1">
-                                {formatTimeAgo(notification.createdAt)}
-                              </p>
-                            </div>
-                            {!notification.read && (
-                              <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-2" />
-                            )}
                           </div>
-                        </div>
-                      ))
+                        ))}
+                        {hasMoreNotifications && (
+                          <div className="px-4 py-3 border-t border-border bg-muted/20">
+                            <button
+                              onClick={handleLoadMoreNotifications}
+                              disabled={isLoadingMoreNotifications}
+                              className="w-full rounded-lg border border-border px-3 py-2 text-sm font-medium text-text-secondary hover:text-primary hover:border-primary/40 hover:bg-muted transition-base disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              {isLoadingMoreNotifications ? 'Loading...' : 'Load more notifications'}
+                            </button>
+                          </div>
+                        )}
+                      </>
                     ) : (
                       <div className="py-12 text-center">
                         <Icon

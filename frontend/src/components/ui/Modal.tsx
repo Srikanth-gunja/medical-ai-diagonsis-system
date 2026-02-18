@@ -62,6 +62,8 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = 'md
                   <button
                     onClick={onClose}
                     className="rounded-full p-1 text-text-secondary hover:bg-muted transition-colors"
+                    aria-label="Close modal"
+                    title="Close"
                   >
                     <XMarkIcon className="w-5 h-5" />
                   </button>
@@ -78,4 +80,3 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = 'md
     </Transition>
   );
 }
-

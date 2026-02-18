@@ -217,6 +217,8 @@ const AIChatbotModal = ({ isOpen, onClose }: AIChatbotModalProps) => {
           <button
             onClick={onClose}
             className="p-2 text-text-secondary hover:text-text-primary hover:bg-muted rounded-lg transition-base"
+            aria-label="Close AI chatbot"
+            title="Close"
           >
             <Icon name="XMarkIcon" size={20} />
           </button>
@@ -305,6 +307,8 @@ const AIChatbotModal = ({ isOpen, onClose }: AIChatbotModalProps) => {
               onClick={handleSendMessage}
               disabled={!inputValue.trim() || isLoading}
               className="h-12 px-4 bg-primary text-primary-foreground rounded-lg hover:shadow-elevation-2 disabled:opacity-50 disabled:cursor-not-allowed transition-base"
+              aria-label="Send message"
+              title="Send"
             >
               <Icon name="PaperAirplaneIcon" size={20} />
             </button>

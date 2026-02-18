@@ -12,6 +12,8 @@ interface LoginFormProps {
   onSubmit?: (email: string, password: string) => void;
 }
 
+const REMEMBERED_EMAIL_KEY = 'medicare-remembered-email';
+
 const LoginForm = ({ onSubmit }: LoginFormProps) => {
   const router = useRouter();
   const { showToast } = useToast();
@@ -43,6 +45,11 @@ const LoginForm = ({ onSubmit }: LoginFormProps) => {
   });
 
   useEffect(() => {
+    const rememberedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY);
+    if (rememberedEmail) {
+      setFormData((prev) => ({ ...prev, email: rememberedEmail }));
+      setRememberMe(true);
+    }
     setIsHydrated(true);
   }, []);
 
@@ -73,6 +80,11 @@ const LoginForm = ({ onSubmit }: LoginFormProps) => {
 
     try {
       const response = await authApi.login(formData.email, formData.password);
+      if (rememberMe) {
+        localStorage.setItem(REMEMBERED_EMAIL_KEY, formData.email.trim());
+      } else {
+        localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+      }
 
       if (onSubmit) {
         onSubmit(formData.email, formData.password);
