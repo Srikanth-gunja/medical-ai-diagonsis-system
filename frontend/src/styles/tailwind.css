@@ -65,6 +65,10 @@
         /*slate-900*/
         --color-text-secondary: #4A5568;
         /*slate-600*/
+        --color-text-tertiary: #64748B;
+        /*slate-500*/
+        --color-text-muted: #94A3B8;
+        /*slate-400*/
 
         --radius: 10px;
     }
@@ -126,6 +130,10 @@
         /*white/92*/
         --color-text-secondary: rgba(255, 255, 255, 0.6);
         /*white/60*/
+        --color-text-tertiary: rgba(255, 255, 255, 0.45);
+        /*white/45*/
+        --color-text-muted: rgba(255, 255, 255, 0.35);
+        /*white/35*/
     }
 }
 

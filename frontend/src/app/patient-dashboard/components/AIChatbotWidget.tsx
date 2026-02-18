@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/AppIcon';
 
 interface AIChatbotWidgetProps {
@@ -10,9 +10,9 @@ interface AIChatbotWidgetProps {
 const AIChatbotWidget = ({ onOpen }: AIChatbotWidgetProps) => {
   const [isHydrated, setIsHydrated] = useState(false);
 
-  useState(() => {
+  useEffect(() => {
     setIsHydrated(true);
-  });
+  }, []);
 
   if (!isHydrated) {
     return (

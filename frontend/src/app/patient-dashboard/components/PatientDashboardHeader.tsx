@@ -1,6 +1,8 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import AuthenticatedHeader from '@/components/common/AuthenticatedHeader';
+import { authApi } from '@/lib/api';
 
 interface User {
   name: string;
@@ -14,10 +16,11 @@ interface PatientDashboardHeaderProps {
 }
 
 const PatientDashboardHeader = ({ user, notificationCount }: PatientDashboardHeaderProps) => {
+  const router = useRouter();
+
   const handleLogout = () => {
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login';
-    }
+    authApi.logout();
+    router.push('/login');
   };
 
   return (

@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
   patientsApi,
@@ -264,17 +265,17 @@ export default function PatientDashboardClientLayout({
               </div>
 
               <div className="flex items-center space-x-6 text-sm">
-                <a
-                  href="#privacy"
+                <Link
+                  href="/privacy-policy"
                   className="text-text-secondary hover:text-primary transition-base"
                 >
                   Privacy Policy
-                </a>
-                <a href="#terms" className="text-text-secondary hover:text-primary transition-base">
+                </Link>
+                <Link href="/terms-of-service" className="text-text-secondary hover:text-primary transition-base">
                   Terms of Service
-                </a>
+                </Link>
                 <a
-                  href="#support"
+                  href="mailto:support@medicare.com"
                   className="text-text-secondary hover:text-primary transition-base"
                 >
                   Support

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/AppIcon';
 import AppImage from '@/components/ui/AppImage';
 
@@ -26,9 +26,9 @@ interface DoctorCardProps {
 const DoctorCard = ({ doctor, onBook }: DoctorCardProps) => {
   const [isHydrated, setIsHydrated] = useState(false);
 
-  useState(() => {
+  useEffect(() => {
     setIsHydrated(true);
-  });
+  }, []);
 
   if (!isHydrated) {
     return (

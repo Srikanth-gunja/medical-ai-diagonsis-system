@@ -61,7 +61,7 @@ const ReviewsSection = ({ className = '' }: ReviewsSectionProps) => {
       <div className={`bg-card border border-border rounded-lg p-6 ${className}`}>
         <h2 className="text-xl font-semibold text-text-primary mb-6">Patient Reviews</h2>
         <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-3 border-primary/30 border-t-primary" />
+          <div className="animate-spin rounded-full h-8 w-8 border-[3px] border-primary/30 border-t-primary" />
         </div>
       </div>
     );

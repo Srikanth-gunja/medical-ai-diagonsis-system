@@ -20,23 +20,34 @@ export function MobileBottomNav({ items }: MobileBottomNavProps) {
   const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [currentHash, setCurrentHash] = useState('');
 
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      
+
       if (currentScrollY > lastScrollY && currentScrollY > 100) {
         setIsVisible(false);
       } else {
         setIsVisible(true);
       }
-      
+
       setLastScrollY(currentScrollY);
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
+
+  useEffect(() => {
+    const syncHash = () => {
+      setCurrentHash(window.location.hash || '');
+    };
+
+    syncHash();
+    window.addEventListener('hashchange', syncHash);
+    return () => window.removeEventListener('hashchange', syncHash);
+  }, [pathname]);
 
   return (
     <nav
@@ -50,8 +61,11 @@ export function MobileBottomNav({ items }: MobileBottomNavProps) {
     >
       <div className="flex items-center justify-around px-2 py-2">
         {items.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-          
+          const [basePath, hashFragment] = item.href.split('#');
+          const isActive = hashFragment
+            ? pathname === basePath && currentHash === `#${hashFragment}`
+            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+
           return (
             <Link
               key={item.href}
@@ -96,16 +110,16 @@ export function MobileBottomNav({ items }: MobileBottomNavProps) {
 // Patient navigation items
 export const patientNavItems: NavItem[] = [
   { label: 'Home', icon: 'HomeIcon', href: '/patient-dashboard' },
-  { label: 'Doctors', icon: 'UserGroupIcon', href: '/patient-dashboard/doctors' },
-  { label: 'Appointments', icon: 'CalendarIcon', href: '/patient-dashboard/appointments' },
+  { label: 'Doctors', icon: 'UserGroupIcon', href: '/patient-dashboard#find-doctors' },
+  { label: 'Appointments', icon: 'CalendarIcon', href: '/patient-dashboard#appointments' },
   { label: 'Profile', icon: 'UserCircleIcon', href: '/patient-dashboard/profile' },
 ];
 
 // Doctor navigation items
 export const doctorNavItems: NavItem[] = [
   { label: 'Dashboard', icon: 'HomeIcon', href: '/doctor-dashboard' },
-  { label: 'Patients', icon: 'UserGroupIcon', href: '/doctor-dashboard/patients' },
-  { label: 'Schedule', icon: 'CalendarIcon', href: '/doctor-dashboard/schedule' },
+  { label: 'Patients', icon: 'UserGroupIcon', href: '/doctor-dashboard#patients' },
+  { label: 'Schedule', icon: 'CalendarIcon', href: '/doctor-dashboard#schedule' },
   { label: 'Profile', icon: 'UserCircleIcon', href: '/doctor-dashboard/profile' },
 ];
 

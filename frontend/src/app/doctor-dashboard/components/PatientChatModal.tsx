@@ -223,7 +223,7 @@ const PatientChatModal = ({ isOpen, onClose, appointment }: PatientChatModalProp
           {isLoading ? (
             <div className="flex items-center justify-center h-full">
               <div className="flex flex-col items-center space-y-3">
-                <div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
+                <div className="w-8 h-8 border-[3px] border-primary/30 border-t-primary rounded-full animate-spin" />
                 <span className="text-sm text-text-secondary">Loading messages...</span>
               </div>
             </div>

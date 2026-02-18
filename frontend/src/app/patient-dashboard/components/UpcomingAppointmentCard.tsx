@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/AppIcon';
 import AppImage from '@/components/ui/AppImage';
 
@@ -37,9 +37,9 @@ const UpcomingAppointmentCard = ({
 }: UpcomingAppointmentCardProps) => {
   const [isHydrated, setIsHydrated] = useState(false);
 
-  useState(() => {
+  useEffect(() => {
     setIsHydrated(true);
-  });
+  }, []);
 
   const getStatusColor = () => {
     switch (appointment.status) {
@@ -123,11 +123,11 @@ const UpcomingAppointmentCard = ({
             <div className="flex flex-wrap items-center gap-3 text-sm">
               <div className="flex items-center space-x-1.5 text-text-secondary">
                 <Icon name="CalendarIcon" size={16} />
-                <span className="nowrap">{appointment.date}</span>
+                <span className="whitespace-nowrap">{appointment.date}</span>
               </div>
               <div className="flex items-center space-x-1.5 text-text-secondary">
                 <Icon name="ClockIcon" size={16} />
-                <span className="nowrap">{appointment.time}</span>
+                <span className="whitespace-nowrap">{appointment.time}</span>
               </div>
               <div className="flex items-center space-x-1.5 text-text-secondary">
                 <Icon

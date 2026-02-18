@@ -182,9 +182,9 @@ const AuthenticatedHeader = ({
     { label: 'Dashboard', path: '/patient-dashboard', icon: 'HomeIcon' },
     { label: 'Find Doctors', path: '/patient-dashboard#find-doctors', icon: 'MagnifyingGlassIcon' },
     {
-      label: 'Medical History',
-      path: '/patient-dashboard/medical-history',
-      icon: 'DocumentTextIcon',
+      label: 'Appointments',
+      path: '/patient-dashboard#appointments',
+      icon: 'CalendarIcon',
     },
     { label: 'Profile', path: '/patient-dashboard/profile', icon: 'UserIcon' },
   ];
@@ -193,7 +193,7 @@ const AuthenticatedHeader = ({
     { label: 'Dashboard', path: '/doctor-dashboard', icon: 'HomeIcon' },
     { label: 'Schedule', path: '/doctor-dashboard#schedule', icon: 'CalendarIcon' },
     { label: 'Patients', path: '/doctor-dashboard#patients', icon: 'UsersIcon' },
-    { label: 'Profile', path: '/doctor-dashboard#profile', icon: 'UserIcon' },
+    { label: 'Profile', path: '/doctor-dashboard/profile', icon: 'UserIcon' },
   ];
 
   const navItems = user.role === 'patient' ? patientNavItems : doctorNavItems;

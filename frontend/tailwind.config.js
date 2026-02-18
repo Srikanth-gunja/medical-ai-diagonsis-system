@@ -68,6 +68,8 @@ module.exports = {
                 surface: 'var(--color-surface)', /*white*/
                 'text-primary': 'var(--color-text-primary)', /*slate-900*/
                 'text-secondary': 'var(--color-text-secondary)', /*slate-600*/
+                'text-tertiary': 'var(--color-text-tertiary)', /*slate-500*/
+                'text-muted': 'var(--color-text-muted)', /*slate-400*/
             },
             borderRadius: {
                 lg: 'var(--radius)',

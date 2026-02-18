@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/AppIcon';
 
 interface FilterOptions {
@@ -24,9 +24,9 @@ const DoctorSearchFilters = ({ onFilterChange }: DoctorSearchFiltersProps) => {
   });
   const [isExpanded, setIsExpanded] = useState(false);
 
-  useState(() => {
+  useEffect(() => {
     setIsHydrated(true);
-  });
+  }, []);
 
   const specialties = [
     { label: 'All Specialties', value: 'all' },
