@@ -109,6 +109,15 @@ const PatientDashboardInteractive = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Pagination states
+  const [visibleAppointments, setVisibleAppointments] = useState(5);
+  const [visibleDoctors, setVisibleDoctors] = useState(5);
+
+  const handleTabChange = (tab: 'upcoming' | 'pending' | 'completed' | 'rejected') => {
+    setAppointmentTab(tab);
+    setVisibleAppointments(5);
+  };
+
   // Filter state
   const [filters, setFilters] = useState<FilterOptions>({
     specialty: '',
@@ -125,7 +134,7 @@ const PatientDashboardInteractive = () => {
   // Process React Query data into component state
   const appointments = useMemo(() => {
     if (!appointmentsData?.items) return [];
-    
+
     const apptData = appointmentsData.items;
     const now = new Date();
 
@@ -193,7 +202,7 @@ const PatientDashboardInteractive = () => {
         return {
           id: a.id,
           doctorName: a.doctorName.replace('Dr. ', ''),
-          doctorImage: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400',
+          doctorImage: '/assets/images/doctor_profile.png',
           doctorImageAlt: `Doctor ${a.doctorName}`,
           specialty: 'General',
           date: formatDate(a.date),
@@ -213,11 +222,11 @@ const PatientDashboardInteractive = () => {
 
   const doctors = useMemo(() => {
     if (!doctorsData?.items) return [];
-    
+
     return doctorsData.items.map((d: ApiDoctor) => ({
       id: d.id,
       name: d.name.replace('Dr. ', ''),
-      image: d.image || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400',
+      image: d.image || '/assets/images/doctor_profile.png',
       imageAlt: `${d.name} profile photo`,
       specialty: d.specialty,
       rating: d.rating ?? 0,
@@ -244,7 +253,7 @@ const PatientDashboardInteractive = () => {
   useEffect(() => {
     const loading = isDoctorsLoading || isAppointmentsLoading;
     setIsLoading(loading);
-    
+
     if (doctorsError || appointmentsError) {
       setError('Failed to load dashboard data. Please try again.');
       logger.error('Dashboard error:', doctorsError || appointmentsError);
@@ -579,7 +588,7 @@ const PatientDashboardInteractive = () => {
 
   return (
     <>
-      <div className="container mx-auto px-4 sm:px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-32 mt-16 sm:mt-20">
         {showSuccessMessage && (
           <div className="mb-6 bg-success/10 border border-success/20 rounded-lg p-4 flex items-center space-x-3 animate-fade-in">
             <Icon name="CheckCircleIcon" size={24} className="text-success flex-shrink-0" />
@@ -596,11 +605,11 @@ const PatientDashboardInteractive = () => {
           </div>
         )}
 
-        <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-heading font-semibold text-text-primary mb-2">
-            Welcome back, {user?.firstName || 'there'}!
+        <div className="mb-10 text-center sm:text-left">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent mb-3 tracking-tight">
+            Welcome back, {user?.firstName || 'there'}! 👋
           </h1>
-          <p className="text-text-secondary">
+          <p className="text-base sm:text-lg text-text-secondary font-medium max-w-2xl mx-auto sm:mx-0">
             Manage your appointments and find the right doctor for your needs
           </p>
         </div>
@@ -612,82 +621,72 @@ const PatientDashboardInteractive = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             <section id="appointments" className="scroll-mt-24">
-              <div className="bg-card border border-border rounded-xl p-6 mb-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-semibold text-text-primary flex items-center space-x-2">
-                    <Icon name="CalendarIcon" size={28} />
+              <div className="bg-card/80 backdrop-blur-md border border-white/20 dark:border-border/50 rounded-3xl p-6 sm:p-8 shadow-elevation-1 mb-6">
+                <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-2xl font-bold text-text-primary flex items-center space-x-3">
+                    <div className="p-2 bg-primary/10 rounded-xl text-primary">
+                      <Icon name="CalendarIcon" size={24} />
+                    </div>
                     <span>Appointments</span>
                   </h2>
                 </div>
 
-                {/* Appointment Tabs */}
-                <div className="flex items-center gap-2 border-b border-border mb-6">
+                {/* Appointment Tabs -> Pill Toggles */}
+                <div className="flex flex-wrap items-center gap-2 mb-8 bg-muted/30 p-1.5 rounded-2xl w-fit border border-border/50">
                   <button
-                    onClick={() => setAppointmentTab('upcoming')}
-                    className={`pb-3 px-4 font-medium transition-base relative ${appointmentTab === 'upcoming'
-                      ? 'text-primary'
-                      : 'text-text-secondary hover:text-text-primary'
+                    onClick={() => handleTabChange('upcoming')}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${appointmentTab === 'upcoming'
+                      ? 'bg-primary text-primary-foreground shadow-sm scale-100'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
                       }`}
                   >
                     Upcoming
                     {appointmentCounts.confirmed > 0 && (
-                      <span className="ml-2 px-2 py-0.5 bg-success/10 text-success rounded-full text-xs font-semibold">
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${appointmentTab === 'upcoming' ? 'bg-primary-foreground/20 text-white' : 'bg-success/10 text-success'}`}>
                         {appointmentCounts.confirmed}
                       </span>
                     )}
-                    {appointmentTab === 'upcoming' && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-                    )}
                   </button>
                   <button
-                    onClick={() => setAppointmentTab('pending')}
-                    className={`pb-3 px-4 font-medium transition-base relative ${appointmentTab === 'pending'
-                      ? 'text-primary'
-                      : 'text-text-secondary hover:text-text-primary'
+                    onClick={() => handleTabChange('pending')}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${appointmentTab === 'pending'
+                      ? 'bg-primary text-primary-foreground shadow-sm scale-100'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
                       }`}
                   >
                     Pending
                     {appointmentCounts.pending > 0 && (
-                      <span className="ml-2 px-2 py-0.5 bg-warning/10 text-warning rounded-full text-xs font-semibold">
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${appointmentTab === 'pending' ? 'bg-primary-foreground/20 text-white' : 'bg-warning/10 text-warning'}`}>
                         {appointmentCounts.pending}
                       </span>
                     )}
-                    {appointmentTab === 'pending' && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-                    )}
                   </button>
                   <button
-                    onClick={() => setAppointmentTab('completed')}
-                    className={`pb-3 px-4 font-medium transition-base relative ${appointmentTab === 'completed'
-                      ? 'text-primary'
-                      : 'text-text-secondary hover:text-text-primary'
+                    onClick={() => handleTabChange('completed')}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${appointmentTab === 'completed'
+                      ? 'bg-primary text-primary-foreground shadow-sm scale-100'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
                       }`}
                   >
                     Completed
                     {appointmentCounts.completed > 0 && (
-                      <span className="ml-2 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-semibold">
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${appointmentTab === 'completed' ? 'bg-primary-foreground/20 text-white' : 'bg-primary/20 text-primary'}`}>
                         {appointmentCounts.completed}
                       </span>
                     )}
-                    {appointmentTab === 'completed' && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-                    )}
                   </button>
                   <button
-                    onClick={() => setAppointmentTab('rejected')}
-                    className={`pb-3 px-4 font-medium transition-base relative ${appointmentTab === 'rejected'
-                      ? 'text-primary'
-                      : 'text-text-secondary hover:text-text-primary'
+                    onClick={() => handleTabChange('rejected')}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${appointmentTab === 'rejected'
+                      ? 'bg-primary text-primary-foreground shadow-sm scale-100'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
                       }`}
                   >
                     Rejected
                     {appointmentCounts.rejected > 0 && (
-                      <span className="ml-2 px-2 py-0.5 bg-error/10 text-error rounded-full text-xs font-semibold">
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${appointmentTab === 'rejected' ? 'bg-primary-foreground/20 text-white' : 'bg-error/10 text-error'}`}>
                         {appointmentCounts.rejected}
                       </span>
-                    )}
-                    {appointmentTab === 'rejected' && (
-                      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
                     )}
                   </button>
                 </div>
@@ -697,17 +696,26 @@ const PatientDashboardInteractive = () => {
                   {appointmentTab === 'upcoming' && (
                     <>
                       {confirmedAppointments.length > 0 ? (
-                        confirmedAppointments.map((appointment) => (
-                          <UpcomingAppointmentCard
-                            key={appointment.id}
-                            appointment={appointment}
-                            onReschedule={handleReschedule}
-                            onJoin={handleJoinAppointment}
-                            onCancel={handleCancelAppointment}
-                            onChat={handleChat}
-                            onReview={handleReview}
-                          />
-                        ))
+                        <>
+                          {confirmedAppointments.slice(0, visibleAppointments).map((appointment) => (
+                            <UpcomingAppointmentCard
+                              key={appointment.id}
+                              appointment={appointment}
+                              onReschedule={handleReschedule}
+                              onJoin={handleJoinAppointment}
+                              onCancel={handleCancelAppointment}
+                              onChat={handleChat}
+                              onReview={handleReview}
+                            />
+                          ))}
+                          {visibleAppointments < confirmedAppointments.length && (
+                            <div className="flex justify-center mt-6">
+                              <button onClick={() => setVisibleAppointments(v => v + 5)} className="px-6 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl transition-colors">
+                                Load More ({confirmedAppointments.length - visibleAppointments})
+                              </button>
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="text-center py-12">
                           <Icon
@@ -727,17 +735,26 @@ const PatientDashboardInteractive = () => {
                   {appointmentTab === 'pending' && (
                     <>
                       {pendingAppointmentsList.length > 0 ? (
-                        pendingAppointmentsList.map((appointment) => (
-                          <UpcomingAppointmentCard
-                            key={appointment.id}
-                            appointment={appointment}
-                            onReschedule={handleReschedule}
-                            onJoin={handleJoinAppointment}
-                            onCancel={handleCancelAppointment}
-                            onChat={handleChat}
-                            onReview={handleReview}
-                          />
-                        ))
+                        <>
+                          {pendingAppointmentsList.slice(0, visibleAppointments).map((appointment) => (
+                            <UpcomingAppointmentCard
+                              key={appointment.id}
+                              appointment={appointment}
+                              onReschedule={handleReschedule}
+                              onJoin={handleJoinAppointment}
+                              onCancel={handleCancelAppointment}
+                              onChat={handleChat}
+                              onReview={handleReview}
+                            />
+                          ))}
+                          {visibleAppointments < pendingAppointmentsList.length && (
+                            <div className="flex justify-center mt-6">
+                              <button onClick={() => setVisibleAppointments(v => v + 5)} className="px-6 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl transition-colors">
+                                Load More ({pendingAppointmentsList.length - visibleAppointments})
+                              </button>
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="text-center py-12">
                           <Icon
@@ -757,17 +774,26 @@ const PatientDashboardInteractive = () => {
                   {appointmentTab === 'completed' && (
                     <>
                       {completedAppointmentsList.length > 0 ? (
-                        completedAppointmentsList.map((appointment) => (
-                          <UpcomingAppointmentCard
-                            key={appointment.id}
-                            appointment={appointment}
-                            onReschedule={handleReschedule}
-                            onJoin={handleJoinAppointment}
-                            onCancel={handleCancelAppointment}
-                            onChat={handleChat}
-                            onReview={handleReview}
-                          />
-                        ))
+                        <>
+                          {completedAppointmentsList.slice(0, visibleAppointments).map((appointment) => (
+                            <UpcomingAppointmentCard
+                              key={appointment.id}
+                              appointment={appointment}
+                              onReschedule={handleReschedule}
+                              onJoin={handleJoinAppointment}
+                              onCancel={handleCancelAppointment}
+                              onChat={handleChat}
+                              onReview={handleReview}
+                            />
+                          ))}
+                          {visibleAppointments < completedAppointmentsList.length && (
+                            <div className="flex justify-center mt-6">
+                              <button onClick={() => setVisibleAppointments(v => v + 5)} className="px-6 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl transition-colors">
+                                Load More ({completedAppointmentsList.length - visibleAppointments})
+                              </button>
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="text-center py-12">
                           <Icon
@@ -787,17 +813,26 @@ const PatientDashboardInteractive = () => {
                   {appointmentTab === 'rejected' && (
                     <>
                       {rejectedAppointmentsList.length > 0 ? (
-                        rejectedAppointmentsList.map((appointment) => (
-                          <UpcomingAppointmentCard
-                            key={appointment.id}
-                            appointment={appointment}
-                            onReschedule={handleReschedule}
-                            onJoin={handleJoinAppointment}
-                            onCancel={handleCancelAppointment}
-                            onChat={handleChat}
-                            onReview={handleReview}
-                          />
-                        ))
+                        <>
+                          {rejectedAppointmentsList.slice(0, visibleAppointments).map((appointment) => (
+                            <UpcomingAppointmentCard
+                              key={appointment.id}
+                              appointment={appointment}
+                              onReschedule={handleReschedule}
+                              onJoin={handleJoinAppointment}
+                              onCancel={handleCancelAppointment}
+                              onChat={handleChat}
+                              onReview={handleReview}
+                            />
+                          ))}
+                          {visibleAppointments < rejectedAppointmentsList.length && (
+                            <div className="flex justify-center mt-6">
+                              <button onClick={() => setVisibleAppointments(v => v + 5)} className="px-6 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl transition-colors">
+                                Load More ({rejectedAppointmentsList.length - visibleAppointments})
+                              </button>
+                            </div>
+                          )}
+                        </>
                       ) : (
                         <div className="text-center py-12">
                           <Icon
@@ -851,9 +886,18 @@ const PatientDashboardInteractive = () => {
 
                 <div className="xl:col-span-3 space-y-4">
                   {filteredDoctors.length > 0 ? (
-                    filteredDoctors.map((doctor) => (
-                      <DoctorCard key={doctor.id} doctor={doctor} onBook={handleBookDoctor} />
-                    ))
+                    <>
+                      {filteredDoctors.slice(0, visibleDoctors).map((doctor) => (
+                        <DoctorCard key={doctor.id} doctor={doctor} onBook={handleBookDoctor} />
+                      ))}
+                      {visibleDoctors < filteredDoctors.length && (
+                        <div className="flex justify-center mt-6">
+                          <button onClick={() => setVisibleDoctors(v => v + 5)} className="px-6 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl transition-colors">
+                            Load More Doctors ({filteredDoctors.length - visibleDoctors})
+                          </button>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <div className="bg-card border border-border rounded-xl p-8 text-center">
                       <Icon
@@ -872,7 +916,7 @@ const PatientDashboardInteractive = () => {
             </section>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-6 lg:sticky lg:top-8 h-fit lg:h-[calc(100vh-80px)] overflow-y-auto scrollbar-none pb-12 w-full lg:w-auto">
             <AIChatbotWidget onOpen={handleOpenAIChat} />
             <RecentActivityFeed
               activities={

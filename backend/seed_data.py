@@ -16,6 +16,14 @@ from bson import ObjectId
 # MongoDB connection - reads from environment variables with fallback
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://127.0.0.1:27017/")
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "medical_project")
+DEFAULT_DOCTOR_PROFILE_IMAGE = os.getenv(
+    "DEFAULT_DOCTOR_PROFILE_IMAGE",
+    "/assets/images/doctor_profile.png",
+)
+DEFAULT_PATIENT_PROFILE_IMAGE = os.getenv(
+    "DEFAULT_PATIENT_PROFILE_IMAGE",
+    "/assets/images/patient_profile.png",
+)
 
 
 def seed_database():
@@ -80,6 +88,80 @@ def seed_database():
             "created_at": datetime.utcnow(),
         },
     ]
+    doctor_users.extend(
+        [
+            {
+                "_id": ObjectId(),
+                "email": "dr.arjun.mehta@hospital.in",
+                "password": generate_password_hash("password"),
+                "role": "doctor",
+                "created_at": datetime.utcnow(),
+            },
+            {
+                "_id": ObjectId(),
+                "email": "dr.priya.nair@hospital.in",
+                "password": generate_password_hash("password"),
+                "role": "doctor",
+                "created_at": datetime.utcnow(),
+            },
+            {
+                "_id": ObjectId(),
+                "email": "dr.karthik.reddy@hospital.in",
+                "password": generate_password_hash("password"),
+                "role": "doctor",
+                "created_at": datetime.utcnow(),
+            },
+            {
+                "_id": ObjectId(),
+                "email": "dr.neha.sharma@hospital.in",
+                "password": generate_password_hash("password"),
+                "role": "doctor",
+                "created_at": datetime.utcnow(),
+            },
+            {
+                "_id": ObjectId(),
+                "email": "dr.rohan.banerjee@hospital.in",
+                "password": generate_password_hash("password"),
+                "role": "doctor",
+                "created_at": datetime.utcnow(),
+            },
+            {
+                "_id": ObjectId(),
+                "email": "dr.aisha.khan@hospital.in",
+                "password": generate_password_hash("password"),
+                "role": "doctor",
+                "created_at": datetime.utcnow(),
+            },
+            {
+                "_id": ObjectId(),
+                "email": "dr.vikram.patel@hospital.in",
+                "password": generate_password_hash("password"),
+                "role": "doctor",
+                "created_at": datetime.utcnow(),
+            },
+            {
+                "_id": ObjectId(),
+                "email": "dr.isha.kapoor@hospital.in",
+                "password": generate_password_hash("password"),
+                "role": "doctor",
+                "created_at": datetime.utcnow(),
+            },
+            {
+                "_id": ObjectId(),
+                "email": "dr.sandeep.iyer@hospital.in",
+                "password": generate_password_hash("password"),
+                "role": "doctor",
+                "created_at": datetime.utcnow(),
+            },
+            {
+                "_id": ObjectId(),
+                "email": "dr.manisha.joshi@hospital.in",
+                "password": generate_password_hash("password"),
+                "role": "doctor",
+                "created_at": datetime.utcnow(),
+            },
+        ]
+    )
 
     # Create patient users
     patient_users = [
@@ -112,6 +194,52 @@ def seed_database():
             "created_at": datetime.utcnow(),
         },
     ]
+    patient_users.extend(
+        [
+            {
+                "_id": ObjectId(),
+                "email": "rahul.verma@example.in",
+                "password": generate_password_hash("password"),
+                "role": "patient",
+                "created_at": datetime.utcnow(),
+            },
+            {
+                "_id": ObjectId(),
+                "email": "ananya.iyer@example.in",
+                "password": generate_password_hash("password"),
+                "role": "patient",
+                "created_at": datetime.utcnow(),
+            },
+            {
+                "_id": ObjectId(),
+                "email": "pradeep.singh@example.in",
+                "password": generate_password_hash("password"),
+                "role": "patient",
+                "created_at": datetime.utcnow(),
+            },
+            {
+                "_id": ObjectId(),
+                "email": "meera.patel@example.in",
+                "password": generate_password_hash("password"),
+                "role": "patient",
+                "created_at": datetime.utcnow(),
+            },
+            {
+                "_id": ObjectId(),
+                "email": "farhan.ali@example.in",
+                "password": generate_password_hash("password"),
+                "role": "patient",
+                "created_at": datetime.utcnow(),
+            },
+            {
+                "_id": ObjectId(),
+                "email": "kavya.reddy@example.in",
+                "password": generate_password_hash("password"),
+                "role": "patient",
+                "created_at": datetime.utcnow(),
+            },
+        ]
+    )
 
     # Insert all users
     all_users = doctor_users + patient_users
@@ -134,7 +262,7 @@ def seed_database():
             "available_today": True,
             "consultation_types": ["video", "in-person"],
             "next_available": "Today, 3:00 PM",
-            "image": "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=400",
+            "image": DEFAULT_DOCTOR_PROFILE_IMAGE,
             "verified": True,
             "verification_status": "verified",
         },
@@ -152,7 +280,7 @@ def seed_database():
             "available_today": False,
             "consultation_types": ["video", "in-person"],
             "next_available": "Tomorrow, 9:00 AM",
-            "image": "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400",
+            "image": DEFAULT_DOCTOR_PROFILE_IMAGE,
             "verified": True,
             "verification_status": "verified",
         },
@@ -170,7 +298,7 @@ def seed_database():
             "available_today": True,
             "consultation_types": ["video"],
             "next_available": "Today, 4:30 PM",
-            "image": "https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=400",
+            "image": DEFAULT_DOCTOR_PROFILE_IMAGE,
             "verified": True,
             "verification_status": "verified",
         },
@@ -188,11 +316,198 @@ def seed_database():
             "available_today": True,
             "consultation_types": ["video", "in-person"],
             "next_available": "Today, 5:00 PM",
-            "image": "https://images.unsplash.com/photo-1537368910025-700350fe46c7?w=400",
+            "image": DEFAULT_DOCTOR_PROFILE_IMAGE,
             "verified": True,
             "verification_status": "verified",
         },
     ]
+    doctors.extend(
+        [
+            {
+                "_id": ObjectId(),
+                "user_id": doctor_users[4]["_id"],
+                "name": "Dr. Arjun Mehta",
+                "specialty": "Cardiology",
+                "location": "Mumbai, Maharashtra",
+                "availability": ["Mon 9:00 AM - 5:00 PM", "Tue 9:00 AM - 2:00 PM", "Thu 10:00 AM - 6:00 PM"],
+                "rating": 0,
+                "rating_count": 0,
+                "review_count": 0,
+                "experience": 14,
+                "available_today": True,
+                "consultation_types": ["video", "in-person"],
+                "next_available": "Today, 5:30 PM",
+                "image": DEFAULT_DOCTOR_PROFILE_IMAGE,
+                "verified": True,
+                "verification_status": "verified",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": doctor_users[5]["_id"],
+                "name": "Dr. Priya Nair",
+                "specialty": "Dermatology",
+                "location": "Kochi, Kerala",
+                "availability": ["Mon 10:00 AM - 6:00 PM", "Wed 10:00 AM - 6:00 PM", "Sat 9:00 AM - 1:00 PM"],
+                "rating": 0,
+                "rating_count": 0,
+                "review_count": 0,
+                "experience": 11,
+                "available_today": True,
+                "consultation_types": ["video", "in-person"],
+                "next_available": "Today, 4:00 PM",
+                "image": DEFAULT_DOCTOR_PROFILE_IMAGE,
+                "verified": True,
+                "verification_status": "verified",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": doctor_users[6]["_id"],
+                "name": "Dr. Karthik Reddy",
+                "specialty": "Endocrinology",
+                "location": "Hyderabad, Telangana",
+                "availability": ["Tue 9:00 AM - 5:00 PM", "Thu 9:00 AM - 5:00 PM", "Fri 9:00 AM - 2:00 PM"],
+                "rating": 0,
+                "rating_count": 0,
+                "review_count": 0,
+                "experience": 13,
+                "available_today": False,
+                "consultation_types": ["video", "in-person"],
+                "next_available": "Tomorrow, 10:30 AM",
+                "image": DEFAULT_DOCTOR_PROFILE_IMAGE,
+                "verified": True,
+                "verification_status": "verified",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": doctor_users[7]["_id"],
+                "name": "Dr. Neha Sharma",
+                "specialty": "Gynecology",
+                "location": "Delhi, NCR",
+                "availability": ["Mon 8:30 AM - 4:30 PM", "Wed 8:30 AM - 4:30 PM", "Fri 8:30 AM - 2:30 PM"],
+                "rating": 0,
+                "rating_count": 0,
+                "review_count": 0,
+                "experience": 16,
+                "available_today": True,
+                "consultation_types": ["video", "in-person"],
+                "next_available": "Today, 2:45 PM",
+                "image": DEFAULT_DOCTOR_PROFILE_IMAGE,
+                "verified": True,
+                "verification_status": "verified",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": doctor_users[8]["_id"],
+                "name": "Dr. Rohan Banerjee",
+                "specialty": "Pulmonology",
+                "location": "Kolkata, West Bengal",
+                "availability": ["Mon 9:00 AM - 5:00 PM", "Tue 9:00 AM - 5:00 PM", "Sat 10:00 AM - 2:00 PM"],
+                "rating": 0,
+                "rating_count": 0,
+                "review_count": 0,
+                "experience": 12,
+                "available_today": True,
+                "consultation_types": ["video", "in-person"],
+                "next_available": "Today, 6:00 PM",
+                "image": DEFAULT_DOCTOR_PROFILE_IMAGE,
+                "verified": True,
+                "verification_status": "verified",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": doctor_users[9]["_id"],
+                "name": "Dr. Aisha Khan",
+                "specialty": "ENT",
+                "location": "Lucknow, Uttar Pradesh",
+                "availability": ["Tue 10:00 AM - 6:00 PM", "Thu 10:00 AM - 6:00 PM", "Sat 9:00 AM - 1:00 PM"],
+                "rating": 0,
+                "rating_count": 0,
+                "review_count": 0,
+                "experience": 9,
+                "available_today": False,
+                "consultation_types": ["video", "in-person"],
+                "next_available": "Tomorrow, 11:00 AM",
+                "image": DEFAULT_DOCTOR_PROFILE_IMAGE,
+                "verified": True,
+                "verification_status": "verified",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": doctor_users[10]["_id"],
+                "name": "Dr. Vikram Patel",
+                "specialty": "Gastroenterology",
+                "location": "Ahmedabad, Gujarat",
+                "availability": ["Mon 9:30 AM - 5:30 PM", "Wed 9:30 AM - 5:30 PM", "Fri 9:30 AM - 3:00 PM"],
+                "rating": 0,
+                "rating_count": 0,
+                "review_count": 0,
+                "experience": 15,
+                "available_today": True,
+                "consultation_types": ["video", "in-person"],
+                "next_available": "Today, 4:30 PM",
+                "image": DEFAULT_DOCTOR_PROFILE_IMAGE,
+                "verified": True,
+                "verification_status": "verified",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": doctor_users[11]["_id"],
+                "name": "Dr. Isha Kapoor",
+                "specialty": "Ophthalmology",
+                "location": "Chandigarh, Chandigarh",
+                "availability": ["Mon 10:00 AM - 6:00 PM", "Wed 10:00 AM - 6:00 PM", "Thu 10:00 AM - 2:00 PM"],
+                "rating": 0,
+                "rating_count": 0,
+                "review_count": 0,
+                "experience": 10,
+                "available_today": True,
+                "consultation_types": ["video", "in-person"],
+                "next_available": "Today, 3:30 PM",
+                "image": DEFAULT_DOCTOR_PROFILE_IMAGE,
+                "verified": True,
+                "verification_status": "verified",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": doctor_users[12]["_id"],
+                "name": "Dr. Sandeep Iyer",
+                "specialty": "Nephrology",
+                "location": "Chennai, Tamil Nadu",
+                "availability": ["Tue 9:00 AM - 5:00 PM", "Thu 9:00 AM - 5:00 PM", "Fri 9:00 AM - 1:00 PM"],
+                "rating": 0,
+                "rating_count": 0,
+                "review_count": 0,
+                "experience": 17,
+                "available_today": False,
+                "consultation_types": ["video", "in-person"],
+                "next_available": "Tomorrow, 9:30 AM",
+                "image": DEFAULT_DOCTOR_PROFILE_IMAGE,
+                "verified": True,
+                "verification_status": "verified",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": doctor_users[13]["_id"],
+                "name": "Dr. Manisha Joshi",
+                "specialty": "General Medicine",
+                "location": "Pune, Maharashtra",
+                "availability": ["Mon 8:00 AM - 4:00 PM", "Tue 8:00 AM - 4:00 PM", "Thu 8:00 AM - 2:00 PM"],
+                "rating": 0,
+                "rating_count": 0,
+                "review_count": 0,
+                "experience": 8,
+                "available_today": True,
+                "consultation_types": ["video", "in-person"],
+                "next_available": "Today, 1:30 PM",
+                "image": DEFAULT_DOCTOR_PROFILE_IMAGE,
+                "verified": True,
+                "verification_status": "verified",
+            },
+        ]
+    )
+    for doctor in doctors:
+        doctor["image"] = DEFAULT_DOCTOR_PROFILE_IMAGE
+
     db.doctors.insert_many(doctors)
     print(f"✓ Created {len(doctors)} doctor profiles")
 
@@ -247,6 +562,145 @@ def seed_database():
             "emergencyContact": "Mark Davis - 312-555-0146",
         },
     ]
+    patients.extend(
+        [
+            {
+                "_id": ObjectId(),
+                "user_id": patient_users[4]["_id"],
+                "email": "rahul.verma@example.in",
+                "firstName": "Rahul",
+                "lastName": "Verma",
+                "phone": "+91-98765-21001",
+                "address": "Flat 12B, Lake View Residency, Andheri East, Mumbai, Maharashtra 400059",
+                "dateOfBirth": "1988-09-12",
+                "gender": "male",
+                "bloodGroup": "B+",
+                "city": "Mumbai",
+                "state": "Maharashtra",
+                "zipCode": "400059",
+                "emergencyContactName": "Pooja Verma",
+                "emergencyContactPhone": "+91-98765-21002",
+                "allergies": "Penicillin",
+                "currentMedications": "Metformin 500mg",
+                "chronicConditions": ["Type 2 Diabetes"],
+                "insuranceProvider": "Star Health",
+                "insurancePolicyNumber": "SH-2026-11209",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": patient_users[5]["_id"],
+                "email": "ananya.iyer@example.in",
+                "firstName": "Ananya",
+                "lastName": "Iyer",
+                "phone": "+91-98450-32010",
+                "address": "No. 7, 4th Cross, Indiranagar, Bengaluru, Karnataka 560038",
+                "dateOfBirth": "1992-04-03",
+                "gender": "female",
+                "bloodGroup": "O+",
+                "city": "Bengaluru",
+                "state": "Karnataka",
+                "zipCode": "560038",
+                "emergencyContactName": "S. R. Iyer",
+                "emergencyContactPhone": "+91-98450-32011",
+                "allergies": "None",
+                "currentMedications": "",
+                "chronicConditions": ["Family history of hypertension"],
+                "insuranceProvider": "HDFC Ergo",
+                "insurancePolicyNumber": "HE-2026-49018",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": patient_users[6]["_id"],
+                "email": "pradeep.singh@example.in",
+                "firstName": "Pradeep",
+                "lastName": "Singh",
+                "phone": "+91-98110-44022",
+                "address": "C-14, Sector 62, Noida, Uttar Pradesh 201309",
+                "dateOfBirth": "1981-01-25",
+                "gender": "male",
+                "bloodGroup": "A+",
+                "city": "Noida",
+                "state": "Uttar Pradesh",
+                "zipCode": "201309",
+                "emergencyContactName": "Neelam Singh",
+                "emergencyContactPhone": "+91-98110-44023",
+                "allergies": "Dust allergy",
+                "currentMedications": "Pantoprazole 40mg",
+                "chronicConditions": ["Acid reflux"],
+                "insuranceProvider": "ICICI Lombard",
+                "insurancePolicyNumber": "ICL-2026-66820",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": patient_users[7]["_id"],
+                "email": "meera.patel@example.in",
+                "firstName": "Meera",
+                "lastName": "Patel",
+                "phone": "+91-98250-55133",
+                "address": "B-302, Shree Residency, Satellite, Ahmedabad, Gujarat 380015",
+                "dateOfBirth": "1994-12-11",
+                "gender": "female",
+                "bloodGroup": "AB+",
+                "city": "Ahmedabad",
+                "state": "Gujarat",
+                "zipCode": "380015",
+                "emergencyContactName": "Harsh Patel",
+                "emergencyContactPhone": "+91-98250-55134",
+                "allergies": "None",
+                "currentMedications": "Iron and folic acid supplements",
+                "chronicConditions": [],
+                "insuranceProvider": "Niva Bupa",
+                "insurancePolicyNumber": "NB-2026-77931",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": patient_users[8]["_id"],
+                "email": "farhan.ali@example.in",
+                "firstName": "Farhan",
+                "lastName": "Ali",
+                "phone": "+91-98300-66144",
+                "address": "27 Park Circus, Kolkata, West Bengal 700017",
+                "dateOfBirth": "1986-06-29",
+                "gender": "male",
+                "bloodGroup": "O-",
+                "city": "Kolkata",
+                "state": "West Bengal",
+                "zipCode": "700017",
+                "emergencyContactName": "Sana Ali",
+                "emergencyContactPhone": "+91-98300-66145",
+                "allergies": "Pollen",
+                "currentMedications": "Budesonide inhaler",
+                "chronicConditions": ["Mild asthma"],
+                "insuranceProvider": "Care Health",
+                "insurancePolicyNumber": "CH-2026-90211",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": patient_users[9]["_id"],
+                "email": "kavya.reddy@example.in",
+                "firstName": "Kavya",
+                "lastName": "Reddy",
+                "phone": "+91-99590-77255",
+                "address": "Plot 44, Kondapur, Hyderabad, Telangana 500084",
+                "dateOfBirth": "1997-08-17",
+                "gender": "female",
+                "bloodGroup": "A-",
+                "city": "Hyderabad",
+                "state": "Telangana",
+                "zipCode": "500084",
+                "emergencyContactName": "Ramesh Reddy",
+                "emergencyContactPhone": "+91-99590-77256",
+                "allergies": "Nickel",
+                "currentMedications": "Topical tretinoin",
+                "chronicConditions": ["PCOS"],
+                "insuranceProvider": "Aditya Birla Health",
+                "insurancePolicyNumber": "ABH-2026-33570",
+            },
+        ]
+    )
+    for patient in patients:
+        patient["image"] = DEFAULT_PATIENT_PROFILE_IMAGE
+
     db.patients.insert_many(patients)
     print(f"✓ Created {len(patients)} patient profiles")
 
@@ -451,6 +905,216 @@ def seed_database():
             "created_at": datetime.utcnow() - timedelta(days=16),
         },
     ]
+    appt_ananya_cardiology_completed = {
+        "_id": ObjectId(),
+        "patient_id": patient_users[5]["_id"],
+        "patient_name": "Ananya Iyer",
+        "doctor_id": doctors[4]["_id"],
+        "doctor_name": "Dr. Arjun Mehta",
+        "date": two_weeks_ago,
+        "time": "10:30 AM",
+        "status": "completed",
+        "rated": True,
+        "type": "in-person",
+        "symptoms": "Episodes of palpitations and borderline high BP",
+        "created_at": datetime.utcnow() - timedelta(days=17),
+    }
+    appt_rahul_diabetes_completed = {
+        "_id": ObjectId(),
+        "patient_id": patient_users[4]["_id"],
+        "patient_name": "Rahul Verma",
+        "doctor_id": doctors[6]["_id"],
+        "doctor_name": "Dr. Karthik Reddy",
+        "date": last_week,
+        "time": "09:30 AM",
+        "status": "completed",
+        "rated": True,
+        "type": "video",
+        "symptoms": "High fasting sugar and fatigue",
+        "created_at": datetime.utcnow() - timedelta(days=11),
+    }
+    appt_meera_gyn_completed = {
+        "_id": ObjectId(),
+        "patient_id": patient_users[7]["_id"],
+        "patient_name": "Meera Patel",
+        "doctor_id": doctors[7]["_id"],
+        "doctor_name": "Dr. Neha Sharma",
+        "date": yesterday,
+        "time": "11:15 AM",
+        "status": "completed",
+        "rated": True,
+        "type": "in-person",
+        "symptoms": "Irregular cycle and low iron symptoms",
+        "created_at": datetime.utcnow() - timedelta(days=5),
+    }
+    appt_farhan_pulmo_completed = {
+        "_id": ObjectId(),
+        "patient_id": patient_users[8]["_id"],
+        "patient_name": "Farhan Ali",
+        "doctor_id": doctors[8]["_id"],
+        "doctor_name": "Dr. Rohan Banerjee",
+        "date": three_weeks_ago,
+        "time": "04:30 PM",
+        "status": "completed",
+        "rated": True,
+        "type": "video",
+        "symptoms": "Night cough and wheezing episodes",
+        "created_at": datetime.utcnow() - timedelta(days=23),
+    }
+    appt_kavya_derma_completed = {
+        "_id": ObjectId(),
+        "patient_id": patient_users[9]["_id"],
+        "patient_name": "Kavya Reddy",
+        "doctor_id": doctors[5]["_id"],
+        "doctor_name": "Dr. Priya Nair",
+        "date": last_week,
+        "time": "03:45 PM",
+        "status": "completed",
+        "rated": True,
+        "type": "video",
+        "symptoms": "Acne flare-up and post-inflammatory marks",
+        "created_at": datetime.utcnow() - timedelta(days=9),
+    }
+    appt_pradeep_gastro_completed = {
+        "_id": ObjectId(),
+        "patient_id": patient_users[6]["_id"],
+        "patient_name": "Pradeep Singh",
+        "doctor_id": doctors[10]["_id"],
+        "doctor_name": "Dr. Vikram Patel",
+        "date": two_weeks_ago,
+        "time": "12:15 PM",
+        "status": "completed",
+        "rated": True,
+        "type": "in-person",
+        "symptoms": "Acidity, bloating and early satiety",
+        "created_at": datetime.utcnow() - timedelta(days=16),
+    }
+    appt_rahul_eye_completed = {
+        "_id": ObjectId(),
+        "patient_id": patient_users[4]["_id"],
+        "patient_name": "Rahul Verma",
+        "doctor_id": doctors[11]["_id"],
+        "doctor_name": "Dr. Isha Kapoor",
+        "date": yesterday,
+        "time": "05:00 PM",
+        "status": "completed",
+        "rated": True,
+        "type": "in-person",
+        "symptoms": "Eye strain and dryness from long screen hours",
+        "created_at": datetime.utcnow() - timedelta(days=6),
+    }
+    appt_ananya_nephro_completed = {
+        "_id": ObjectId(),
+        "patient_id": patient_users[5]["_id"],
+        "patient_name": "Ananya Iyer",
+        "doctor_id": doctors[12]["_id"],
+        "doctor_name": "Dr. Sandeep Iyer",
+        "date": last_week,
+        "time": "01:00 PM",
+        "status": "completed",
+        "rated": True,
+        "type": "video",
+        "symptoms": "Mild edema and elevated creatinine in annual tests",
+        "created_at": datetime.utcnow() - timedelta(days=10),
+    }
+    appt_meera_general_completed = {
+        "_id": ObjectId(),
+        "patient_id": patient_users[7]["_id"],
+        "patient_name": "Meera Patel",
+        "doctor_id": doctors[13]["_id"],
+        "doctor_name": "Dr. Manisha Joshi",
+        "date": yesterday,
+        "time": "10:00 AM",
+        "status": "completed",
+        "rated": True,
+        "type": "video",
+        "symptoms": "Viral fever follow-up and weakness",
+        "created_at": datetime.utcnow() - timedelta(days=4),
+    }
+    appt_farhan_ent_completed = {
+        "_id": ObjectId(),
+        "patient_id": patient_users[8]["_id"],
+        "patient_name": "Farhan Ali",
+        "doctor_id": doctors[9]["_id"],
+        "doctor_name": "Dr. Aisha Khan",
+        "date": two_weeks_ago,
+        "time": "11:30 AM",
+        "status": "completed",
+        "rated": True,
+        "type": "in-person",
+        "symptoms": "Chronic sinus congestion and blocked nose",
+        "created_at": datetime.utcnow() - timedelta(days=15),
+    }
+    appt_rahul_cardio_upcoming = {
+        "_id": ObjectId(),
+        "patient_id": patient_users[4]["_id"],
+        "patient_name": "Rahul Verma",
+        "doctor_id": doctors[4]["_id"],
+        "doctor_name": "Dr. Arjun Mehta",
+        "date": tomorrow,
+        "time": "06:00 PM",
+        "status": "confirmed",
+        "type": "video",
+        "symptoms": "Cardiac lifestyle follow-up",
+        "created_at": datetime.utcnow() - timedelta(days=1),
+    }
+    appt_kavya_nephro_upcoming = {
+        "_id": ObjectId(),
+        "patient_id": patient_users[9]["_id"],
+        "patient_name": "Kavya Reddy",
+        "doctor_id": doctors[12]["_id"],
+        "doctor_name": "Dr. Sandeep Iyer",
+        "date": next_week,
+        "time": "09:30 AM",
+        "status": "pending",
+        "type": "video",
+        "symptoms": "Kidney function review after antibiotics",
+        "created_at": datetime.utcnow(),
+    }
+    appt_pradeep_pulmo_upcoming = {
+        "_id": ObjectId(),
+        "patient_id": patient_users[6]["_id"],
+        "patient_name": "Pradeep Singh",
+        "doctor_id": doctors[8]["_id"],
+        "doctor_name": "Dr. Rohan Banerjee",
+        "date": day_after,
+        "time": "02:00 PM",
+        "status": "confirmed",
+        "type": "in-person",
+        "symptoms": "Persistent cough after viral infection",
+        "created_at": datetime.utcnow() - timedelta(hours=8),
+    }
+    appt_ananya_eye_upcoming = {
+        "_id": ObjectId(),
+        "patient_id": patient_users[5]["_id"],
+        "patient_name": "Ananya Iyer",
+        "doctor_id": doctors[11]["_id"],
+        "doctor_name": "Dr. Isha Kapoor",
+        "date": today,
+        "time": "07:00 PM",
+        "status": "confirmed",
+        "type": "video",
+        "symptoms": "Dry eyes and mild headache from screen exposure",
+        "created_at": datetime.utcnow() - timedelta(hours=3),
+    }
+    appointments.extend(
+        [
+            appt_ananya_cardiology_completed,
+            appt_rahul_diabetes_completed,
+            appt_meera_gyn_completed,
+            appt_farhan_pulmo_completed,
+            appt_kavya_derma_completed,
+            appt_pradeep_gastro_completed,
+            appt_rahul_eye_completed,
+            appt_ananya_nephro_completed,
+            appt_meera_general_completed,
+            appt_farhan_ent_completed,
+            appt_rahul_cardio_upcoming,
+            appt_kavya_nephro_upcoming,
+            appt_pradeep_pulmo_upcoming,
+            appt_ananya_eye_upcoming,
+        ]
+    )
 
     # Ensure appointments have a slot duration captured at booking time
     for appt in appointments:
@@ -522,6 +1186,70 @@ def seed_database():
             "notes": "Total Cholesterol: 215 mg/dL, LDL: 140 mg/dL, HDL: 55 mg/dL. Recommended dietary changes and exercise.",
         },
     ]
+    medical_records.extend(
+        [
+            {
+                "_id": ObjectId(),
+                "patient_id": patients[4]["_id"],
+                "date": last_week,
+                "type": "Consultation",
+                "doctor": "Dr. Karthik Reddy",
+                "description": "Diabetes management review",
+                "result": "HbA1c mildly elevated",
+                "notes": "Adjusted metformin timing and advised evening walk after dinner.",
+            },
+            {
+                "_id": ObjectId(),
+                "patient_id": patients[5]["_id"],
+                "date": two_weeks_ago,
+                "type": "Consultation",
+                "doctor": "Dr. Arjun Mehta",
+                "description": "Cardiac risk assessment",
+                "result": "No acute findings",
+                "notes": "ECG normal. Recommended low-salt diet and home BP monitoring.",
+            },
+            {
+                "_id": ObjectId(),
+                "patient_id": patients[6]["_id"],
+                "date": two_weeks_ago,
+                "type": "Lab Result",
+                "doctor": "Dr. Vikram Patel",
+                "description": "Liver Function Test and H. pylori panel",
+                "result": "Mild gastritis markers present",
+                "notes": "Start PPI for 4 weeks and avoid late-night spicy meals.",
+            },
+            {
+                "_id": ObjectId(),
+                "patient_id": patients[7]["_id"],
+                "date": yesterday,
+                "type": "Consultation",
+                "doctor": "Dr. Neha Sharma",
+                "description": "Cycle irregularity and iron deficiency review",
+                "result": "Stable, improving with supplements",
+                "notes": "Continue iron supplements and follow-up CBC in 6 weeks.",
+            },
+            {
+                "_id": ObjectId(),
+                "patient_id": patients[8]["_id"],
+                "date": three_weeks_ago,
+                "type": "Consultation",
+                "doctor": "Dr. Rohan Banerjee",
+                "description": "Asthma symptom control assessment",
+                "result": "Mild persistent asthma",
+                "notes": "Continued inhaled steroid plan and breathing exercises explained.",
+            },
+            {
+                "_id": ObjectId(),
+                "patient_id": patients[9]["_id"],
+                "date": last_week,
+                "type": "Consultation",
+                "doctor": "Dr. Priya Nair",
+                "description": "Acne treatment follow-up",
+                "result": "Improving",
+                "notes": "Continue topical treatment and sun protection. Review in 1 month.",
+            },
+        ]
+    )
     db.medical_records.insert_many(medical_records)
     print(f"✓ Created {len(medical_records)} medical records")
 
@@ -611,6 +1339,70 @@ def seed_database():
             "color": "bg-warning",
         },
     ]
+    activities.extend(
+        [
+            {
+                "_id": ObjectId(),
+                "user_id": patient_users[4]["_id"],
+                "type": "appointment",
+                "title": "Follow-up Confirmed",
+                "description": "Video follow-up with Dr. Arjun Mehta is confirmed",
+                "timestamp": datetime.utcnow() - timedelta(hours=6),
+                "icon": "CheckCircleIcon",
+                "color": "bg-success",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": patient_users[5]["_id"],
+                "type": "report",
+                "title": "Kidney Profile Reviewed",
+                "description": "Dr. Sandeep Iyer reviewed your test reports",
+                "timestamp": datetime.utcnow() - timedelta(days=3),
+                "icon": "DocumentTextIcon",
+                "color": "bg-primary",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": patient_users[6]["_id"],
+                "type": "appointment",
+                "title": "Appointment Confirmed",
+                "description": "In-person consultation with Dr. Rohan Banerjee on day after tomorrow",
+                "timestamp": datetime.utcnow() - timedelta(hours=10),
+                "icon": "CheckCircleIcon",
+                "color": "bg-success",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": patient_users[7]["_id"],
+                "type": "prescription",
+                "title": "New Prescription",
+                "description": "Dr. Neha Sharma prescribed iron and folate tablets",
+                "timestamp": datetime.utcnow() - timedelta(days=1),
+                "icon": "ClipboardDocumentListIcon",
+                "color": "bg-accent",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": patient_users[8]["_id"],
+                "type": "report",
+                "title": "Spirometry Update",
+                "description": "Breathing assessment notes are now available",
+                "timestamp": datetime.utcnow() - timedelta(days=6),
+                "icon": "DocumentTextIcon",
+                "color": "bg-primary",
+            },
+            {
+                "_id": ObjectId(),
+                "user_id": patient_users[9]["_id"],
+                "type": "appointment",
+                "title": "Dermatology Session Completed",
+                "description": "Video review with Dr. Priya Nair completed successfully",
+                "timestamp": datetime.utcnow() - timedelta(days=7),
+                "icon": "CheckCircleIcon",
+                "color": "bg-success",
+            },
+        ]
+    )
     db.activities.insert_many(activities)
     print(f"✓ Created {len(activities)} patient activities")
 
@@ -673,6 +1465,150 @@ def seed_database():
             "blocked_dates": [],
         },
     ]
+    schedules.extend(
+        [
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[4]["_id"],
+                "weekly_schedule": {
+                    "monday": {"enabled": True, "start": "09:00", "end": "17:00"},
+                    "tuesday": {"enabled": True, "start": "09:00", "end": "14:00"},
+                    "wednesday": {"enabled": False},
+                    "thursday": {"enabled": True, "start": "10:00", "end": "18:00"},
+                    "friday": {"enabled": False},
+                    "saturday": {"enabled": True, "start": "09:00", "end": "13:00"},
+                    "sunday": {"enabled": False},
+                },
+                "blocked_dates": [],
+            },
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[5]["_id"],
+                "weekly_schedule": {
+                    "monday": {"enabled": True, "start": "10:00", "end": "18:00"},
+                    "tuesday": {"enabled": False},
+                    "wednesday": {"enabled": True, "start": "10:00", "end": "18:00"},
+                    "thursday": {"enabled": False},
+                    "friday": {"enabled": True, "start": "10:00", "end": "16:00"},
+                    "saturday": {"enabled": True, "start": "09:00", "end": "13:00"},
+                    "sunday": {"enabled": False},
+                },
+                "blocked_dates": [],
+            },
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[6]["_id"],
+                "weekly_schedule": {
+                    "monday": {"enabled": False},
+                    "tuesday": {"enabled": True, "start": "09:00", "end": "17:00"},
+                    "wednesday": {"enabled": False},
+                    "thursday": {"enabled": True, "start": "09:00", "end": "17:00"},
+                    "friday": {"enabled": True, "start": "09:00", "end": "14:00"},
+                    "saturday": {"enabled": False},
+                    "sunday": {"enabled": False},
+                },
+                "blocked_dates": [],
+            },
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[7]["_id"],
+                "weekly_schedule": {
+                    "monday": {"enabled": True, "start": "08:30", "end": "16:30"},
+                    "tuesday": {"enabled": False},
+                    "wednesday": {"enabled": True, "start": "08:30", "end": "16:30"},
+                    "thursday": {"enabled": False},
+                    "friday": {"enabled": True, "start": "08:30", "end": "14:30"},
+                    "saturday": {"enabled": True, "start": "09:00", "end": "12:30"},
+                    "sunday": {"enabled": False},
+                },
+                "blocked_dates": [],
+            },
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[8]["_id"],
+                "weekly_schedule": {
+                    "monday": {"enabled": True, "start": "09:00", "end": "17:00"},
+                    "tuesday": {"enabled": True, "start": "09:00", "end": "17:00"},
+                    "wednesday": {"enabled": False},
+                    "thursday": {"enabled": True, "start": "11:00", "end": "18:00"},
+                    "friday": {"enabled": False},
+                    "saturday": {"enabled": True, "start": "10:00", "end": "14:00"},
+                    "sunday": {"enabled": False},
+                },
+                "blocked_dates": [],
+            },
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[9]["_id"],
+                "weekly_schedule": {
+                    "monday": {"enabled": False},
+                    "tuesday": {"enabled": True, "start": "10:00", "end": "18:00"},
+                    "wednesday": {"enabled": False},
+                    "thursday": {"enabled": True, "start": "10:00", "end": "18:00"},
+                    "friday": {"enabled": False},
+                    "saturday": {"enabled": True, "start": "09:00", "end": "13:00"},
+                    "sunday": {"enabled": False},
+                },
+                "blocked_dates": [],
+            },
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[10]["_id"],
+                "weekly_schedule": {
+                    "monday": {"enabled": True, "start": "09:30", "end": "17:30"},
+                    "tuesday": {"enabled": False},
+                    "wednesday": {"enabled": True, "start": "09:30", "end": "17:30"},
+                    "thursday": {"enabled": False},
+                    "friday": {"enabled": True, "start": "09:30", "end": "15:00"},
+                    "saturday": {"enabled": True, "start": "09:30", "end": "12:30"},
+                    "sunday": {"enabled": False},
+                },
+                "blocked_dates": [],
+            },
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[11]["_id"],
+                "weekly_schedule": {
+                    "monday": {"enabled": True, "start": "10:00", "end": "18:00"},
+                    "tuesday": {"enabled": False},
+                    "wednesday": {"enabled": True, "start": "10:00", "end": "18:00"},
+                    "thursday": {"enabled": True, "start": "10:00", "end": "14:00"},
+                    "friday": {"enabled": False},
+                    "saturday": {"enabled": True, "start": "09:30", "end": "13:30"},
+                    "sunday": {"enabled": False},
+                },
+                "blocked_dates": [],
+            },
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[12]["_id"],
+                "weekly_schedule": {
+                    "monday": {"enabled": False},
+                    "tuesday": {"enabled": True, "start": "09:00", "end": "17:00"},
+                    "wednesday": {"enabled": False},
+                    "thursday": {"enabled": True, "start": "09:00", "end": "17:00"},
+                    "friday": {"enabled": True, "start": "09:00", "end": "13:00"},
+                    "saturday": {"enabled": False},
+                    "sunday": {"enabled": False},
+                },
+                "blocked_dates": [],
+            },
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[13]["_id"],
+                "weekly_schedule": {
+                    "monday": {"enabled": True, "start": "08:00", "end": "16:00"},
+                    "tuesday": {"enabled": True, "start": "08:00", "end": "16:00"},
+                    "wednesday": {"enabled": False},
+                    "thursday": {"enabled": True, "start": "08:00", "end": "14:00"},
+                    "friday": {"enabled": False},
+                    "saturday": {"enabled": True, "start": "08:30", "end": "12:30"},
+                    "sunday": {"enabled": False},
+                },
+                "blocked_dates": [],
+            },
+        ]
+    )
     db.schedules.insert_many(schedules)
     print(f"✓ Created {len(schedules)} doctor schedules")
 
@@ -702,6 +1638,69 @@ def seed_database():
             "created_at": datetime.utcnow() - timedelta(days=14),
         },
     ]
+    prescriptions.extend(
+        [
+            {
+                "_id": ObjectId(),
+                "patient_id": patients[4]["_id"],
+                "doctor_id": doctors[6]["_id"],
+                "appointment_id": appt_rahul_diabetes_completed["_id"],
+                "medications": [
+                    {"name": "Metformin", "dosage": "500mg", "frequency": "Twice daily after meals", "duration": "30 days"},
+                    {"name": "Vitamin D3", "dosage": "60,000 IU", "frequency": "Once weekly", "duration": "8 weeks"},
+                ],
+                "notes": "Monitor fasting and post-meal sugar logs. Repeat HbA1c after 3 months.",
+                "created_at": datetime.utcnow() - timedelta(days=7),
+            },
+            {
+                "_id": ObjectId(),
+                "patient_id": patients[6]["_id"],
+                "doctor_id": doctors[10]["_id"],
+                "appointment_id": appt_pradeep_gastro_completed["_id"],
+                "medications": [
+                    {"name": "Pantoprazole", "dosage": "40mg", "frequency": "Once daily before breakfast", "duration": "4 weeks"},
+                    {"name": "Domperidone", "dosage": "10mg", "frequency": "Twice daily before meals", "duration": "10 days"},
+                ],
+                "notes": "Avoid oily and late-night meals. Follow-up if symptoms persist beyond 2 weeks.",
+                "created_at": datetime.utcnow() - timedelta(days=12),
+            },
+            {
+                "_id": ObjectId(),
+                "patient_id": patients[7]["_id"],
+                "doctor_id": doctors[7]["_id"],
+                "appointment_id": appt_meera_gyn_completed["_id"],
+                "medications": [
+                    {"name": "Ferrous Ascorbate + Folic Acid", "dosage": "1 tablet", "frequency": "Once daily after dinner", "duration": "45 days"},
+                ],
+                "notes": "Continue hydration and iron-rich diet. Repeat CBC in 6 weeks.",
+                "created_at": datetime.utcnow() - timedelta(days=1),
+            },
+            {
+                "_id": ObjectId(),
+                "patient_id": patients[8]["_id"],
+                "doctor_id": doctors[9]["_id"],
+                "appointment_id": appt_farhan_ent_completed["_id"],
+                "medications": [
+                    {"name": "Mometasone Nasal Spray", "dosage": "2 sprays", "frequency": "Once daily", "duration": "21 days"},
+                    {"name": "Levocetirizine", "dosage": "5mg", "frequency": "At bedtime", "duration": "10 days"},
+                ],
+                "notes": "Steam inhalation advised nightly. Avoid known dust triggers.",
+                "created_at": datetime.utcnow() - timedelta(days=11),
+            },
+            {
+                "_id": ObjectId(),
+                "patient_id": patients[9]["_id"],
+                "doctor_id": doctors[5]["_id"],
+                "appointment_id": appt_kavya_derma_completed["_id"],
+                "medications": [
+                    {"name": "Adapalene Gel", "dosage": "0.1%", "frequency": "Apply thin layer at night", "duration": "8 weeks"},
+                    {"name": "Clindamycin Gel", "dosage": "1%", "frequency": "Apply in morning", "duration": "6 weeks"},
+                ],
+                "notes": "Use non-comedogenic moisturizer and sunscreen SPF 50 daily.",
+                "created_at": datetime.utcnow() - timedelta(days=6),
+            },
+        ]
+    )
     db.prescriptions.insert_many(prescriptions)
     print(f"✓ Created {len(prescriptions)} prescriptions")
 
@@ -776,6 +1775,100 @@ def seed_database():
             "created_at": datetime.utcnow() - timedelta(days=14),
         },
     ]
+    ratings.extend(
+        [
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[4]["_id"],
+                "patient_id": patient_users[5]["_id"],  # Ananya Iyer
+                "appointment_id": appt_ananya_cardiology_completed["_id"],
+                "score": 5,
+                "comment": "Dr. Mehta explained my ECG and blood pressure trend in very simple terms. Practical plan and no unnecessary tests.",
+                "created_at": datetime.utcnow() - timedelta(days=13),
+            },
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[5]["_id"],
+                "patient_id": patient_users[9]["_id"],  # Kavya Reddy
+                "appointment_id": appt_kavya_derma_completed["_id"],
+                "score": 4,
+                "comment": "Good acne treatment plan tailored for my skin. Skin is improving, only mild dryness in week one.",
+                "created_at": datetime.utcnow() - timedelta(days=8),
+            },
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[6]["_id"],
+                "patient_id": patient_users[4]["_id"],  # Rahul Verma
+                "appointment_id": appt_rahul_diabetes_completed["_id"],
+                "score": 5,
+                "comment": "Excellent diabetes consultation with detailed diet advice for Indian meals and clear sugar targets.",
+                "created_at": datetime.utcnow() - timedelta(days=7),
+            },
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[7]["_id"],
+                "patient_id": patient_users[7]["_id"],  # Meera Patel
+                "appointment_id": appt_meera_gyn_completed["_id"],
+                "score": 5,
+                "comment": "Very reassuring and respectful consultation. Dr. Sharma addressed all concerns and gave a clear follow-up plan.",
+                "created_at": datetime.utcnow() - timedelta(days=1),
+            },
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[8]["_id"],
+                "patient_id": patient_users[8]["_id"],  # Farhan Ali
+                "appointment_id": appt_farhan_pulmo_completed["_id"],
+                "score": 4,
+                "comment": "Thorough asthma review and inhaler technique correction helped reduce my night symptoms.",
+                "created_at": datetime.utcnow() - timedelta(days=20),
+            },
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[9]["_id"],
+                "patient_id": patient_users[8]["_id"],  # Farhan Ali
+                "appointment_id": appt_farhan_ent_completed["_id"],
+                "score": 5,
+                "comment": "Great ENT consultation for sinus issues. I felt better within a few days of starting treatment.",
+                "created_at": datetime.utcnow() - timedelta(days=12),
+            },
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[10]["_id"],
+                "patient_id": patient_users[6]["_id"],  # Pradeep Singh
+                "appointment_id": appt_pradeep_gastro_completed["_id"],
+                "score": 4,
+                "comment": "Dr. Patel gave a practical gastritis plan and explained how to prevent flare-ups with routine changes.",
+                "created_at": datetime.utcnow() - timedelta(days=13),
+            },
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[11]["_id"],
+                "patient_id": patient_users[4]["_id"],  # Rahul Verma
+                "appointment_id": appt_rahul_eye_completed["_id"],
+                "score": 5,
+                "comment": "Helpful eye consultation with immediate relief tips for digital strain and dryness.",
+                "created_at": datetime.utcnow() - timedelta(days=5),
+            },
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[12]["_id"],
+                "patient_id": patient_users[5]["_id"],  # Ananya Iyer
+                "appointment_id": appt_ananya_nephro_completed["_id"],
+                "score": 4,
+                "comment": "Clear explanation of kidney profile and hydration strategy. Consultation was calm and detailed.",
+                "created_at": datetime.utcnow() - timedelta(days=9),
+            },
+            {
+                "_id": ObjectId(),
+                "doctor_id": doctors[13]["_id"],
+                "patient_id": patient_users[7]["_id"],  # Meera Patel
+                "appointment_id": appt_meera_general_completed["_id"],
+                "score": 5,
+                "comment": "Quick but attentive follow-up for fever recovery. Advice on diet and rest was very useful.",
+                "created_at": datetime.utcnow() - timedelta(days=2),
+            },
+        ]
+    )
     db.ratings.insert_many(ratings)
     print(f"✓ Created {len(ratings)} ratings")
 
@@ -806,30 +1899,17 @@ def seed_database():
    
     print()
     print("Patients:")
-    print("  Email: john.doe@example.com")
-    print("  Password: password")
-    print()
-    print("  Email: sarah.johnson@example.com")
-    print("  Password: password")
-    print()
-    print("  Email: michael.chen@example.com")
-    print("  Password: password")
-    print()
-    print("  Email: emily.davis@example.com")
-    print("  Password: password")
-    print()
+    for user in patient_users:
+        print(f"  Email: {user['email']}")
+        print("  Password: password")
+        print()
+
     print("Doctors:")
-    print("  Email: dr.rodriguez@hospital.com")
-    print("  Password: password")
-    print()
-    print("  Email: dr.thompson@hospital.com")
-    print("  Password: password")
-    print()
-    print("  Email: dr.anderson@hospital.com")
-    print("  Password: password")
-    print()
-    print("  Email: dr.wilson@hospital.com")
-    print("  Password: password")
+    for user in doctor_users:
+        print(f"  Email: {user['email']}")
+        print("  Password: password")
+        print()
+
     print("-" * 50)
 
     client.close()

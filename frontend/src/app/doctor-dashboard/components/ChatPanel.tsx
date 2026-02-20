@@ -218,17 +218,15 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity duration-300 ${
-          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-        }`}
+        className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
         onClick={onClose}
       />
 
       {/* Slide-in Chat Panel */}
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-md bg-card border-l border-border shadow-elevation-3 z-50 transform transition-transform duration-300 ease-out ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-card/95 backdrop-blur-xl border-l border-white/20 dark:border-border/50 shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.2)] z-50 transform transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
       >
         {/* Gradient Header */}
         <div className="relative bg-gradient-to-br from-primary via-primary/90 to-accent p-6 pb-4">
@@ -277,7 +275,7 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
               <select
                 value={selectedAppointmentId || ''}
                 onChange={(e) => setSelectedAppointmentId(e.target.value)}
-                className="w-full px-4 py-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-white/30 appearance-none cursor-pointer"
+                className="w-full px-4 py-2.5 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-xl text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white/50 transition-all appearance-none cursor-pointer"
               >
                 {appointments.map((apt) => (
                   <option key={apt.id} value={apt.id} className="text-text-primary bg-card">
@@ -375,11 +373,10 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
 
                     {/* Message Bubble */}
                     <div
-                      className={`max-w-[75%] px-4 py-3 ${
-                        isMe
-                          ? 'bg-gradient-to-br from-primary to-primary/90 text-white rounded-2xl rounded-br-sm'
-                          : 'bg-card border border-border text-text-primary rounded-2xl rounded-bl-sm shadow-sm'
-                      } ${isTemp ? 'opacity-70' : ''}`}
+                      className={`max-w-[75%] px-4 py-3 shadow-sm ${isMe
+                          ? 'bg-gradient-to-br from-primary to-accent text-white rounded-[1.25rem] rounded-br-[4px]'
+                          : 'bg-card border border-border/50 text-text-primary rounded-[1.25rem] rounded-bl-[4px]'
+                        } ${isTemp ? 'opacity-70 scale-95' : 'scale-100'} transition-all duration-300 origin-bottom`}
                     >
                       <p className="text-sm whitespace-pre-wrap leading-relaxed">
                         {message.content}
@@ -422,8 +419,8 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
         )}
 
         {/* Input Area */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-card border-t border-border">
-          <div className="flex items-center gap-3">
+        <div className="absolute bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-xl border-t border-border/50">
+          <div className="flex items-center gap-3 bg-card border border-border/50 rounded-full p-1.5 shadow-sm focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary/50 transition-all">
             <div className="flex-1 relative">
               <input
                 type="text"
@@ -431,7 +428,7 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder={canChat ? 'Type your message...' : 'Chat unavailable'}
-                className="w-full h-12 px-5 py-2 bg-muted border-0 rounded-full text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                className="w-full h-11 px-4 bg-transparent border-0 text-text-primary placeholder:text-text-secondary/60 focus:outline-none focus:ring-0 text-sm font-medium"
                 disabled={isSending || !canChat}
               />
               <button
@@ -444,12 +441,12 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
             <button
               onClick={handleSendMessage}
               disabled={!inputValue.trim() || isSending || !canChat}
-              className="p-3 bg-gradient-to-br from-primary to-accent text-white rounded-full hover:shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 transition-all duration-200 flex items-center justify-center"
+              className="w-11 h-11 bg-gradient-to-br from-primary to-accent text-white rounded-full flex items-center justify-center hover:shadow-lg hover:shadow-primary/30 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none transition-all duration-300"
             >
               {isSending ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
-                <Icon name="PaperAirplaneIcon" size={20} />
+                <Icon name="PaperAirplaneIcon" size={18} className="ml-1" />
               )}
             </button>
           </div>

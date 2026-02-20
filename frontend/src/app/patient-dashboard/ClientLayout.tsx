@@ -84,7 +84,7 @@ export default function PatientDashboardClientLayout({
         lastName: profile.lastName,
         email: profile.email,
         role: 'patient',
-        avatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg',
+        avatar: '/assets/images/patient_profile.png',
         phone: profile.phone,
         address: profile.address,
       });
@@ -241,8 +241,7 @@ export default function PatientDashboardClientLayout({
           user={{
             name: user?.name || 'Patient',
             role: 'patient',
-            avatar:
-              user?.avatar || 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg',
+            avatar: user?.avatar || '/assets/images/patient_profile.png',
           }}
           notificationCount={notificationCount}
         />
@@ -259,7 +258,7 @@ export default function PatientDashboardClientLayout({
 
         <main>{children}</main>
 
-        <footer className="bg-card border-t border-border mt-16">
+        <footer className="bg-card/80 backdrop-blur-md border-t border-border/50 mt-16">
           <div className="container mx-auto px-4 sm:px-6 py-8">
             <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
               <div className="flex items-center space-x-4 text-sm text-text-secondary">

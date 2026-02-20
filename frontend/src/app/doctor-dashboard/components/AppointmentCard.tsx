@@ -74,46 +74,48 @@ export default function AppointmentCard({
   };
 
   return (
-    <div className="bg-card border border-border rounded-lg p-4 hover:shadow-elevation-2 transition-base">
+    <div className={`group bg-card/80 backdrop-blur-md border border-border/50 rounded-2xl p-5 shadow-elevation-1 transition-all duration-300 ${isExpanded ? 'shadow-elevation-2 border-primary/30' : 'hover:shadow-elevation-3 hover:border-primary/20'}`}>
       <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
+        <div className="flex items-start gap-4 flex-1 min-w-0 cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
+          <div className="w-14 h-14 rounded-full overflow-hidden bg-muted flex-shrink-0 border-2 border-background ring-2 ring-primary/10 group-hover:ring-primary/30 transition-all shadow-sm">
             <AppImage
               src={appointment.patientImage}
               alt={appointment.patientImageAlt}
-              width={48}
-              height={48}
-              className="w-full h-full object-cover"
+              width={56}
+              height={56}
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
             />
           </div>
 
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-text-primary truncate">{appointment.patientName}</h3>
-            <div className="flex items-center gap-2 mt-1 text-sm text-text-secondary">
-              <Icon name="ClockIcon" size={16} />
-              <span>{appointment.time}</span>
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <Icon name={getTypeIcon(appointment.type) as any} size={16} className="text-accent" />
-              <span className="text-sm text-text-secondary">{appointment.type}</span>
+          <div className="flex-1 min-w-0 py-0.5">
+            <h3 className="font-bold text-lg text-text-primary truncate group-hover:text-primary transition-colors">{appointment.patientName}</h3>
+            <div className="flex flex-wrap items-center gap-3 mt-1.5">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary bg-muted/40 px-2 py-1 rounded-md">
+                <Icon name="ClockIcon" size={14} className="text-primary/70" />
+                <span>{appointment.time}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-text-secondary bg-muted/40 px-2 py-1 rounded-md">
+                <Icon name={getTypeIcon(appointment.type) as any} size={14} className="text-accent/80" />
+                <span className="capitalize">{appointment.type}</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-col items-end gap-3 flex-shrink-0">
           <span
-            className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(displayStatus)}`}
+            className={`px-3 py-1.5 rounded-full text-[10px] font-bold tracking-widest uppercase border ${getStatusColor(displayStatus)}`}
           >
             {displayStatus}
           </span>
           <button
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1 hover:bg-muted rounded transition-base"
+            onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
+            className={`p-1.5 bg-background border border-border/50 hover:bg-muted rounded-full transition-all duration-300 ${isExpanded ? 'rotate-180 bg-muted border-border' : ''}`}
             aria-label={isExpanded ? 'Collapse details' : 'Expand details'}
           >
             <Icon
-              name={isExpanded ? 'ChevronUpIcon' : 'ChevronDownIcon'}
-              size={20}
+              name="ChevronDownIcon"
+              size={16}
               className="text-text-secondary"
             />
           </button>
@@ -121,23 +123,26 @@ export default function AppointmentCard({
       </div>
 
       {isExpanded && (
-        <div className="mt-4 pt-4 border-t border-border space-y-3 animate-fade-in">
+        <div className="mt-5 pt-5 border-t border-border/50 space-y-4 animate-fade-in relative">
           {appointment.isExpiredNoActivity && (
-            <div className="rounded-lg border border-warning/20 bg-warning/10 px-3 py-2 text-sm text-warning">
-              The scheduled window has passed with no activity. You can mark this as a no-show or
-              reschedule.
+            <div className="rounded-xl border border-warning/30 bg-warning/10 p-4 flex items-start gap-3">
+              <Icon name="ExclamationTriangleIcon" size={20} className="text-warning flex-shrink-0 mt-0.5" />
+              <p className="text-sm font-medium text-warning/90 leading-relaxed">
+                The scheduled window has passed with no activity. You can mark this as a no-show or
+                reschedule.
+              </p>
             </div>
           )}
-          <div>
-            <p className="text-sm text-text-secondary">Reason for visit:</p>
-            <p className="text-sm text-text-primary mt-1">{appointment.reason}</p>
+          <div className="bg-muted/30 rounded-xl p-4 border border-border/30">
+            <p className="text-xs font-bold uppercase tracking-wider text-text-tertiary mb-1.5 flex items-center gap-1.5"><Icon name="DocumentTextIcon" size={14} /> Reason for visit</p>
+            <p className="text-sm font-medium text-text-primary leading-relaxed">{appointment.reason}</p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2.5 pt-1">
             {appointment.status === 'Pending' && !appointment.isExpiredNoActivity && (
               <button
-                onClick={() => onConfirm(appointment.id)}
-                className="flex items-center gap-2 px-4 py-2 bg-success text-success-foreground rounded-lg hover:shadow-elevation-2 transition-base text-sm font-medium"
+                onClick={(e) => { e.stopPropagation(); onConfirm(appointment.id); }}
+                className="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-2.5 bg-success text-success-foreground rounded-xl hover:bg-success/90 hover:shadow-lg hover:shadow-success/20 hover:-translate-y-0.5 active:scale-[0.98] transition-all text-sm font-bold"
               >
                 <Icon name="CheckIcon" size={16} />
                 <span>Confirm</span>
@@ -153,28 +158,28 @@ export default function AppointmentCard({
                     appointment.type === 'Video' &&
                     onJoinCall && (
                       <button
-                        onClick={() => onJoinCall(appointment.id)}
-                        className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-base text-sm font-medium"
+                        onClick={(e) => { e.stopPropagation(); onJoinCall(appointment.id); }}
+                        className="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5 active:scale-[0.98] transition-all text-sm font-bold"
                       >
-                        <Icon name="VideoCameraIcon" size={16} />
+                        <Icon name="VideoCameraIcon" size={18} />
                         <span>Join Call</span>
                       </button>
                     )}
 
                   <button
-                    onClick={() => onReschedule(appointment.id)}
-                    className="flex items-center gap-2 px-4 py-2 bg-muted text-text-primary rounded-lg hover:bg-muted/80 transition-base text-sm font-medium"
+                    onClick={(e) => { e.stopPropagation(); onChat(appointment.id); }}
+                    className="flex items-center justify-center gap-2 px-6 py-2.5 bg-background border border-border rounded-xl hover:bg-muted transition-colors text-sm font-bold text-text-primary shadow-sm"
                   >
-                    <Icon name="CalendarIcon" size={16} />
-                    <span>Reschedule</span>
+                    <Icon name="ChatBubbleLeftRightIcon" size={18} />
+                    <span>Chat</span>
                   </button>
 
                   <button
-                    onClick={() => onChat(appointment.id)}
-                    className="flex items-center gap-2 px-4 py-2 bg-accent text-accent-foreground rounded-lg hover:shadow-elevation-2 transition-base text-sm font-medium"
+                    onClick={(e) => { e.stopPropagation(); onReschedule(appointment.id); }}
+                    className="flex-1 min-w-[120px] sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-background border border-border rounded-xl hover:bg-muted transition-colors text-sm font-bold text-text-primary shadow-sm"
                   >
-                    <Icon name="ChatBubbleLeftRightIcon" size={16} />
-                    <span>Chat</span>
+                    <Icon name="CalendarIcon" size={16} />
+                    <span>Reschedule</span>
                   </button>
                 </>
               )}
@@ -183,18 +188,18 @@ export default function AppointmentCard({
               (appointment.status === 'Confirmed' || appointment.status === 'In Progress') &&
               onFinish && (
                 <button
-                  onClick={() => onFinish(appointment.id)}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-base text-sm font-medium"
+                  onClick={(e) => { e.stopPropagation(); onFinish(appointment.id); }}
+                  className="flex-1 min-w-[150px] flex items-center justify-center gap-2 px-4 py-2.5 bg-accent text-accent-foreground rounded-xl hover:bg-accent/90 hover:shadow-lg hover:shadow-accent/20 hover:-translate-y-0.5 active:scale-[0.98] transition-all text-sm font-bold"
                 >
-                  <Icon name="CheckCircleIcon" size={16} />
+                  <Icon name="CheckCircleIcon" size={18} />
                   <span>Finish Appointment</span>
                 </button>
               )}
 
             {appointment.isExpiredNoActivity && onMarkNoShow && (
               <button
-                onClick={() => onMarkNoShow(appointment.id)}
-                className="flex items-center gap-2 px-4 py-2 bg-warning text-warning-foreground rounded-lg hover:bg-warning/90 transition-base text-sm font-medium"
+                onClick={(e) => { e.stopPropagation(); onMarkNoShow(appointment.id); }}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-warning text-warning-foreground rounded-xl hover:bg-warning/90 hover:shadow-md transition-all text-sm font-bold"
               >
                 <Icon name="ExclamationTriangleIcon" size={16} />
                 <span>Mark No-Show</span>
@@ -203,8 +208,8 @@ export default function AppointmentCard({
 
             {appointment.isExpiredNoActivity && (
               <button
-                onClick={() => onReschedule(appointment.id)}
-                className="flex items-center gap-2 px-4 py-2 bg-muted text-text-primary rounded-lg hover:bg-muted/80 transition-base text-sm font-medium"
+                onClick={(e) => { e.stopPropagation(); onReschedule(appointment.id); }}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-background border border-border shadow-sm text-text-primary rounded-xl hover:bg-muted transition-all text-sm font-bold"
               >
                 <Icon name="CalendarIcon" size={16} />
                 <span>Reschedule</span>

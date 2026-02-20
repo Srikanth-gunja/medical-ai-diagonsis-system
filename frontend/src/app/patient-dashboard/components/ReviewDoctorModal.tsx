@@ -55,7 +55,7 @@ const ReviewDoctorModal = ({ isOpen, onClose, appointment, onSuccess }: ReviewDo
             <img
               src={
                 appointment.doctorImage ||
-                'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=400'
+                '/assets/images/doctor_profile.png'
               }
               alt={appointment.doctorName}
               className="w-full h-full rounded-full object-cover"

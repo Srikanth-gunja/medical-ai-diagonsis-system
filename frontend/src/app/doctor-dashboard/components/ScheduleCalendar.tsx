@@ -204,38 +204,42 @@ export default function ScheduleCalendar({ onManageSchedule }: ScheduleCalendarP
   }
 
   return (
-    <div className="bg-card border border-border rounded-lg p-6">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-text-primary">Schedule Overview</h2>
-        <div className="flex items-center gap-2">
-          <div className="flex bg-muted rounded-lg p-1">
+    <div className="bg-card/80 backdrop-blur-md border border-border/50 rounded-3xl p-6 sm:p-8 shadow-elevation-1">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+        <h2 className="text-2xl font-bold text-text-primary flex items-center space-x-3">
+          <div className="p-2 bg-primary/10 rounded-xl text-primary">
+            <Icon name="CalendarIcon" size={24} />
+          </div>
+          <span>Schedule Overview</span>
+        </h2>
+
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex bg-muted/50 p-1.5 rounded-xl border border-border/50 w-full sm:w-auto">
             <button
               onClick={() => setViewMode('day')}
-              className={`px-3 py-1.5 rounded text-sm font-medium transition-base ${
-                viewMode === 'day'
-                  ? 'bg-card text-primary shadow-sm'
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${viewMode === 'day'
+                ? 'bg-primary text-primary-foreground shadow-sm scale-100'
+                : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                }`}
             >
               Day
             </button>
             <button
               onClick={() => setViewMode('week')}
-              className={`px-3 py-1.5 rounded text-sm font-medium transition-base ${
-                viewMode === 'week'
-                  ? 'bg-card text-primary shadow-sm'
-                  : 'text-text-secondary hover:text-text-primary'
-              }`}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${viewMode === 'week'
+                ? 'bg-primary text-primary-foreground shadow-sm scale-100'
+                : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                }`}
             >
               Week
             </button>
           </div>
           <button
             onClick={onManageSchedule}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:shadow-elevation-2 transition-base text-sm font-medium"
+            className="hidden sm:flex items-center justify-center gap-2 px-4 py-2 bg-background border border-border text-text-primary rounded-xl hover:bg-muted shadow-sm transition-all text-sm font-bold"
           >
             <Icon name="Cog6ToothIcon" size={16} />
-            <span className="hidden sm:inline">Manage</span>
+            <span>Manage</span>
           </button>
         </div>
       </div>
@@ -261,18 +265,17 @@ export default function ScheduleCalendar({ onManageSchedule }: ScheduleCalendarP
                   setSelectedDate(day.date);
                   setViewMode('day');
                 }}
-                className={`p-4 rounded-lg border transition-base ${
-                  day.date === selectedDate
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/50'
-                }`}
+                className={`p-4 rounded-2xl border transition-all duration-300 hover:shadow-md ${day.date === selectedDate
+                    ? 'border-primary bg-primary shadow-lg shadow-primary/20 text-primary-foreground scale-105 z-10'
+                    : 'border-border/50 bg-card hover:border-primary/50'
+                  }`}
               >
-                <p className="text-sm font-medium text-text-secondary">{day.day}</p>
-                <p className="text-lg font-semibold text-text-primary mt-1">
+                <p className={`text-sm font-semibold opacity-90`}>{day.day}</p>
+                <p className="text-xl font-extrabold mt-1">
                   {new Date(day.date).getDate()}
                 </p>
-                <p className="text-xs text-accent mt-2">
-                  {day.appointments} appointment{day.appointments !== 1 ? 's' : ''}
+                <p className={`text-[10px] font-bold mt-2 uppercase tracking-wider ${day.date === selectedDate ? 'text-primary-foreground/90' : 'text-accent'}`}>
+                  {day.appointments} appt{day.appointments !== 1 ? 's' : ''}
                 </p>
               </button>
             ))}
@@ -320,11 +323,10 @@ export default function ScheduleCalendar({ onManageSchedule }: ScheduleCalendarP
                 timeSlots.map((slot, index) => (
                   <div
                     key={index}
-                    className={`p-3 rounded-lg border transition-base ${
-                      slot.available
-                        ? 'border-border hover:border-success bg-success/5'
-                        : 'border-border bg-muted'
-                    }`}
+                    className={`p-3 rounded-lg border transition-base ${slot.available
+                      ? 'border-border hover:border-success bg-success/5'
+                      : 'border-border bg-muted'
+                      }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">

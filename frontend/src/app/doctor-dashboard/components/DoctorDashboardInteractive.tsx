@@ -307,9 +307,9 @@ export default function DoctorDashboardInteractive() {
       );
       const isExpiredNoActivity = Boolean(
         endTime &&
-          now.getTime() > endTime.getTime() + graceMinutes * 60000 &&
-          !hasActivity &&
-          (a.status === 'confirmed' || a.status === 'pending')
+        now.getTime() > endTime.getTime() + graceMinutes * 60000 &&
+        !hasActivity &&
+        (a.status === 'confirmed' || a.status === 'pending')
       );
 
       // Separate pending appointments as requests
@@ -317,7 +317,7 @@ export default function DoctorDashboardInteractive() {
         pendingRequests.push({
           id: a.id,
           patientName: a.patientName || 'Unknown Patient',
-          patientImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
+          patientImage: '/assets/images/patient_profile.png',
           patientImageAlt: `${a.patientName || 'Patient'} profile`,
           requestedDate: formatDate(a.date),
           requestedTime: a.time,
@@ -332,7 +332,7 @@ export default function DoctorDashboardInteractive() {
         formattedAppointments.push({
           id: a.id,
           patientName: a.patientName || 'Unknown Patient',
-          patientImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
+          patientImage: '/assets/images/patient_profile.png',
           patientImageAlt: `${a.patientName || 'Patient'} profile`,
           time: `${a.time} - ${addMinutesToTime(a.time, durationMinutes)}`,
           date: a.date,
@@ -348,7 +348,7 @@ export default function DoctorDashboardInteractive() {
         expiredNoActivity.push({
           id: a.id,
           patientName: a.patientName || 'Unknown Patient',
-          patientImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
+          patientImage: '/assets/images/patient_profile.png',
           patientImageAlt: `${a.patientName || 'Patient'} profile`,
           time: `${a.time} - ${addMinutesToTime(a.time, durationMinutes)}`,
           date: a.date,
@@ -374,7 +374,7 @@ export default function DoctorDashboardInteractive() {
         return {
           id: a.id,
           patientName: a.patientName || 'Unknown Patient',
-          patientImage: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
+          patientImage: '/assets/images/patient_profile.png',
           patientImageAlt: `${a.patientName || 'Patient'} profile`,
           time: `${a.time} - ${addMinutesToTime(a.time, durationMinutes)}`,
           date: a.date,
@@ -448,7 +448,7 @@ export default function DoctorDashboardInteractive() {
     return patientsData.map((p) => ({
       id: p.userId,
       name: `${p.firstName} ${p.lastName}`,
-      image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400',
+      image: '/assets/images/patient_profile.png',
       imageAlt: `${p.firstName} ${p.lastName}`,
       age: calculateAge(p.dateOfBirth),
       lastVisit: 'Recently',
@@ -764,8 +764,7 @@ export default function DoctorDashboardInteractive() {
         user={{
           name: doctorProfile?.name || 'Doctor',
           role: 'doctor',
-          avatar:
-            doctorProfile?.image || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d',
+          avatar: doctorProfile?.image || '/assets/images/doctor_profile.png',
         }}
         notificationCount={notificationCount}
         onLogout={handleLogout}
@@ -786,9 +785,11 @@ export default function DoctorDashboardInteractive() {
       <div className="container mx-auto px-4 sm:px-6 py-6">
         <NavigationBreadcrumbs />
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-text-primary mb-2">Doctor Dashboard</h1>
-          <p className="text-text-secondary">
+        <div className="mb-10 text-center sm:text-left">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent mb-3 tracking-tight">
+            Doctor Dashboard 👨‍⚕️
+          </h1>
+          <p className="text-base sm:text-lg text-text-secondary font-medium max-w-2xl mx-auto sm:mx-0">
             Manage your appointments, patients, and practice analytics
           </p>
         </div>
@@ -1074,8 +1075,8 @@ export default function DoctorDashboardInteractive() {
                       </div>
                       <span
                         className={`px-3 py-1 rounded-full text-xs font-medium border ${appointment.status === 'No Show'
-                            ? 'bg-warning/10 text-warning border-warning/20'
-                            : 'bg-primary/10 text-primary border-primary/20'
+                          ? 'bg-warning/10 text-warning border-warning/20'
+                          : 'bg-primary/10 text-primary border-primary/20'
                           }`}
                       >
                         {appointment.status}

@@ -49,43 +49,43 @@ const ConsultationModal = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg mx-4 bg-card border border-border rounded-2xl shadow-elevation-3 animate-in fade-in zoom-in duration-200">
+      <div className="relative w-full max-w-lg mx-4 bg-card/95 backdrop-blur-xl border border-white/20 dark:border-border/50 rounded-[2rem] shadow-elevation-3 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Icon name="ClipboardDocumentCheckIcon" size={24} className="text-primary" />
+        <div className="flex items-center justify-between p-6 border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/20">
+              <Icon name="ClipboardDocumentCheckIcon" size={24} className="text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-text-primary">Complete Consultation</h2>
-              <p className="text-sm text-text-secondary">Recording for {patientName}</p>
+              <h2 className="text-xl font-extrabold text-text-primary tracking-tight">Consultation Log</h2>
+              <p className="text-sm font-medium text-text-secondary mt-0.5">Recording for <span className="text-primary">{patientName}</span></p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-text-secondary hover:text-text-primary hover:bg-muted rounded-lg transition-base"
+            className="p-2 text-text-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all"
             aria-label="Close consultation modal"
             title="Close"
           >
-            <Icon name="XMarkIcon" size={20} />
+            <Icon name="XMarkIcon" size={22} />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Consultation Type */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
+            <label className="block text-sm font-bold text-text-primary mb-2 uppercase tracking-wider text-opacity-80">
               Consultation Type
             </label>
             <select
               name="type"
               value={formData.type}
               onChange={handleChange}
-              className="w-full px-4 py-3 bg-muted border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full px-4 py-3 bg-muted/50 border border-border/50 rounded-xl text-text-primary font-medium focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none"
             >
               <option value="Consultation">General Consultation</option>
               <option value="Follow-up">Follow-up Visit</option>
@@ -97,7 +97,7 @@ const ConsultationModal = ({
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
+            <label className="block text-sm font-bold text-text-primary mb-2 uppercase tracking-wider text-opacity-80">
               Diagnosis / Description
             </label>
             <textarea
@@ -106,21 +106,21 @@ const ConsultationModal = ({
               onChange={handleChange}
               placeholder="Enter diagnosis or consultation summary..."
               rows={3}
-              className="w-full px-4 py-3 bg-muted border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+              className="w-full px-4 py-3 bg-muted/50 border border-border/50 rounded-xl text-text-primary font-medium placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
               required
             />
           </div>
 
           {/* Result */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
+            <label className="block text-sm font-bold text-text-primary mb-2 uppercase tracking-wider text-opacity-80">
               Outcome / Result
             </label>
             <select
               name="result"
               value={formData.result}
               onChange={handleChange}
-              className="w-full px-4 py-3 bg-muted border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-ring"
+              className="w-full px-4 py-3 bg-muted/50 border border-border/50 rounded-xl text-text-primary font-medium focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none"
             >
               <option value="Completed">Completed Successfully</option>
               <option value="Requires Follow-up">Requires Follow-up</option>
@@ -132,7 +132,7 @@ const ConsultationModal = ({
 
           {/* Notes */}
           <div>
-            <label className="block text-sm font-medium text-text-primary mb-2">
+            <label className="block text-sm font-bold text-text-primary mb-2 uppercase tracking-wider text-opacity-80">
               Additional Notes
             </label>
             <textarea
@@ -140,17 +140,17 @@ const ConsultationModal = ({
               value={formData.notes}
               onChange={handleChange}
               placeholder="Any additional notes or recommendations..."
-              rows={3}
-              className="w-full px-4 py-3 bg-muted border border-border rounded-lg text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+              rows={2}
+              className="w-full px-4 py-3 bg-muted/50 border border-border/50 rounded-xl text-text-primary font-medium placeholder:text-text-secondary/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none"
             />
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-4 pt-4 border-t border-border/30">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-3 bg-muted text-text-primary rounded-lg hover:bg-muted/80 transition-base font-medium"
+              className="flex-1 px-4 py-3.5 bg-background border border-border text-text-primary rounded-xl hover:bg-muted font-bold transition-all"
               disabled={isLoading}
             >
               Cancel
@@ -158,16 +158,16 @@ const ConsultationModal = ({
             <button
               type="submit"
               disabled={isLoading || !formData.description}
-              className="flex-1 px-4 py-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-base font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-3.5 bg-gradient-to-r from-primary to-accent text-white rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] active:scale-[0.98] transition-all font-bold disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   <span>Saving...</span>
                 </>
               ) : (
                 <>
-                  <Icon name="CheckCircleIcon" size={18} />
+                  <Icon name="CheckCircleIcon" size={20} />
                   <span>Complete & Save</span>
                 </>
               )}

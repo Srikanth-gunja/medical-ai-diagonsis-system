@@ -20,19 +20,21 @@ const QuickAccessPanel = ({ items }: QuickAccessPanelProps) => {
         <a
           key={item.id}
           href={item.href}
-          className="group bg-card border border-border rounded-xl p-6 shadow-elevation-1 hover:shadow-elevation-2 hover:-translate-y-1 transition-base"
+          className="group bg-card/80 backdrop-blur-sm border border-border rounded-2xl p-6 shadow-elevation-1 hover:shadow-elevation-3 hover:-translate-y-1.5 hover:border-primary/20 transition-all duration-300 flex flex-col"
         >
           <div
-            className={`inline-flex items-center justify-center w-12 h-12 rounded-lg ${item.color} mb-4`}
+            className={`inline-flex items-center justify-center w-14 h-14 rounded-xl ${item.color} mb-5 shadow-sm group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}
           >
-            <Icon name={item.icon as any} size={24} className="text-white" />
+            <Icon name={item.icon as any} size={28} className="text-white" />
           </div>
 
-          <h3 className="text-base font-semibold text-text-primary mb-2 group-hover:text-primary transition-base">
+          <h3 className="text-lg font-bold text-text-primary mb-2 group-hover:text-primary transition-colors">
             {item.title}
           </h3>
 
-          <p className="text-sm text-text-secondary">{item.description}</p>
+          <p className="text-sm font-medium text-text-secondary leading-relaxed">
+            {item.description}
+          </p>
         </a>
       ))}
     </div>

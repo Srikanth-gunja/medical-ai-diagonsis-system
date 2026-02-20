@@ -245,7 +245,7 @@ def register():
             location=location,
             availability=[],
             rating=0,
-            image=image or 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=200',
+            image=image or '/assets/images/doctor_profile.png',
             verified=False
         )
 

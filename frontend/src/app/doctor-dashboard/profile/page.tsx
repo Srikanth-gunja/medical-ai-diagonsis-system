@@ -148,8 +148,7 @@ export default function DoctorProfilePage() {
         user={{
           name: doctorProfile?.name || 'Doctor',
           role: 'doctor',
-          avatar:
-            doctorProfile?.image || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d',
+          avatar: doctorProfile?.image || '/assets/images/doctor_profile.png',
         }}
         notificationCount={0}
         onLogout={handleLogout}

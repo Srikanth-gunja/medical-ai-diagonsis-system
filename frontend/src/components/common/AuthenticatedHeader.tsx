@@ -40,6 +40,8 @@ const AuthenticatedHeader = ({
   const [hasMoreNotifications, setHasMoreNotifications] = useState(false);
   const [, setTimeTick] = useState(0);
   const notificationsRef = useRef<HTMLDivElement>(null);
+  const defaultAvatar =
+    user.role === 'doctor' ? '/assets/images/doctor_profile.png' : '/assets/images/patient_profile.png';
 
   useEffect(() => {
     setLocalNotificationCount(notificationCount);
@@ -372,7 +374,7 @@ const AuthenticatedHeader = ({
               >
                 <div className="w-8 h-8 rounded-full overflow-hidden bg-muted">
                   <AppImage
-                    src={user.avatar || '/assets/images/default-avatar.png'}
+                    src={user.avatar || defaultAvatar}
                     alt={user.name}
                     width={32}
                     height={32}
@@ -453,7 +455,7 @@ const AuthenticatedHeader = ({
               <div className="flex items-center space-x-3 px-4 py-2">
                 <div className="w-10 h-10 rounded-full overflow-hidden bg-muted">
                   <AppImage
-                    src={user.avatar || '/assets/images/default-avatar.png'}
+                    src={user.avatar || defaultAvatar}
                     alt={user.name}
                     width={40}
                     height={40}
