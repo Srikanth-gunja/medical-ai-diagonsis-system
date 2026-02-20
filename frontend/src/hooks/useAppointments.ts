@@ -16,11 +16,7 @@ export const appointmentKeys = {
  * Hook to fetch paginated list of appointments
  * Automatically caches data and handles background refetching
  */
-export function useAppointments(
-  page: number = 1,
-  perPage: number = 10,
-  enabled: boolean = true
-) {
+export function useAppointments(page: number = 1, perPage: number = 10, enabled: boolean = true) {
   return useQuery({
     queryKey: appointmentKeys.list(page, perPage),
     queryFn: () => appointmentsApi.getAll(page, perPage),
@@ -38,7 +34,7 @@ export function useAppointments(
  */
 export function useCreateAppointment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: appointmentsApi.create,
     onSuccess: () => {
@@ -54,7 +50,7 @@ export function useCreateAppointment() {
  */
 export function useUpdateAppointmentStatus() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) =>
       appointmentsApi.updateStatus(id, status),
@@ -72,7 +68,7 @@ export function useUpdateAppointmentStatus() {
  */
 export function useRevokeAppointment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: appointmentsApi.revoke,
     onSuccess: () => {
@@ -86,10 +82,15 @@ export function useRevokeAppointment() {
  */
 export function useCompleteAppointment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Parameters<typeof appointmentsApi.complete>[1] }) =>
-      appointmentsApi.complete(id, data),
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: Parameters<typeof appointmentsApi.complete>[1];
+    }) => appointmentsApi.complete(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
     },
@@ -101,7 +102,7 @@ export function useCompleteAppointment() {
  */
 export function useDeleteAppointment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: appointmentsApi.delete,
     onSuccess: () => {
@@ -115,7 +116,7 @@ export function useDeleteAppointment() {
  */
 export function useRejectAppointment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       appointmentsApi.reject(id, reason),
@@ -130,7 +131,7 @@ export function useRejectAppointment() {
  */
 export function useRescheduleAppointment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: { date: string; time: string } }) =>
       appointmentsApi.reschedule(id, data),

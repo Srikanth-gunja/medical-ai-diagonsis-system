@@ -27,22 +27,15 @@ const LoginForm = ({ onSubmit }: LoginFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [pendingVerification, setPendingVerification] = useState(false);
 
-  const {
-    errors,
-    handleChange,
-    handleBlur,
-    validateAll,
-    isFieldInvalid,
-    isFieldValid,
-    touched,
-  } = useFormValidation({
-    rules: {
-      email: { required: true, email: true },
-      password: { required: true, minLength: 6 },
-    },
-    validateOnChange: true,
-    validateOnBlur: true,
-  });
+  const { errors, handleChange, handleBlur, validateAll, isFieldInvalid, isFieldValid, touched } =
+    useFormValidation({
+      rules: {
+        email: { required: true, email: true },
+        password: { required: true, minLength: 6 },
+      },
+      validateOnChange: true,
+      validateOnBlur: true,
+    });
 
   useEffect(() => {
     const rememberedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY);
@@ -182,8 +175,8 @@ const LoginForm = ({ onSubmit }: LoginFormProps) => {
                 isFieldInvalid('email')
                   ? 'border-error focus:ring-error/30'
                   : isFieldValid('email')
-                  ? 'border-success focus:ring-success/30'
-                  : 'border-input focus:ring-ring'
+                    ? 'border-success focus:ring-success/30'
+                    : 'border-input focus:ring-ring'
               }`}
             />
             {isFieldValid('email') && (
@@ -225,8 +218,8 @@ const LoginForm = ({ onSubmit }: LoginFormProps) => {
                 isFieldInvalid('password')
                   ? 'border-error focus:ring-error/30'
                   : isFieldValid('password')
-                  ? 'border-success focus:ring-success/30'
-                  : 'border-input focus:ring-ring'
+                    ? 'border-success focus:ring-success/30'
+                    : 'border-input focus:ring-ring'
               }`}
             />
             <button

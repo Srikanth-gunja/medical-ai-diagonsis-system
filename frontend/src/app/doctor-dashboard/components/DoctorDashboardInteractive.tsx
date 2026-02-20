@@ -28,7 +28,13 @@ import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { DoctorDashboardSkeleton } from '@/components/ui/Skeletons';
 import { useDoctorProfile } from '@/hooks/useDoctors';
-import { useAppointments, appointmentKeys, useUpdateAppointmentStatus, useCompleteAppointment, useRejectAppointment } from '@/hooks/useAppointments';
+import {
+  useAppointments,
+  appointmentKeys,
+  useUpdateAppointmentStatus,
+  useCompleteAppointment,
+  useRejectAppointment,
+} from '@/hooks/useAppointments';
 import { useMySchedule } from '@/hooks/useSchedules';
 import { useDoctorPatients, patientKeys } from '@/hooks/usePatients';
 import { useDoctorAnalytics, useDoctorChartData, analyticsKeys } from '@/hooks/useAnalytics';
@@ -236,7 +242,11 @@ export default function DoctorDashboardInteractive() {
   const { data: doctorProfile, isLoading: isProfileLoading } = useDoctorProfile();
   const shouldLoadCoreData = isHydrated && Boolean(doctorProfile);
   const shouldLoadPatients = isHydrated && activeTab === 'patients';
-  const { data: appointmentsData, isLoading: isAppointmentsLoading } = useAppointments(1, 20, shouldLoadCoreData);
+  const { data: appointmentsData, isLoading: isAppointmentsLoading } = useAppointments(
+    1,
+    20,
+    shouldLoadCoreData
+  );
   const { data: patientsData } = useDoctorPatients(shouldLoadPatients);
   const { data: analytics, isLoading: isAnalyticsLoading } = useDoctorAnalytics(shouldLoadCoreData);
   const { data: chartData, isLoading: isChartDataLoading } = useDoctorChartData(shouldLoadCoreData);
@@ -266,15 +276,32 @@ export default function DoctorDashboardInteractive() {
   }, [slotDurationFromSchedule]);
 
   // Combined loading state
-  const isLoading = isProfileLoading || isAppointmentsLoading || isAnalyticsLoading || isChartDataLoading || isScheduleLoading;
+  const isLoading =
+    isProfileLoading ||
+    isAppointmentsLoading ||
+    isAnalyticsLoading ||
+    isChartDataLoading ||
+    isScheduleLoading;
 
   // Notification count from React Query
   const notificationCount = notificationCountData?.count ?? 0;
 
   // Process appointments data with useMemo
-  const { appointments, completedAppointments, requests, patientsWithActiveAppointments, nextAppointment } = useMemo(() => {
+  const {
+    appointments,
+    completedAppointments,
+    requests,
+    patientsWithActiveAppointments,
+    nextAppointment,
+  } = useMemo(() => {
     if (!appointmentsData?.items) {
-      return { appointments: [], completedAppointments: [], requests: [], patientsWithActiveAppointments: new Set<string>(), nextAppointment: null };
+      return {
+        appointments: [],
+        completedAppointments: [],
+        requests: [],
+        patientsWithActiveAppointments: new Set<string>(),
+        nextAppointment: null,
+      };
     }
 
     const apptData = appointmentsData.items;
@@ -300,9 +327,7 @@ export default function DoctorDashboardInteractive() {
       ) as 'Confirmed' | 'Pending' | 'Completed' | 'Cancelled' | 'In Progress' | 'No Show';
 
       const startTime = parseDateTime(a.date, a.time);
-      const endTime = startTime
-        ? new Date(startTime.getTime() + durationMinutes * 60000)
-        : null;
+      const endTime = startTime ? new Date(startTime.getTime() + durationMinutes * 60000) : null;
       const hasActivity = Boolean(
         a.call_started_at ||
         a.call_duration ||
@@ -544,10 +569,8 @@ export default function DoctorDashboardInteractive() {
     const queueInvalidation = (updates: Partial<typeof pendingInvalidations>) => {
       pendingInvalidations.appointments =
         pendingInvalidations.appointments || Boolean(updates.appointments);
-      pendingInvalidations.patients =
-        pendingInvalidations.patients || Boolean(updates.patients);
-      pendingInvalidations.analytics =
-        pendingInvalidations.analytics || Boolean(updates.analytics);
+      pendingInvalidations.patients = pendingInvalidations.patients || Boolean(updates.patients);
+      pendingInvalidations.analytics = pendingInvalidations.analytics || Boolean(updates.analytics);
       pendingInvalidations.chart = pendingInvalidations.chart || Boolean(updates.chart);
       pendingInvalidations.notifications =
         pendingInvalidations.notifications || Boolean(updates.notifications);
@@ -625,8 +648,6 @@ export default function DoctorDashboardInteractive() {
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [isHydrated]);
-
-
 
   const handleConfirmAppointment = async (id: string) => {
     if (!isHydrated) return;
@@ -1003,7 +1024,7 @@ export default function DoctorDashboardInteractive() {
               onClick={() => setActiveTab('appointments')}
               className={`pb-4 px-2 font-medium transition-base relative ${activeTab === 'appointments' ? 'text-primary' : 'text-text-secondary hover:text-text-primary'}`}
             >
-              Today's Appointments
+              Today&apos;s Appointments
               {activeTab === 'appointments' && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
               )}
@@ -1171,10 +1192,11 @@ export default function DoctorDashboardInteractive() {
                         </div>
                       </div>
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium border ${appointment.status === 'No Show'
-                          ? 'bg-warning/10 text-warning border-warning/20'
-                          : 'bg-primary/10 text-primary border-primary/20'
-                          }`}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border ${
+                          appointment.status === 'No Show'
+                            ? 'bg-warning/10 text-warning border-warning/20'
+                            : 'bg-primary/10 text-primary border-primary/20'
+                        }`}
                       >
                         {appointment.status}
                       </span>
@@ -1248,7 +1270,7 @@ export default function DoctorDashboardInteractive() {
       )}
 
       {/* Incoming Call Modal */}
-      <IncomingCallModal isOpen={!!incomingCall} onClose={() => { }} />
+      <IncomingCallModal isOpen={!!incomingCall} onClose={() => {}} />
 
       {/* Confirmation Dialog */}
       {ConfirmDialogComponent}

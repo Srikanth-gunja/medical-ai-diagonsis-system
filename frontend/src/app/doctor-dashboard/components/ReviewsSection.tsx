@@ -125,7 +125,9 @@ const ReviewsSection = ({ className = '' }: ReviewsSectionProps) => {
                 {renderStars(review.score)}
               </div>
               {review.comment && (
-                <p className="text-sm text-text-secondary mt-3 pl-13">"{review.comment}"</p>
+                <p className="text-sm text-text-secondary mt-3 pl-13">
+                  &quot;{review.comment}&quot;
+                </p>
               )}
             </div>
           ))}

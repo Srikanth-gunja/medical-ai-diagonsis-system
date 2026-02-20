@@ -317,19 +317,19 @@ export default function PatientHistoryModal({ patientId, onClose }: PatientHisto
                               }`}
                             >
                               {formatStatus(derivedStatus)}
-                          </span>
-                        </div>
-                        {derivedStatus === 'rejected' && rejectionReason && (
-                          <div className="mt-3 rounded-md border border-error/20 bg-error/5 p-3 text-sm text-text-secondary">
-                            <span className="font-medium text-error">Rejection Reason:</span>{' '}
-                            {rejectionReason}
+                            </span>
                           </div>
-                        )}
-                        <div className="mt-2 flex items-center gap-2 text-sm text-text-muted">
-                          <Icon name="VideoCameraIcon" size={14} />
-                          <span>{appt.type || 'video'}</span>
+                          {derivedStatus === 'rejected' && rejectionReason && (
+                            <div className="mt-3 rounded-md border border-error/20 bg-error/5 p-3 text-sm text-text-secondary">
+                              <span className="font-medium text-error">Rejection Reason:</span>{' '}
+                              {rejectionReason}
+                            </div>
+                          )}
+                          <div className="mt-2 flex items-center gap-2 text-sm text-text-muted">
+                            <Icon name="VideoCameraIcon" size={14} />
+                            <span>{appt.type || 'video'}</span>
+                          </div>
                         </div>
-                      </div>
                       );
                     })
                   )}

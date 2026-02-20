@@ -12,9 +12,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <ThemeProvider>
         <AuthProvider>
           <VideoCallProvider>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
+            <ToastProvider>{children}</ToastProvider>
           </VideoCallProvider>
         </AuthProvider>
       </ThemeProvider>

@@ -16,9 +16,9 @@ interface PersonalInfoSectionProps {
   isFieldInvalid: (field: string) => boolean;
 }
 
-const PersonalInfoSection = ({ 
-  formData, 
-  errors, 
+const PersonalInfoSection = ({
+  formData,
+  errors,
   touched,
   onChange,
   onBlur,
@@ -57,8 +57,8 @@ const PersonalInfoSection = ({
                 isFieldInvalid('firstName')
                   ? 'border-error focus:ring-error/30'
                   : isFieldValid('firstName')
-                  ? 'border-success focus:ring-success/30'
-                  : 'border-input focus:ring-primary'
+                    ? 'border-success focus:ring-success/30'
+                    : 'border-input focus:ring-primary'
               }`}
               placeholder="Enter your first name"
             />
@@ -96,8 +96,8 @@ const PersonalInfoSection = ({
                 isFieldInvalid('lastName')
                   ? 'border-error focus:ring-error/30'
                   : isFieldValid('lastName')
-                  ? 'border-success focus:ring-success/30'
-                  : 'border-input focus:ring-primary'
+                    ? 'border-success focus:ring-success/30'
+                    : 'border-input focus:ring-primary'
               }`}
               placeholder="Enter your last name"
             />
@@ -138,8 +138,8 @@ const PersonalInfoSection = ({
                 isFieldInvalid('dateOfBirth')
                   ? 'border-error focus:ring-error/30'
                   : isFieldValid('dateOfBirth')
-                  ? 'border-success focus:ring-success/30'
-                  : 'border-input focus:ring-primary'
+                    ? 'border-success focus:ring-success/30'
+                    : 'border-input focus:ring-primary'
               }`}
             />
             {isFieldValid('dateOfBirth') && (
@@ -175,8 +175,8 @@ const PersonalInfoSection = ({
                 isFieldInvalid('gender')
                   ? 'border-error focus:ring-error/30'
                   : isFieldValid('gender')
-                  ? 'border-success focus:ring-success/30'
-                  : 'border-input focus:ring-primary'
+                    ? 'border-success focus:ring-success/30'
+                    : 'border-input focus:ring-primary'
               }`}
             >
               <option value="">Select gender</option>

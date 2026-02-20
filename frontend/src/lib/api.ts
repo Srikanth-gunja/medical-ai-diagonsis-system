@@ -61,7 +61,14 @@ export interface Appointment {
   doctorImage?: string;
   date: string;
   time: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'in_progress' | 'no_show' | 'rejected';
+  status:
+    | 'pending'
+    | 'confirmed'
+    | 'completed'
+    | 'cancelled'
+    | 'in_progress'
+    | 'no_show'
+    | 'rejected';
   symptoms?: string;
   type?: 'video' | 'in-person';
   rated?: boolean;
@@ -772,19 +779,20 @@ export const eventsApi = {
 
 // Video Calls API
 export const videoCallsApi = {
-  getToken: (): Promise<VideoCallToken> => fetchApi<VideoCallToken>('/video-calls/token', {
-    method: 'POST'
-  }),
+  getToken: (): Promise<VideoCallToken> =>
+    fetchApi<VideoCallToken>('/video-calls/token', {
+      method: 'POST',
+    }),
 
   createCall: (appointmentId: string): Promise<CallDetails> =>
     fetchApi<CallDetails>(`/video-calls/call/${appointmentId}`, {
-      method: 'POST'
+      method: 'POST',
     }),
 
   endCall: (appointmentId: string, duration?: number): Promise<{ message: string }> =>
     fetchApi<{ message: string }>(`/video-calls/call/${appointmentId}/end`, {
       method: 'POST',
-      body: JSON.stringify({ duration })
+      body: JSON.stringify({ duration }),
     }),
 };
 

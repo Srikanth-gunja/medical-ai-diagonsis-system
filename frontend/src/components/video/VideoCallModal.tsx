@@ -5,7 +5,13 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import VideoCallRoom from './VideoCallRoom';
 import { useVideoCall } from '../../contexts/VideoCallContext';
-import { XMarkIcon, VideoCameraIcon, PhoneIcon, ClockIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import {
+  XMarkIcon,
+  VideoCameraIcon,
+  PhoneIcon,
+  ClockIcon,
+  ArrowPathIcon,
+} from '@heroicons/react/24/outline';
 
 interface VideoCallModalProps {
   isOpen: boolean;
@@ -52,7 +58,16 @@ export default function VideoCallModal({
 
   // Auto-start call when modal opens and client is ready (only if not already started)
   useEffect(() => {
-    if (isOpen && isClientReady && !activeCall && !isInitializing && !isConnecting && !isRinging && !isStartingCall && !hasStartedCallRef.current) {
+    if (
+      isOpen &&
+      isClientReady &&
+      !activeCall &&
+      !isInitializing &&
+      !isConnecting &&
+      !isRinging &&
+      !isStartingCall &&
+      !hasStartedCallRef.current
+    ) {
       hasStartedCallRef.current = true;
       const startCall = async () => {
         setIsStartingCall(true);
@@ -68,7 +83,17 @@ export default function VideoCallModal({
       };
       startCall();
     }
-  }, [isOpen, isClientReady, activeCall, isInitializing, isConnecting, isRinging, isStartingCall, appointmentId, initializeCall]);
+  }, [
+    isOpen,
+    isClientReady,
+    activeCall,
+    isInitializing,
+    isConnecting,
+    isRinging,
+    isStartingCall,
+    appointmentId,
+    initializeCall,
+  ]);
 
   const handleClose = async () => {
     if (isInitializing || isStartingCall) {
@@ -117,7 +142,7 @@ export default function VideoCallModal({
   if (isClientInitializing || (!isClientReady && !callError && !startError)) {
     return (
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => { }}>
+        <Dialog as="div" className="relative z-50" onClose={() => {}}>
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -158,9 +183,7 @@ export default function VideoCallModal({
                     Connecting to video service...
                   </Dialog.Title>
 
-                  <p className="text-gray-400 mb-6">
-                    Please wait while we prepare your video call
-                  </p>
+                  <p className="text-gray-400 mb-6">Please wait while we prepare your video call</p>
 
                   <button
                     onClick={handleClose}
@@ -182,7 +205,7 @@ export default function VideoCallModal({
   if (isInitializing || isConnecting) {
     return (
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => { }}>
+        <Dialog as="div" className="relative z-50" onClose={() => {}}>
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -273,7 +296,7 @@ export default function VideoCallModal({
   if (isRinging && activeCall) {
     return (
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => { }}>
+        <Dialog as="div" className="relative z-50" onClose={() => {}}>
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -351,7 +374,7 @@ export default function VideoCallModal({
   if (activeCall) {
     return (
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => { }}>
+        <Dialog as="div" className="relative z-50" onClose={() => {}}>
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -391,7 +414,7 @@ export default function VideoCallModal({
   if (displayError && !activeCall && !isRinging) {
     return (
       <Transition appear show={isOpen} as={Fragment}>
-        <Dialog as="div" className="relative z-50" onClose={() => { }}>
+        <Dialog as="div" className="relative z-50" onClose={() => {}}>
           <Transition.Child
             as={Fragment}
             enter="ease-out duration-300"
@@ -425,9 +448,7 @@ export default function VideoCallModal({
                   <Dialog.Title as="h3" className="text-xl font-bold text-white mb-2">
                     Call Failed
                   </Dialog.Title>
-                  <p className="text-red-300 mb-6">
-                    {displayError}
-                  </p>
+                  <p className="text-red-300 mb-6">{displayError}</p>
 
                   <div className="flex items-center justify-center gap-4">
                     <button
@@ -457,14 +478,12 @@ export default function VideoCallModal({
   // Should not reach here, but show fallback
   return (
     <Transition appear show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-50" onClose={() => { }}>
+      <Dialog as="div" className="relative z-50" onClose={() => {}}>
         <div className="fixed inset-0 bg-black/90 backdrop-blur-sm" />
         <div className="fixed inset-0 overflow-y-auto">
           <div className="flex min-h-full items-center justify-center p-4 text-center">
             <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-gray-900 p-8 text-center align-middle shadow-xl transition-all">
-              <p className="text-gray-400 mb-4">
-                Preparing call...
-              </p>
+              <p className="text-gray-400 mb-4">Preparing call...</p>
               <button
                 onClick={handleClose}
                 className="px-6 py-2 bg-gray-600 hover:bg-gray-700 rounded-md text-white font-medium transition-colors"

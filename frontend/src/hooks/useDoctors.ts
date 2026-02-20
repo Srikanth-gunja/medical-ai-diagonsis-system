@@ -67,7 +67,7 @@ export function useDoctorProfile() {
  */
 export function useUpdateDoctorProfile() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: doctorsApi.updateProfile,
     onSuccess: () => {

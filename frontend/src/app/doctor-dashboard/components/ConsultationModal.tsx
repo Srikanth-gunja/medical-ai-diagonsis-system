@@ -60,8 +60,12 @@ const ConsultationModal = ({
               <Icon name="ClipboardDocumentCheckIcon" size={24} className="text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-extrabold text-text-primary tracking-tight">Consultation Log</h2>
-              <p className="text-sm font-medium text-text-secondary mt-0.5">Recording for <span className="text-primary">{patientName}</span></p>
+              <h2 className="text-xl font-extrabold text-text-primary tracking-tight">
+                Consultation Log
+              </h2>
+              <p className="text-sm font-medium text-text-secondary mt-0.5">
+                Recording for <span className="text-primary">{patientName}</span>
+              </p>
             </div>
           </div>
           <button

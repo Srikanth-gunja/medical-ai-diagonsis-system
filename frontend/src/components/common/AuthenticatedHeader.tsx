@@ -41,7 +41,9 @@ const AuthenticatedHeader = ({
   const [, setTimeTick] = useState(0);
   const notificationsRef = useRef<HTMLDivElement>(null);
   const defaultAvatar =
-    user.role === 'doctor' ? '/assets/images/doctor_profile.png' : '/assets/images/patient_profile.png';
+    user.role === 'doctor'
+      ? '/assets/images/doctor_profile.png'
+      : '/assets/images/patient_profile.png';
 
   useEffect(() => {
     setLocalNotificationCount(notificationCount);
@@ -343,7 +345,9 @@ const AuthenticatedHeader = ({
                               disabled={isLoadingMoreNotifications}
                               className="w-full rounded-lg border border-border px-3 py-2 text-sm font-medium text-text-secondary hover:text-primary hover:border-primary/40 hover:bg-muted transition-base disabled:opacity-60 disabled:cursor-not-allowed"
                             >
-                              {isLoadingMoreNotifications ? 'Loading...' : 'Load more notifications'}
+                              {isLoadingMoreNotifications
+                                ? 'Loading...'
+                                : 'Load more notifications'}
                             </button>
                           </div>
                         )}

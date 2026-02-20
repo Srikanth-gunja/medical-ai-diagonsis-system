@@ -148,7 +148,7 @@ export const FormSkeleton = () => (
       <Skeleton className="h-8 w-1/3" />
       <Skeleton className="h-4 w-1/2" />
     </div>
-    
+
     <div className="space-y-4">
       {[...Array(4)].map((_, i) => (
         <div key={i} className="space-y-2">
@@ -157,7 +157,7 @@ export const FormSkeleton = () => (
         </div>
       ))}
     </div>
-    
+
     <Skeleton className="h-12 w-full rounded-lg" />
   </div>
 );
@@ -197,7 +197,7 @@ export const ChatSkeleton = () => (
         <Skeleton className="h-16 w-64 rounded-2xl rounded-tl-sm" />
       </div>
     </div>
-    
+
     {/* Outgoing message */}
     <div className="flex items-start gap-3 justify-end">
       <div className="space-y-2">
@@ -206,7 +206,7 @@ export const ChatSkeleton = () => (
       </div>
       <Skeleton className="w-10 h-10 rounded-full" />
     </div>
-    
+
     {/* Incoming message */}
     <div className="flex items-start gap-3">
       <Skeleton className="w-10 h-10 rounded-full" />

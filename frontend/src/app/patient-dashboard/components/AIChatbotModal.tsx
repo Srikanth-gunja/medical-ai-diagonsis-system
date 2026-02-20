@@ -37,18 +37,18 @@ const renderMarkdown = (text: string): React.ReactNode[] => {
   // Process inline formatting safely - returns React nodes, not HTML
   const processLine = (line: string, index: number): React.ReactNode => {
     // First escape HTML
-    let processed = escapeHtml(line);
-    
+    const processed = escapeHtml(line);
+
     // Split by markers and create React elements
     const parts: React.ReactNode[] = [];
-    let remaining = processed;
+    const remaining = processed;
     let key = 0;
-    
+
     // Process bold: **text**
     const boldRegex = /\*\*(.+?)\*\*/g;
     let match;
     let lastIndex = 0;
-    
+
     while ((match = boldRegex.exec(processed)) !== null) {
       if (match.index > lastIndex) {
         parts.push(<span key={key++}>{processed.slice(lastIndex, match.index)}</span>);
@@ -56,16 +56,16 @@ const renderMarkdown = (text: string): React.ReactNode[] => {
       parts.push(<strong key={key++}>{match[1]}</strong>);
       lastIndex = match.index + match[0].length;
     }
-    
+
     if (lastIndex < processed.length) {
       parts.push(<span key={key++}>{processed.slice(lastIndex)}</span>);
     }
-    
+
     // If no bold found, return as is
     if (parts.length === 0) {
       return <span key={index}>{processed}</span>;
     }
-    
+
     return <span key={index}>{parts}</span>;
   };
 
@@ -83,7 +83,7 @@ const renderMarkdown = (text: string): React.ReactNode[] => {
 
   lines.forEach((line, index) => {
     // Check for bullet points
-    const bulletMatch = line.match(/^\s*[\*\-•]\s+(.+)$/);
+    const bulletMatch = line.match(/^\s*[*•-]\s+(.+)$/);
     const numberedMatch = line.match(/^\s*\d+\.\s+(.+)$/);
 
     if (bulletMatch || numberedMatch) {

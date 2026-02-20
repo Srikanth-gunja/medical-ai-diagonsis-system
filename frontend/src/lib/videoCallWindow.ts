@@ -9,9 +9,7 @@ interface CallWindowResult {
   reason?: string;
 }
 
-export const checkVideoCallWindow = ({
-  status,
-}: CallWindowInput): CallWindowResult => {
+export const checkVideoCallWindow = ({ status }: CallWindowInput): CallWindowResult => {
   if (status && !['confirmed', 'pending', 'in_progress'].includes(status)) {
     return {
       allowed: false,

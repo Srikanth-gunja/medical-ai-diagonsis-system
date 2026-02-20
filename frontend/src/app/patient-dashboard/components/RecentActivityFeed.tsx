@@ -38,7 +38,11 @@ const RecentActivityFeed = ({ activities }: RecentActivityFeedProps) => {
       {/* Feed Area */}
       <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 relative scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
         {displayedActivities.map((activity, index) => (
-          <div key={activity.id} className="relative flex items-start group animation-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
+          <div
+            key={activity.id}
+            className="relative flex items-start group animation-fade-in"
+            style={{ animationDelay: `${index * 50}ms` }}
+          >
             {/* Timeline Line (Only visual, connects items) */}
             {index !== displayedActivities.length - 1 && (
               <div className="absolute left-6 top-14 bottom-[-1rem] w-[2px] bg-gradient-to-b from-border to-transparent hidden sm:block z-0 group-hover:from-primary/30 transition-colors duration-500"></div>
@@ -68,7 +72,10 @@ const RecentActivityFeed = ({ activities }: RecentActivityFeedProps) => {
                     <span>{activity.timestamp}</span>
                   </span>
                 </div>
-                <p className="text-xs sm:text-sm font-medium text-text-secondary line-clamp-2 leading-relaxed" title={activity.description}>
+                <p
+                  className="text-xs sm:text-sm font-medium text-text-secondary line-clamp-2 leading-relaxed"
+                  title={activity.description}
+                >
                   {activity.description}
                 </p>
               </div>
@@ -81,7 +88,7 @@ const RecentActivityFeed = ({ activities }: RecentActivityFeedProps) => {
               <Icon name="BellSlashIcon" size={24} className="text-text-secondary" />
             </div>
             <h3 className="text-text-primary font-bold mb-1">No Recent Activity</h3>
-            <p className="text-sm text-text-secondary">You're all caught up!</p>
+            <p className="text-sm text-text-secondary">You&apos;re all caught up!</p>
           </div>
         )}
       </div>
@@ -90,7 +97,11 @@ const RecentActivityFeed = ({ activities }: RecentActivityFeedProps) => {
       <div className="p-4 sm:p-5 bg-background/50 border-t border-border/50 backdrop-blur-md z-10 shrink-0 mt-auto">
         <button className="w-full flex items-center justify-center space-x-2 px-5 py-3 bg-card hover:bg-primary text-text-primary hover:text-primary-foreground border border-border/80 hover:border-primary/50 shadow-sm font-bold rounded-xl transition-all duration-300 group">
           <span>View All Activity</span>
-          <Icon name="ArrowRightIcon" size={16} className="transform group-hover:translate-x-1 transition-transform" />
+          <Icon
+            name="ArrowRightIcon"
+            size={16}
+            className="transform group-hover:translate-x-1 transition-transform"
+          />
         </button>
       </div>
     </div>

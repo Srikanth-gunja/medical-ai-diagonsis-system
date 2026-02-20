@@ -49,7 +49,9 @@ function VideoCallRoomInner({ onLeave }: { onLeave: () => void }) {
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [waitTime, setWaitTime] = useState(0);
   const [showWaitingOverlay, setShowWaitingOverlay] = useState(true);
-  const [connectionQuality, setConnectionQuality] = useState<'good' | 'poor' | 'reconnecting'>('good');
+  const [connectionQuality, setConnectionQuality] = useState<'good' | 'poor' | 'reconnecting'>(
+    'good'
+  );
   const hasHandledEndRef = useRef(false);
   const waitTimerRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -271,7 +273,9 @@ function VideoCallRoomInner({ onLeave }: { onLeave: () => void }) {
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent p-4 text-white">
         <div className="flex items-center gap-2">
-          <span className={`flex h-2 w-2 rounded-full ${connectionQuality === 'good' ? 'bg-green-500' : connectionQuality === 'poor' ? 'bg-yellow-500' : 'bg-red-500'} animate-pulse`}></span>
+          <span
+            className={`flex h-2 w-2 rounded-full ${connectionQuality === 'good' ? 'bg-green-500' : connectionQuality === 'poor' ? 'bg-yellow-500' : 'bg-red-500'} animate-pulse`}
+          ></span>
           <span className="font-medium">Live Consultation</span>
           <span className="text-sm text-gray-300 ml-2">({participantCount} participants)</span>
         </div>

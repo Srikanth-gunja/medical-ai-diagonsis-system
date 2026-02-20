@@ -11,7 +11,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: 'MediCare - Your Trusted Healthcare Platform',
-  description: 'Connect with verified doctors, book appointments, manage prescriptions, and track your health journey all in one place.',
+  description:
+    'Connect with verified doctors, book appointments, manage prescriptions, and track your health journey all in one place.',
   icons: {
     icon: [{ url: '/favicon.ico', type: 'image/x-icon' }],
   },
@@ -44,9 +45,7 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>
-          <ClientLayout>
-            {children}
-          </ClientLayout>
+          <ClientLayout>{children}</ClientLayout>
         </Providers>
       </body>
     </html>

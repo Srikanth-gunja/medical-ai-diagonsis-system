@@ -88,11 +88,12 @@ export function Pagination({
               disabled={page === '...'}
               className={`
                 min-w-[40px] h-10 px-3 rounded-lg font-medium transition-colors
-                ${page === currentPage
-                  ? 'bg-primary text-primary-foreground'
-                  : page === '...'
-                  ? 'cursor-default text-text-secondary'
-                  : 'text-text-secondary hover:text-text-primary hover:bg-muted'
+                ${
+                  page === currentPage
+                    ? 'bg-primary text-primary-foreground'
+                    : page === '...'
+                      ? 'cursor-default text-text-secondary'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-muted'
                 }
               `}
             >

@@ -217,19 +217,21 @@ export default function ScheduleCalendar({ onManageSchedule }: ScheduleCalendarP
           <div className="flex bg-muted/50 p-1.5 rounded-xl border border-border/50 w-full sm:w-auto">
             <button
               onClick={() => setViewMode('day')}
-              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${viewMode === 'day'
-                ? 'bg-primary text-primary-foreground shadow-sm scale-100'
-                : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
-                }`}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${
+                viewMode === 'day'
+                  ? 'bg-primary text-primary-foreground shadow-sm scale-100'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
+              }`}
             >
               Day
             </button>
             <button
               onClick={() => setViewMode('week')}
-              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${viewMode === 'week'
-                ? 'bg-primary text-primary-foreground shadow-sm scale-100'
-                : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
-                }`}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-bold transition-all duration-300 ${
+                viewMode === 'week'
+                  ? 'bg-primary text-primary-foreground shadow-sm scale-100'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
+              }`}
             >
               Week
             </button>
@@ -265,16 +267,17 @@ export default function ScheduleCalendar({ onManageSchedule }: ScheduleCalendarP
                   setSelectedDate(day.date);
                   setViewMode('day');
                 }}
-                className={`p-4 rounded-2xl border transition-all duration-300 hover:shadow-md ${day.date === selectedDate
+                className={`p-4 rounded-2xl border transition-all duration-300 hover:shadow-md ${
+                  day.date === selectedDate
                     ? 'border-primary bg-primary shadow-lg shadow-primary/20 text-primary-foreground scale-105 z-10'
                     : 'border-border/50 bg-card hover:border-primary/50'
-                  }`}
+                }`}
               >
                 <p className={`text-sm font-semibold opacity-90`}>{day.day}</p>
-                <p className="text-xl font-extrabold mt-1">
-                  {new Date(day.date).getDate()}
-                </p>
-                <p className={`text-[10px] font-bold mt-2 uppercase tracking-wider ${day.date === selectedDate ? 'text-primary-foreground/90' : 'text-accent'}`}>
+                <p className="text-xl font-extrabold mt-1">{new Date(day.date).getDate()}</p>
+                <p
+                  className={`text-[10px] font-bold mt-2 uppercase tracking-wider ${day.date === selectedDate ? 'text-primary-foreground/90' : 'text-accent'}`}
+                >
                   {day.appointments} appt{day.appointments !== 1 ? 's' : ''}
                 </p>
               </button>
@@ -323,10 +326,11 @@ export default function ScheduleCalendar({ onManageSchedule }: ScheduleCalendarP
                 timeSlots.map((slot, index) => (
                   <div
                     key={index}
-                    className={`p-3 rounded-lg border transition-base ${slot.available
-                      ? 'border-border hover:border-success bg-success/5'
-                      : 'border-border bg-muted'
-                      }`}
+                    className={`p-3 rounded-lg border transition-base ${
+                      slot.available
+                        ? 'border-border hover:border-success bg-success/5'
+                        : 'border-border bg-muted'
+                    }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">

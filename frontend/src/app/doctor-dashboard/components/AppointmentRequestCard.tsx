@@ -71,11 +71,14 @@ export default function AppointmentRequestCard({
               />
             </div>
             <div className="min-w-0">
-              <h3 className="font-bold text-text-primary text-base truncate group-hover:text-primary transition-colors">{request.patientName}</h3>
+              <h3 className="font-bold text-text-primary text-base truncate group-hover:text-primary transition-colors">
+                {request.patientName}
+              </h3>
               <div className="flex items-center gap-1.5 text-xs text-text-secondary font-medium mt-0.5">
                 <Icon name="CalendarIcon" size={14} className="text-primary/60" />
                 <span>
-                  {request.requestedDate} <span className="opacity-50 mx-0.5">•</span> {request.requestedTime}
+                  {request.requestedDate} <span className="opacity-50 mx-0.5">•</span>{' '}
+                  {request.requestedTime}
                 </span>
               </div>
             </div>

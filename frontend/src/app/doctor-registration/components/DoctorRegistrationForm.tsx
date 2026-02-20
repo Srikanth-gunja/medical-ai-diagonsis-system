@@ -192,7 +192,7 @@ const DoctorRegistrationForm = () => {
               </h2>
               <p className="text-text-secondary">
                 Our team will review your credentials and verify your medical license. This
-                typically takes 1-2 business days. You'll receive an email once your account is
+                typically takes 1-2 business days. You&apos;ll receive an email once your account is
                 approved.
               </p>
             </div>

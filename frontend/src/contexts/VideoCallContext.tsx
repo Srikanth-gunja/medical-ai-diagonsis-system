@@ -338,7 +338,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
             streamMock?.client ||
             ({
               call: () => streamMock?.call || null,
-              disconnectUser: () => { },
+              disconnectUser: () => {},
             } as unknown as StreamVideoClient);
           if (mountedRef.current) {
             setClient(mockClient);
@@ -462,7 +462,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     setCallError(null);
 
     // Wait a bit before retrying
-    await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+    await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
 
     // Force re-run of initialization effect by temporarily clearing client state
     // The useEffect will pick up the change and reinitialize
@@ -618,7 +618,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
             call.join(),
             new Promise<never>((_, reject) =>
               setTimeout(() => reject(new Error('Join timeout')), CONNECTION_TIMEOUT_MS)
-            )
+            ),
           ]);
 
           await joinWithTimeout;
@@ -637,9 +637,10 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         } catch (joinError) {
           logger.error('❌ Error joining outgoing call:', joinError);
 
-          const errorMessage = joinError instanceof Error && joinError.message === 'Join timeout'
-            ? 'Connection timed out. Please check your internet and try again.'
-            : getFriendlyError(joinError);
+          const errorMessage =
+            joinError instanceof Error && joinError.message === 'Join timeout'
+              ? 'Connection timed out. Please check your internet and try again.'
+              : getFriendlyError(joinError);
 
           setCallError(errorMessage);
           setIsConnecting(false);
@@ -726,7 +727,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         call.join(),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('Join timeout')), CONNECTION_TIMEOUT_MS)
-        )
+        ),
       ]);
 
       await joinWithTimeout;
@@ -757,9 +758,10 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         connectionTimeoutRef.current = null;
       }
 
-      const errorMessage = error instanceof Error && error.message === 'Join timeout'
-        ? 'Connection timed out. Please check your internet and try again.'
-        : getFriendlyError(error);
+      const errorMessage =
+        error instanceof Error && error.message === 'Join timeout'
+          ? 'Connection timed out. Please check your internet and try again.'
+          : getFriendlyError(error);
 
       setCallError(errorMessage);
       setIsConnecting(false);

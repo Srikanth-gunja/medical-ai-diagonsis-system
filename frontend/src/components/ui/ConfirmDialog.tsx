@@ -44,37 +44,41 @@ const ConfirmDialog = ({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-fade-in"
         onClick={onCancel}
       />
-      
+
       {/* Dialog */}
       <div className="relative bg-card border border-border rounded-2xl shadow-elevation-3 max-w-md w-full mx-4 p-6 animate-scale-in">
         {/* Icon */}
-        <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 ${
-          type === 'danger' ? 'bg-error/10' :
-          type === 'warning' ? 'bg-warning/10' :
-          'bg-primary/10'
-        }`}>
-          <Icon 
-            name={type === 'danger' ? 'ExclamationTriangleIcon' : type === 'warning' ? 'ExclamationCircleIcon' : 'InformationCircleIcon'}
+        <div
+          className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 ${
+            type === 'danger'
+              ? 'bg-error/10'
+              : type === 'warning'
+                ? 'bg-warning/10'
+                : 'bg-primary/10'
+          }`}
+        >
+          <Icon
+            name={
+              type === 'danger'
+                ? 'ExclamationTriangleIcon'
+                : type === 'warning'
+                  ? 'ExclamationCircleIcon'
+                  : 'InformationCircleIcon'
+            }
             className={`w-6 h-6 ${iconColors[type]}`}
             variant="solid"
           />
         </div>
 
         {/* Title */}
-        <h3 className="text-xl font-semibold text-text-primary text-center mb-2">
-          {title}
-        </h3>
+        <h3 className="text-xl font-semibold text-text-primary text-center mb-2">{title}</h3>
 
         {/* Message */}
-        {message && (
-          <p className="text-text-secondary text-center mb-6">
-            {message}
-          </p>
-        )}
+        {message && <p className="text-text-secondary text-center mb-6">{message}</p>}
 
         {/* Actions */}
         <div className="flex gap-3 justify-center">
@@ -107,7 +111,7 @@ export function useConfirm() {
   const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
     setOptions(options);
     setIsOpen(true);
-    
+
     return new Promise((resolve) => {
       setResolveRef(() => resolve);
     });
@@ -124,12 +128,7 @@ export function useConfirm() {
   }, [resolveRef]);
 
   const ConfirmDialogComponent = (
-    <ConfirmDialog
-      isOpen={isOpen}
-      {...options}
-      onConfirm={handleConfirm}
-      onCancel={handleCancel}
-    />
+    <ConfirmDialog isOpen={isOpen} {...options} onConfirm={handleConfirm} onCancel={handleCancel} />
   );
 
   return { confirm, ConfirmDialogComponent };

@@ -58,9 +58,7 @@ export function LazyImage({
   return (
     <div ref={imgRef} className={`relative overflow-hidden ${className}`}>
       {/* Skeleton loader */}
-      {!isLoaded && !hasError && (
-        <div className="absolute inset-0 bg-muted animate-pulse" />
-      )}
+      {!isLoaded && !hasError && <div className="absolute inset-0 bg-muted animate-pulse" />}
 
       {/* Error state */}
       {hasError && (

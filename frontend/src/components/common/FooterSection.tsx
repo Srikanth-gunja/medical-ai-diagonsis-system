@@ -148,13 +148,9 @@ const FooterSection = () => {
         </div>
       </footer>
 
-      <ContactModal
-        isOpen={isContactModalOpen}
-        onClose={() => setIsContactModalOpen(false)}
-      />
+      <ContactModal isOpen={isContactModalOpen} onClose={() => setIsContactModalOpen(false)} />
     </>
   );
 };
 
 export default FooterSection;
-

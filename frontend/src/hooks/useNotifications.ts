@@ -5,7 +5,8 @@ import { notificationsApi, Notification } from '@/lib/api';
 export const notificationKeys = {
   all: ['notifications'] as const,
   lists: () => [...notificationKeys.all, 'list'] as const,
-  list: (limit?: number, unreadOnly?: boolean) => [...notificationKeys.lists(), { limit, unreadOnly }] as const,
+  list: (limit?: number, unreadOnly?: boolean) =>
+    [...notificationKeys.lists(), { limit, unreadOnly }] as const,
   count: () => [...notificationKeys.all, 'count'] as const,
 };
 

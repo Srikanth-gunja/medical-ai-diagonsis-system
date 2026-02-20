@@ -17,11 +17,12 @@ export function useKeyboardShortcuts(shortcuts: ShortcutConfig[]) {
       shortcuts.forEach(({ key, handler }) => {
         const keys = key.toLowerCase().split('+');
         const mainKey = keys[keys.length - 1];
-        
+
         const ctrlRequired = keys.includes('ctrl') || keys.includes('control');
         const altRequired = keys.includes('alt');
         const shiftRequired = keys.includes('shift');
-        const metaRequired = keys.includes('meta') || keys.includes('cmd') || keys.includes('command');
+        const metaRequired =
+          keys.includes('meta') || keys.includes('cmd') || keys.includes('command');
 
         const ctrlMatch = ctrlRequired === e.ctrlKey;
         const altMatch = altRequired === e.altKey;
@@ -60,7 +61,9 @@ export function useDashboardShortcuts({
 }) {
   const shortcuts: ShortcutConfig[] = [
     ...(onSearch ? [{ key: 'ctrl+k', handler: onSearch, description: 'Open search' }] : []),
-    ...(onNewAppointment ? [{ key: 'ctrl+n', handler: onNewAppointment, description: 'New appointment' }] : []),
+    ...(onNewAppointment
+      ? [{ key: 'ctrl+n', handler: onNewAppointment, description: 'New appointment' }]
+      : []),
     ...(onProfile ? [{ key: 'ctrl+p', handler: onProfile, description: 'Go to profile' }] : []),
     ...(onLogout ? [{ key: 'ctrl+shift+q', handler: onLogout, description: 'Logout' }] : []),
     ...(onRefresh ? [{ key: 'ctrl+r', handler: onRefresh, description: 'Refresh data' }] : []),

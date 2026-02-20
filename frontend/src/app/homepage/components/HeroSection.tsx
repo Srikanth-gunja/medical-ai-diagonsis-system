@@ -12,7 +12,9 @@ const HeroSection = () => {
   const logoContainerRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
   const logoSrc =
-    theme === 'dark' ? '/assets/images/medicare-3d-logo-dark.png' : '/assets/images/medicare-3d-logo.png';
+    theme === 'dark'
+      ? '/assets/images/medicare-3d-logo-dark.png'
+      : '/assets/images/medicare-3d-logo.png';
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!logoContainerRef.current) return;

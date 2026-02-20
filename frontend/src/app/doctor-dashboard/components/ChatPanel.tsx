@@ -218,15 +218,17 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
     <>
       {/* Backdrop */}
       <div
-        className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          }`}
+        className={`fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-opacity duration-300 ${
+          isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
         onClick={onClose}
       />
 
       {/* Slide-in Chat Panel */}
       <div
-        className={`fixed top-0 right-0 h-full w-full max-w-md bg-card/95 backdrop-blur-xl border-l border-white/20 dark:border-border/50 shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.2)] z-50 transform transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${isOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
+        className={`fixed top-0 right-0 h-full w-full max-w-md bg-card/95 backdrop-blur-xl border-l border-white/20 dark:border-border/50 shadow-[-10px_0_30px_-15px_rgba(0,0,0,0.2)] z-50 transform transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
       >
         {/* Gradient Header */}
         <div className="relative bg-gradient-to-br from-primary via-primary/90 to-accent p-6 pb-4">
@@ -373,10 +375,11 @@ const ChatPanel = ({ isOpen, onClose, patientId, patientName, patientImage }: Ch
 
                     {/* Message Bubble */}
                     <div
-                      className={`max-w-[75%] px-4 py-3 shadow-sm ${isMe
+                      className={`max-w-[75%] px-4 py-3 shadow-sm ${
+                        isMe
                           ? 'bg-gradient-to-br from-primary to-accent text-white rounded-[1.25rem] rounded-br-[4px]'
                           : 'bg-card border border-border/50 text-text-primary rounded-[1.25rem] rounded-bl-[4px]'
-                        } ${isTemp ? 'opacity-70 scale-95' : 'scale-100'} transition-all duration-300 origin-bottom`}
+                      } ${isTemp ? 'opacity-70 scale-95' : 'scale-100'} transition-all duration-300 origin-bottom`}
                     >
                       <p className="text-sm whitespace-pre-wrap leading-relaxed">
                         {message.content}

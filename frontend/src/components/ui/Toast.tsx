@@ -25,19 +25,15 @@ const ToastIcon = ({ type }: { type: Toast['type'] }) => {
     case 'error':
       return <Icon name="XCircleIcon" className="w-5 h-5 text-error" variant="solid" />;
     case 'warning':
-      return <Icon name="ExclamationTriangleIcon" className="w-5 h-5 text-warning" variant="solid" />;
+      return (
+        <Icon name="ExclamationTriangleIcon" className="w-5 h-5 text-warning" variant="solid" />
+      );
     case 'info':
       return <Icon name="InformationCircleIcon" className="w-5 h-5 text-primary" variant="solid" />;
   }
 };
 
-const ToastItem = ({ 
-  toast, 
-  onRemove 
-}: { 
-  toast: Toast; 
-  onRemove: (id: string) => void;
-}) => {
+const ToastItem = ({ toast, onRemove }: { toast: Toast; onRemove: (id: string) => void }) => {
   const [isExiting, setIsExiting] = useState(false);
 
   useEffect(() => {
@@ -71,20 +67,16 @@ const ToastItem = ({
         <ToastIcon type={toast.type} />
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className={`font-semibold text-sm ${
-          toast.type === 'success' && 'text-success'
-        } ${
-          toast.type === 'error' && 'text-error'
-        } ${
-          toast.type === 'warning' && 'text-warning'
-        } ${
-          toast.type === 'info' && 'text-primary'
-        }`}>
+        <h4
+          className={`font-semibold text-sm ${toast.type === 'success' && 'text-success'} ${
+            toast.type === 'error' && 'text-error'
+          } ${toast.type === 'warning' && 'text-warning'} ${
+            toast.type === 'info' && 'text-primary'
+          }`}
+        >
           {toast.title}
         </h4>
-        {toast.message && (
-          <p className="text-text-secondary text-sm mt-1">{toast.message}</p>
-        )}
+        {toast.message && <p className="text-text-secondary text-sm mt-1">{toast.message}</p>}
       </div>
       <button
         onClick={handleClose}

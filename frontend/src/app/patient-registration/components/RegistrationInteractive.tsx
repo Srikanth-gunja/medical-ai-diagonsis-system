@@ -79,7 +79,7 @@ const RegistrationInteractive = () => {
   // Validation rules for each step
   const getValidationRules = useCallback((step: number) => {
     const baseRules: any = {};
-    
+
     if (step === 1) {
       return {
         firstName: { required: true, minLength: 2 },
@@ -88,22 +88,22 @@ const RegistrationInteractive = () => {
         gender: { required: true },
       };
     }
-    
+
     if (step === 2) {
       return {
         email: { required: true, email: true },
-        phone: { required: true, pattern: /^[\d\s\-\+\(\)]{10,}$/ },
+        phone: { required: true, pattern: /^[\d\s+()-]{10,}$/ },
         address: { required: true, minLength: 5 },
         city: { required: true, minLength: 2 },
         state: { required: true, minLength: 2 },
         zipCode: { required: true, pattern: /^\d{5}(-\d{4})?$/ },
       };
     }
-    
+
     if (step === 4) {
       return {
-        password: { 
-          required: true, 
+        password: {
+          required: true,
           minLength: 8,
           custom: (value: string) => {
             const hasUpper = /[A-Z]/.test(value);
@@ -111,12 +111,12 @@ const RegistrationInteractive = () => {
             const hasNumber = /\d/.test(value);
             const hasSpecial = /[^A-Za-z0-9]/.test(value);
             return hasUpper && hasLower && hasNumber && hasSpecial;
-          }
+          },
         },
         confirmPassword: { required: true, match: 'password' },
       };
     }
-    
+
     return baseRules;
   }, []);
 
@@ -160,7 +160,7 @@ const RegistrationInteractive = () => {
   const validateStep = (step: number): boolean => {
     const rules = getValidationRules(step);
     const fieldsToValidate: Record<string, string> = {};
-    
+
     Object.keys(rules).forEach((field) => {
       const value = formData[field as keyof FormData];
       if (typeof value === 'string') {
@@ -169,7 +169,7 @@ const RegistrationInteractive = () => {
     });
 
     const validationErrors = validateAll(fieldsToValidate);
-    
+
     // Mark all fields in current step as touched
     Object.keys(rules).forEach((field) => {
       setTouchedFields((prev) => new Set(prev).add(field));
@@ -308,16 +308,20 @@ const RegistrationInteractive = () => {
               {submitError && (
                 <div className="p-4 bg-error/10 border border-error/20 rounded-lg">
                   <div className="flex items-start space-x-3">
-                    <Icon name="ExclamationCircleIcon" size={20} className="text-error flex-shrink-0 mt-0.5" />
+                    <Icon
+                      name="ExclamationCircleIcon"
+                      size={20}
+                      className="text-error flex-shrink-0 mt-0.5"
+                    />
                     <p className="text-sm text-error">{submitError}</p>
                   </div>
                 </div>
               )}
 
               {currentStep === 1 && (
-                <PersonalInfoSection 
-                  formData={formData} 
-                  errors={errors} 
+                <PersonalInfoSection
+                  formData={formData}
+                  errors={errors}
                   touched={touchedFields}
                   onChange={handleChange}
                   onBlur={handleBlur}
@@ -339,11 +343,7 @@ const RegistrationInteractive = () => {
               )}
 
               {currentStep === 4 && (
-                <AccountSetupSection 
-                  formData={formData} 
-                  errors={errors}
-                  onChange={handleChange}
-                />
+                <AccountSetupSection formData={formData} errors={errors} onChange={handleChange} />
               )}
 
               <div className="flex flex-col sm:flex-row gap-4 pt-6">

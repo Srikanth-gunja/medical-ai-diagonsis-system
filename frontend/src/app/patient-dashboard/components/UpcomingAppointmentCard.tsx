@@ -13,7 +13,14 @@ interface Appointment {
   date: string;
   time: string;
   type: 'video' | 'in-person';
-  status: 'confirmed' | 'pending' | 'completed' | 'cancelled' | 'rejected' | 'in_progress' | 'no_show';
+  status:
+    | 'confirmed'
+    | 'pending'
+    | 'completed'
+    | 'cancelled'
+    | 'rejected'
+    | 'in_progress'
+    | 'no_show';
   rated?: boolean;
   rejectionReason?: string;
 }
@@ -131,9 +138,13 @@ const UpcomingAppointmentCard = ({
                 {appointment.doctorName}
               </h3>
               {appointment.type === 'video' ? (
-                <span className="bg-accent/10 text-accent px-1.5 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 shrink-0"><Icon name="VideoCameraIcon" size={10} /> Video</span>
+                <span className="bg-accent/10 text-accent px-1.5 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 shrink-0">
+                  <Icon name="VideoCameraIcon" size={10} /> Video
+                </span>
               ) : (
-                <span className="bg-secondary/10 text-secondary px-1.5 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 shrink-0"><Icon name="BuildingOfficeIcon" size={10} /> In-Person</span>
+                <span className="bg-secondary/10 text-secondary px-1.5 py-0.5 rounded text-[10px] font-semibold flex items-center gap-1 shrink-0">
+                  <Icon name="BuildingOfficeIcon" size={10} /> In-Person
+                </span>
               )}
             </div>
             <p className="text-xs font-medium text-text-secondary">{appointment.specialty}</p>
@@ -150,34 +161,38 @@ const UpcomingAppointmentCard = ({
         </div>
 
         {/* Divider for Ticket Feel */}
-        <div className="hidden sm:block w-px bg-border/40 my-4 relative">
-        </div>
+        <div className="hidden sm:block w-px bg-border/40 my-4 relative"></div>
         <div className="sm:hidden h-px w-full bg-border/40 mx-4 relative border-dashed"></div>
 
         {/* Right Side: Date/Time & Actions */}
         <div className="p-4 sm:p-5 sm:w-64 flex flex-col justify-between bg-primary/[0.02] sm:bg-transparent">
           <div className="grid grid-cols-2 gap-2 mb-3">
             <div className="flex flex-col text-text-primary bg-background/50 p-2.5 rounded-xl border border-border/50">
-              <p className="flex items-center gap-1 text-[10px] text-text-secondary font-bold uppercase tracking-wider leading-none mb-1.5"><Icon name="CalendarIcon" size={12} className="text-primary" /> Date</p>
+              <p className="flex items-center gap-1 text-[10px] text-text-secondary font-bold uppercase tracking-wider leading-none mb-1.5">
+                <Icon name="CalendarIcon" size={12} className="text-primary" /> Date
+              </p>
               <p className="font-bold text-xs truncate">{appointment.date}</p>
             </div>
             <div className="flex flex-col text-text-primary bg-background/50 p-2.5 rounded-xl border border-border/50">
-              <p className="flex items-center gap-1 text-[10px] text-text-secondary font-bold uppercase tracking-wider leading-none mb-1.5"><Icon name="ClockIcon" size={12} className="text-primary" /> Time</p>
+              <p className="flex items-center gap-1 text-[10px] text-text-secondary font-bold uppercase tracking-wider leading-none mb-1.5">
+                <Icon name="ClockIcon" size={12} className="text-primary" /> Time
+              </p>
               <p className="font-bold text-xs truncate">{appointment.time}</p>
             </div>
           </div>
 
           <div className="flex flex-col gap-2 mt-auto">
             {/* The video call button must be before chat/reschedule in this logic */}
-            {(appointment.status === 'confirmed' || appointment.status === 'in_progress') && appointment.type === 'video' && (
-              <button
-                onClick={() => onJoin(appointment.id)}
-                className="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-primary text-primary-foreground rounded-xl hover:shadow-lg hover:shadow-primary/25 hover:-translate-y-0.5 active:scale-[0.98] transition-all font-semibold text-sm"
-              >
-                <Icon name="VideoCameraIcon" size={16} />
-                <span>Join Video Call</span>
-              </button>
-            )}
+            {(appointment.status === 'confirmed' || appointment.status === 'in_progress') &&
+              appointment.type === 'video' && (
+                <button
+                  onClick={() => onJoin(appointment.id)}
+                  className="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-primary text-primary-foreground rounded-xl hover:shadow-lg hover:shadow-primary/25 hover:-translate-y-0.5 active:scale-[0.98] transition-all font-semibold text-sm"
+                >
+                  <Icon name="VideoCameraIcon" size={16} />
+                  <span>Join Video Call</span>
+                </button>
+              )}
 
             <div className="flex justify-between items-stretch gap-2">
               {(appointment.status === 'confirmed' || appointment.status === 'in_progress') && (
@@ -213,8 +228,8 @@ const UpcomingAppointmentCard = ({
                   </>
                 )}
 
-              {appointment.status === 'completed' && (
-                appointment.rated ? (
+              {appointment.status === 'completed' &&
+                (appointment.rated ? (
                   <span className="w-full flex items-center justify-center space-x-1.5 px-3 py-2 bg-success/10 text-success border border-success/20 rounded-xl text-sm font-bold">
                     <Icon name="CheckCircleIcon" size={16} />
                     <span>Reviewed</span>
@@ -227,14 +242,20 @@ const UpcomingAppointmentCard = ({
                     <Icon name="StarIcon" size={16} />
                     <span>Review Doctor</span>
                   </button>
-                )
-              )}
+                ))}
             </div>
 
             {appointment.status === 'rejected' && appointment.rejectionReason && (
               <div className="w-full mt-1 p-2 bg-error/5 border border-error/20 rounded-xl text-xs">
-                <span className="font-bold text-error flex items-center gap-1 mb-0.5"><Icon name="ExclamationTriangleIcon" size={12} /> Reason</span>
-                <span className="text-text-secondary line-clamp-2" title={appointment.rejectionReason}>{appointment.rejectionReason}</span>
+                <span className="font-bold text-error flex items-center gap-1 mb-0.5">
+                  <Icon name="ExclamationTriangleIcon" size={12} /> Reason
+                </span>
+                <span
+                  className="text-text-secondary line-clamp-2"
+                  title={appointment.rejectionReason}
+                >
+                  {appointment.rejectionReason}
+                </span>
               </div>
             )}
           </div>

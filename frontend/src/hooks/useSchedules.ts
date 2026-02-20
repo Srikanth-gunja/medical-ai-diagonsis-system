@@ -6,7 +6,8 @@ export const scheduleKeys = {
   all: ['schedules'] as const,
   my: () => [...scheduleKeys.all, 'my'] as const,
   doctor: (doctorId: string) => [...scheduleKeys.all, 'doctor', doctorId] as const,
-  slots: (doctorId: string, date: string) => [...scheduleKeys.all, 'slots', doctorId, date] as const,
+  slots: (doctorId: string, date: string) =>
+    [...scheduleKeys.all, 'slots', doctorId, date] as const,
 };
 
 /**

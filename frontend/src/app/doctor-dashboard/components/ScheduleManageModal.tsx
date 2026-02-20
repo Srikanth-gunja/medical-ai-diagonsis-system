@@ -133,10 +133,11 @@ export default function ScheduleManageModal({ onClose }: ScheduleManageModalProp
         <div className="flex items-center gap-4 px-6 border-b border-border">
           <button
             onClick={() => setActiveTab('weekly')}
-            className={`py-4 font-medium relative ${activeTab === 'weekly'
-              ? 'text-primary'
-              : 'text-text-secondary hover:text-text-primary'
-              }`}
+            className={`py-4 font-medium relative ${
+              activeTab === 'weekly'
+                ? 'text-primary'
+                : 'text-text-secondary hover:text-text-primary'
+            }`}
           >
             Weekly Hours
             {activeTab === 'weekly' && (
@@ -145,10 +146,11 @@ export default function ScheduleManageModal({ onClose }: ScheduleManageModalProp
           </button>
           <button
             onClick={() => setActiveTab('blocked')}
-            className={`py-4 font-medium relative ${activeTab === 'blocked'
-              ? 'text-primary'
-              : 'text-text-secondary hover:text-text-primary'
-              }`}
+            className={`py-4 font-medium relative ${
+              activeTab === 'blocked'
+                ? 'text-primary'
+                : 'text-text-secondary hover:text-text-primary'
+            }`}
           >
             Blocked Dates
             {activeTab === 'blocked' && (

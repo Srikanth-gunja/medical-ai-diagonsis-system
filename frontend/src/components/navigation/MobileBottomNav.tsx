@@ -74,18 +74,15 @@ export function MobileBottomNav({ items }: MobileBottomNavProps) {
                 relative flex flex-col items-center justify-center
                 min-w-[64px] py-2 px-3 rounded-lg
                 transition-colors duration-200
-                ${isActive 
-                  ? 'text-primary bg-primary/10' 
-                  : 'text-text-secondary hover:text-text-primary hover:bg-muted'
+                ${
+                  isActive
+                    ? 'text-primary bg-primary/10'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-muted'
                 }
               `}
             >
               <div className="relative">
-                <Icon 
-                  name={item.icon} 
-                  size={24} 
-                  variant={isActive ? 'solid' : 'outline'}
-                />
+                <Icon name={item.icon} size={24} variant={isActive ? 'solid' : 'outline'} />
                 {item.badge !== undefined && item.badge > 0 && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-error text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                     {item.badge > 9 ? '9+' : item.badge}
@@ -100,7 +97,7 @@ export function MobileBottomNav({ items }: MobileBottomNavProps) {
           );
         })}
       </div>
-      
+
       {/* Safe area padding for iOS */}
       <div className="h-safe-area-inset-bottom" />
     </nav>

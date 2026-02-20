@@ -52,10 +52,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = 'md
               >
                 <div className="flex items-center justify-between mb-4">
                   {title && (
-                    <Dialog.Title
-                      as="h3"
-                      className="text-lg font-bold leading-6 text-text-primary"
-                    >
+                    <Dialog.Title as="h3" className="text-lg font-bold leading-6 text-text-primary">
                       {title}
                     </Dialog.Title>
                   )}
@@ -69,9 +66,7 @@ export default function Modal({ isOpen, onClose, title, children, maxWidth = 'md
                   </button>
                 </div>
 
-                <div className="mt-2 text-text-secondary">
-                  {children}
-                </div>
+                <div className="mt-2 text-text-secondary">{children}</div>
               </Dialog.Panel>
             </Transition.Child>
           </div>

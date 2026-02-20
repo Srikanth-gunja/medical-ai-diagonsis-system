@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { render, waitFor } from '@testing-library/react';
 import { VideoCallProvider, useVideoCall } from '../VideoCallContext';
 
@@ -28,7 +28,6 @@ jest.mock('../../lib/api', () => ({
 }));
 
 jest.mock('@stream-io/video-react-sdk', () => {
-  const React = require('react');
   return {
     StreamVideoClient: class {
       call() {
@@ -36,9 +35,7 @@ jest.mock('@stream-io/video-react-sdk', () => {
       }
       disconnectUser() {}
     },
-    StreamVideo: ({ children }: { children: React.ReactNode }) => (
-      <React.Fragment>{children}</React.Fragment>
-    ),
+    StreamVideo: ({ children }: { children: ReactNode }) => <>{children}</>,
     useCalls: () => [],
     CallingState: {
       RINGING: 'ringing',

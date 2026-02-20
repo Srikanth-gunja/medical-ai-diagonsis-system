@@ -11,7 +11,9 @@ import { useToast } from '@/components/ui/Toast';
 
 export default function LoginPage() {
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
-  const [systemStatus, setSystemStatus] = useState<'checking' | 'operational' | 'issues'>('checking');
+  const [systemStatus, setSystemStatus] = useState<'checking' | 'operational' | 'issues'>(
+    'checking'
+  );
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -47,9 +49,12 @@ export default function LoginPage() {
 
   const getStatusColor = () => {
     switch (systemStatus) {
-      case 'operational': return 'text-green-500';
-      case 'issues': return 'text-red-500';
-      default: return 'text-yellow-500';
+      case 'operational':
+        return 'text-green-500';
+      case 'issues':
+        return 'text-red-500';
+      default:
+        return 'text-yellow-500';
     }
   };
 
@@ -81,11 +86,17 @@ export default function LoginPage() {
           <div className="text-center pt-8 pb-4">
             <p className="text-sm text-text-secondary">
               By signing in, you agree to our{' '}
-              <Link href="/terms-of-service" className="text-primary hover:text-accent transition-base font-medium">
+              <Link
+                href="/terms-of-service"
+                className="text-primary hover:text-accent transition-base font-medium"
+              >
                 Terms of Service
               </Link>{' '}
               and{' '}
-              <Link href="/privacy-policy" className="text-primary hover:text-accent transition-base font-medium">
+              <Link
+                href="/privacy-policy"
+                className="text-primary hover:text-accent transition-base font-medium"
+              >
                 Privacy Policy
               </Link>
             </p>
@@ -100,16 +111,28 @@ export default function LoginPage() {
               &copy; {new Date().getFullYear()} MediCare. All rights reserved.
             </p>
             <div className="flex items-center space-x-6 text-sm text-text-secondary">
-              <button onClick={handleHelpCenterClick} className="hover:text-primary transition-base">
+              <button
+                onClick={handleHelpCenterClick}
+                className="hover:text-primary transition-base"
+              >
                 Help Center
               </button>
-              <button onClick={() => setIsContactModalOpen(true)} className="hover:text-primary transition-base">
+              <button
+                onClick={() => setIsContactModalOpen(true)}
+                className="hover:text-primary transition-base"
+              >
                 Contact Support
               </button>
               <div className="flex items-center space-x-2">
-                <span className={`w-2 h-2 rounded-full ${systemStatus === 'operational' ? 'bg-green-500' : systemStatus === 'issues' ? 'bg-red-500' : 'bg-yellow-500'} animate-pulse`} />
+                <span
+                  className={`w-2 h-2 rounded-full ${systemStatus === 'operational' ? 'bg-green-500' : systemStatus === 'issues' ? 'bg-red-500' : 'bg-yellow-500'} animate-pulse`}
+                />
                 <span className={getStatusColor()}>
-                  {systemStatus === 'checking' ? 'Checking Status...' : systemStatus === 'operational' ? 'System Operational' : 'System Issues'}
+                  {systemStatus === 'checking'
+                    ? 'Checking Status...'
+                    : systemStatus === 'operational'
+                      ? 'System Operational'
+                      : 'System Issues'}
                 </span>
               </div>
             </div>
@@ -117,10 +140,7 @@ export default function LoginPage() {
         </div>
       </footer>
 
-      <ContactModal
-        isOpen={isContactModalOpen}
-        onClose={() => setIsContactModalOpen(false)}
-      />
+      <ContactModal isOpen={isContactModalOpen} onClose={() => setIsContactModalOpen(false)} />
     </div>
   );
 }

@@ -60,7 +60,10 @@ const DoctorCard = ({ doctor, onBook }: DoctorCardProps) => {
             />
           </div>
           {doctor.availableToday && (
-            <div className="absolute top-0 right-0 flex items-center justify-center w-5 h-5 bg-success rounded-full border-2 border-card shadow-sm z-20" title="Available Today">
+            <div
+              className="absolute top-0 right-0 flex items-center justify-center w-5 h-5 bg-success rounded-full border-2 border-card shadow-sm z-20"
+              title="Available Today"
+            >
               <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse-subtle" />
             </div>
           )}
@@ -78,8 +81,12 @@ const DoctorCard = ({ doctor, onBook }: DoctorCardProps) => {
 
             <div className="flex items-center bg-warning/10 px-2.5 py-1 rounded-md shrink-0">
               <Icon name="StarIcon" variant="solid" size={14} className="text-warning mr-1" />
-              <span className="text-sm font-extrabold text-warning">{doctor.rating.toFixed(1)}</span>
-              <span className="text-[10px] font-bold text-warning/70 ml-1">({doctor.reviewCount})</span>
+              <span className="text-sm font-extrabold text-warning">
+                {doctor.rating.toFixed(1)}
+              </span>
+              <span className="text-[10px] font-bold text-warning/70 ml-1">
+                ({doctor.reviewCount})
+              </span>
             </div>
           </div>
 
@@ -114,7 +121,9 @@ const DoctorCard = ({ doctor, onBook }: DoctorCardProps) => {
             <Icon name="ClockIcon" size={18} />
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-text-muted">Next available</span>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-text-muted">
+              Next available
+            </span>
             <span className="font-bold text-text-primary truncate">
               {doctor.nextAvailable === 'Not available' ? 'Fully Booked' : doctor.nextAvailable}
             </span>
