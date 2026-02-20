@@ -7,8 +7,10 @@ from ..models.doctor import Doctor
 from ..models.patient import Patient
 from ..models.notification import Notification
 import json
+import logging
 
 ratings_bp = Blueprint('ratings', __name__)
+logger = logging.getLogger(__name__)
 
 
 def get_current_user():
@@ -29,7 +31,7 @@ def create_rating():
     if current_user['role'] != 'patient':
         return jsonify({'error': 'Only patients can rate doctors'}), 403
     
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     appointment_id = data.get('appointmentId')
     score = data.get('score')
     comment = data.get('comment', '')
@@ -122,8 +124,9 @@ def get_doctor_ratings(doctor_id):
             'count': stats['count']
         })
         
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    except Exception:
+        logger.exception("Failed to fetch doctor ratings")
+        return jsonify({'error': 'Failed to fetch ratings'}), 500
 
 
 @ratings_bp.route('/check/<appointment_id>', methods=['GET'])
@@ -171,4 +174,3 @@ def get_my_reviews():
         'average': stats['average'],
         'count': stats['count']
     })
-

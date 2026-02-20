@@ -142,7 +142,7 @@ export default function AppointmentCard({
             {appointment.status === 'Pending' && !appointment.isExpiredNoActivity && (
               <button
                 onClick={(e) => { e.stopPropagation(); onConfirm(appointment.id); }}
-                className="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-2.5 bg-success text-success-foreground rounded-xl hover:bg-success/90 hover:shadow-lg hover:shadow-success/20 hover:-translate-y-0.5 active:scale-[0.98] transition-all text-sm font-bold"
+                className="flex-1 min-w-[120px] flex items-center justify-center gap-2 px-4 py-2.5 bg-success text-success-foreground rounded-xl hover:brightness-110 hover:shadow-lg hover:shadow-success/20 hover:-translate-y-0.5 active:scale-[0.98] transition-all text-sm font-bold"
               >
                 <Icon name="CheckIcon" size={16} />
                 <span>Confirm</span>
@@ -168,7 +168,7 @@ export default function AppointmentCard({
 
                   <button
                     onClick={(e) => { e.stopPropagation(); onChat(appointment.id); }}
-                    className="flex items-center justify-center gap-2 px-6 py-2.5 bg-background border border-border rounded-xl hover:bg-muted transition-colors text-sm font-bold text-text-primary shadow-sm"
+                    className="flex items-center justify-center gap-2 px-6 py-2.5 bg-accent text-accent-foreground rounded-xl hover:brightness-110 transition-colors text-sm font-bold shadow-sm"
                   >
                     <Icon name="ChatBubbleLeftRightIcon" size={18} />
                     <span>Chat</span>
@@ -176,7 +176,7 @@ export default function AppointmentCard({
 
                   <button
                     onClick={(e) => { e.stopPropagation(); onReschedule(appointment.id); }}
-                    className="flex-1 min-w-[120px] sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-background border border-border rounded-xl hover:bg-muted transition-colors text-sm font-bold text-text-primary shadow-sm"
+                    className="flex-1 min-w-[120px] sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 bg-muted text-text-primary rounded-xl hover:brightness-95 transition-colors text-sm font-bold shadow-sm"
                   >
                     <Icon name="CalendarIcon" size={16} />
                     <span>Reschedule</span>
@@ -189,7 +189,7 @@ export default function AppointmentCard({
               onFinish && (
                 <button
                   onClick={(e) => { e.stopPropagation(); onFinish(appointment.id); }}
-                  className="flex-1 min-w-[150px] flex items-center justify-center gap-2 px-4 py-2.5 bg-accent text-accent-foreground rounded-xl hover:bg-accent/90 hover:shadow-lg hover:shadow-accent/20 hover:-translate-y-0.5 active:scale-[0.98] transition-all text-sm font-bold"
+                  className="flex-1 min-w-[150px] flex items-center justify-center gap-2 px-4 py-2.5 bg-secondary text-secondary-foreground rounded-xl hover:brightness-110 hover:shadow-lg hover:shadow-secondary/20 hover:-translate-y-0.5 active:scale-[0.98] transition-all text-sm font-bold"
                 >
                   <Icon name="CheckCircleIcon" size={18} />
                   <span>Finish Appointment</span>
@@ -209,7 +209,7 @@ export default function AppointmentCard({
             {appointment.isExpiredNoActivity && (
               <button
                 onClick={(e) => { e.stopPropagation(); onReschedule(appointment.id); }}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-background border border-border shadow-sm text-text-primary rounded-xl hover:bg-muted transition-all text-sm font-bold"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-muted shadow-sm text-text-primary rounded-xl hover:brightness-95 transition-all text-sm font-bold"
               >
                 <Icon name="CalendarIcon" size={16} />
                 <span>Reschedule</span>

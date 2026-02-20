@@ -50,8 +50,28 @@ describe('ChatPanel', () => {
     jest.clearAllMocks();
     // Mock scrollIntoView
     window.HTMLElement.prototype.scrollIntoView = jest.fn();
-    (appointmentsApi.getAll as jest.Mock).mockResolvedValue(mockAppointments);
-    (messagesApi.getChatStatus as jest.Mock).mockResolvedValue({ canChat: true });
+    (appointmentsApi.getAll as jest.Mock).mockResolvedValue({
+      items: mockAppointments,
+      pagination: {
+        current_page: 1,
+        per_page: 10,
+        total_pages: 1,
+        total_items: 1,
+        has_next: false,
+        has_prev: false,
+        next_page: null,
+        prev_page: null,
+      },
+    });
+    (messagesApi.getChatStatus as jest.Mock).mockResolvedValue({
+      canChat: true,
+      appointmentStatus: 'confirmed',
+      isInTimeWindow: true,
+      timeMessage: 'Chat available',
+      doctorName: 'Doctor',
+      appointmentDate: '2025-01-01',
+      appointmentTime: '10:00 AM',
+    });
     (messagesApi.getMessages as jest.Mock).mockResolvedValue(mockMessages);
   });
 
@@ -61,6 +81,12 @@ describe('ChatPanel', () => {
     );
 
     expect(screen.getByText('John Doe')).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(appointmentsApi.getAll).toHaveBeenCalled();
+      expect(messagesApi.getChatStatus).toHaveBeenCalledWith('apt1');
+      expect(messagesApi.getMessages).toHaveBeenCalledWith('apt1');
+    });
   });
 
   it('fetches appointments and messages on mount', async () => {
@@ -83,7 +109,19 @@ describe('ChatPanel', () => {
   });
 
   it('displays chat unavailable message when no appointments', async () => {
-    (appointmentsApi.getAll as jest.Mock).mockResolvedValue([]);
+    (appointmentsApi.getAll as jest.Mock).mockResolvedValue({
+      items: [],
+      pagination: {
+        current_page: 1,
+        per_page: 10,
+        total_pages: 0,
+        total_items: 0,
+        has_next: false,
+        has_prev: false,
+        next_page: null,
+        prev_page: null,
+      },
+    });
 
     render(
       <ChatPanel isOpen={true} onClose={jest.fn()} patientId="patient1" patientName="John Doe" />
@@ -109,6 +147,8 @@ describe('ChatPanel', () => {
     const sendButton = screen.getByTestId('icon-PaperAirplaneIcon').closest('button');
     fireEvent.click(sendButton!);
 
-    expect(messagesApi.send).toHaveBeenCalledWith('apt1', 'Hi there');
+    await waitFor(() => {
+      expect(messagesApi.send).toHaveBeenCalledWith('apt1', 'Hi there');
+    });
   });
 });

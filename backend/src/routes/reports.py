@@ -61,7 +61,7 @@ def generate_prescription_report(prescription_id):
     appointment_date = appointment.get('date', 'N/A') if appointment else 'N/A'
     
     # Patient info
-    patient_name = patient.get('name', 'Patient')
+    patient_name = f"{patient.get('firstName', '')} {patient.get('lastName', '')}".strip() or 'Patient'
     patient_email = patient.get('email', 'N/A')
     
     try:
@@ -119,7 +119,7 @@ def generate_medical_record_report(record_id):
         return jsonify({'error': 'Access denied'}), 403
     
     # Patient info
-    patient_name = patient.get('name', 'Patient')
+    patient_name = f"{patient.get('firstName', '')} {patient.get('lastName', '')}".strip() or 'Patient'
     patient_email = patient.get('email', 'N/A')
     doctor_name = record.get('doctor', 'Unknown Doctor').replace('Dr. ', '')
     

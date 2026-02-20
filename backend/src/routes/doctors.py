@@ -63,17 +63,19 @@ def _get_next_available_slot_ist(doctor_id: str, max_days: int = 90) -> str | No
 def get_doctors():
     """Get all doctors with pagination support - optimized to avoid N+1 queries."""
     from ..database import get_db, DOCTORS_COLLECTION, SCHEDULES_COLLECTION
-    from bson import ObjectId
 
     # Get pagination parameters
     page, per_page = get_pagination_params(default_per_page=12, max_per_page=50)
     skip = (page - 1) * per_page
 
     db = get_db()
+    verified_query = {
+        "$or": [{"verified": True}, {"verification_status": "verified"}]
+    }
 
     # Use aggregation pipeline to fetch doctors with schedules in one query
     pipeline = [
-        {"$match": {}},  # Add any filters here if needed
+        {"$match": verified_query},
         {"$sort": {"_id": -1}},  # Sort by newest first
         {"$skip": skip},
         {"$limit": per_page},
@@ -91,7 +93,7 @@ def get_doctors():
     doctors = list(db[DOCTORS_COLLECTION].aggregate(pipeline))
 
     # Get total count for pagination
-    total_count = db[DOCTORS_COLLECTION].count_documents({})
+    total_count = db[DOCTORS_COLLECTION].count_documents(verified_query)
 
     # Pre-compute current time info (do once, not per doctor)
     now = datetime.now()
@@ -264,8 +266,20 @@ def _get_next_available_from_schedule(schedule, now_ist, doctor_id):
 
 def _get_slots_from_schedule(schedule, date_str, doctor_id):
     """Get available slots for a date from schedule (faster than Schedule model method)."""
-    from ..models.appointment import Appointment
+    from ..database import get_db, APPOINTMENTS_COLLECTION
+    from bson import ObjectId
     from datetime import datetime as dt
+
+    def normalize_time(value):
+        if not value:
+            return None
+        for fmt in ("%I:%M %p", "%I:%M%p", "%H:%M"):
+            try:
+                parsed = dt.strptime(value.strip(), fmt)
+                return parsed.strftime("%I:%M %p").lstrip("0")
+            except ValueError:
+                continue
+        return value.strip()
 
     if not schedule:
         # Return default slots
@@ -307,7 +321,24 @@ def _get_slots_from_schedule(schedule, date_str, doctor_id):
     # Filter out past slots
     slots = _filter_past_slots_fast(slots, date_str)
 
-    return slots
+    if isinstance(doctor_id, str):
+        doctor_id = ObjectId(doctor_id)
+
+    db = get_db()
+    booked = db[APPOINTMENTS_COLLECTION].find(
+        {
+            "doctor_id": doctor_id,
+            "date": date_str,
+            "status": {"$nin": ["cancelled", "rejected"]},
+        }
+    )
+    booked_times = []
+    for appt in booked:
+        normalized = normalize_time(appt.get("time"))
+        if normalized:
+            booked_times.append(normalized)
+
+    return [slot for slot in slots if slot not in booked_times]
 
 
 def _generate_time_slots_fast(start_time, end_time, duration_minutes):
@@ -356,7 +387,7 @@ def _filter_past_slots_fast(slots, date_str):
 @doctors_bp.route("/next-available", methods=["GET"])
 def get_next_available():
     """Return next available slot for all doctors in IST."""
-    doctors = Doctor.find_all()
+    doctors = Doctor.find_all(verified_only=True)
     result = {}
     for doc in doctors:
         result[str(doc["_id"])] = _get_next_available_slot_ist(str(doc["_id"]))
@@ -389,7 +420,7 @@ def update_doctor_profile():
     if not doctor:
         return jsonify({"error": "Doctor profile not found"}), 404
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     updated = Doctor.update(str(doctor["_id"]), data)
     if updated:
         return jsonify(
@@ -414,7 +445,7 @@ def request_profile_update():
     if doctor.get("pending_profile_update"):
         return jsonify({"error": "You already have a pending profile update"}), 400
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     Doctor.request_profile_update(str(doctor["_id"]), data)
 
     # Create notification for admin (we'll notify via admin endpoint polling)
@@ -459,7 +490,7 @@ def create_doctor():
     current_user = get_current_user()
     if current_user.get("role") != "admin":
         return jsonify({"error": "Admin access required"}), 403
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     doctor = Doctor.create(
         user_id=data.get("user_id"),
         name=data["name"],
@@ -482,7 +513,7 @@ def update_doctor(doctor_id):
         doctor = Doctor.find_by_user_id(current_user["id"])
         if not doctor or str(doctor.get("_id")) != str(doctor_id):
             return jsonify({"error": "Unauthorized"}), 403
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     doctor = Doctor.update(doctor_id, data)
     if doctor:
         return jsonify(Doctor.to_dict(doctor))

@@ -36,12 +36,15 @@ export default function ScheduleManageModal({ onClose }: ScheduleManageModalProp
 
   const handleTimeChange = (day: string, field: 'start' | 'end', value: string) => {
     if (!schedule) return;
+    const currentDaySchedule = schedule.weeklySchedule[day];
     setSchedule({
       ...schedule,
       weeklySchedule: {
         ...schedule.weeklySchedule,
         [day]: {
-          ...schedule.weeklySchedule[day],
+          start: currentDaySchedule?.start || '09:00',
+          end: currentDaySchedule?.end || '17:00',
+          enabled: currentDaySchedule?.enabled || false,
           [field]: value,
         },
       },
@@ -50,13 +53,15 @@ export default function ScheduleManageModal({ onClose }: ScheduleManageModalProp
 
   const handleToggleDay = (day: string) => {
     if (!schedule) return;
+    const currentDaySchedule = schedule.weeklySchedule[day];
     setSchedule({
       ...schedule,
       weeklySchedule: {
         ...schedule.weeklySchedule,
         [day]: {
-          ...schedule.weeklySchedule[day],
-          enabled: !schedule.weeklySchedule[day]?.enabled,
+          start: currentDaySchedule?.start || '09:00',
+          end: currentDaySchedule?.end || '17:00',
+          enabled: !currentDaySchedule?.enabled,
         },
       },
     });
@@ -128,11 +133,10 @@ export default function ScheduleManageModal({ onClose }: ScheduleManageModalProp
         <div className="flex items-center gap-4 px-6 border-b border-border">
           <button
             onClick={() => setActiveTab('weekly')}
-            className={`py-4 font-medium relative ${
-              activeTab === 'weekly'
-                ? 'text-primary'
-                : 'text-text-secondary hover:text-text-primary'
-            }`}
+            className={`py-4 font-medium relative ${activeTab === 'weekly'
+              ? 'text-primary'
+              : 'text-text-secondary hover:text-text-primary'
+              }`}
           >
             Weekly Hours
             {activeTab === 'weekly' && (
@@ -141,11 +145,10 @@ export default function ScheduleManageModal({ onClose }: ScheduleManageModalProp
           </button>
           <button
             onClick={() => setActiveTab('blocked')}
-            className={`py-4 font-medium relative ${
-              activeTab === 'blocked'
-                ? 'text-primary'
-                : 'text-text-secondary hover:text-text-primary'
-            }`}
+            className={`py-4 font-medium relative ${activeTab === 'blocked'
+              ? 'text-primary'
+              : 'text-text-secondary hover:text-text-primary'
+              }`}
           >
             Blocked Dates
             {activeTab === 'blocked' && (
@@ -182,10 +185,11 @@ export default function ScheduleManageModal({ onClose }: ScheduleManageModalProp
 
                 <div className="space-y-2">
                   {DAYS.map((day) => {
-                    const config = schedule.weeklySchedule[day] || {
-                      start: '09:00',
-                      end: '17:00',
-                      enabled: false,
+                    const currentDaySchedule = schedule.weeklySchedule[day] || {};
+                    const config = {
+                      start: currentDaySchedule.start || '09:00',
+                      end: currentDaySchedule.end || '17:00',
+                      enabled: currentDaySchedule.enabled || false,
                     };
                     return (
                       <div

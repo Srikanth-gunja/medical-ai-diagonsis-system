@@ -1,6 +1,9 @@
 from bson import ObjectId
 from datetime import datetime
+import logging
 from ..database import get_db, APPOINTMENTS_COLLECTION
+
+logger = logging.getLogger(__name__)
 
 class Appointment:
     """Appointment model."""
@@ -92,7 +95,10 @@ class Appointment:
                 if patient:
                     patient_name = f"{patient.get('firstName', '')} {patient.get('lastName', '')}".strip()
             except Exception:
-                pass
+                logger.warning(
+                    "Failed to resolve patient name for appointment %s",
+                    appointment.get('_id'),
+                )
 
         return {
             'id': str(appointment['_id']),

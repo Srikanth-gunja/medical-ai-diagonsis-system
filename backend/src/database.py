@@ -27,8 +27,11 @@ def init_db(app):
 
     # Create indexes for better query performance
     with app.app_context():
-        db = get_db()
-        _create_indexes(db)
+        try:
+            db = get_db()
+            _create_indexes(db)
+        except Exception:
+            logger.exception("Skipping DB index initialization because database is unavailable")
 
 
 def _create_indexes(db):

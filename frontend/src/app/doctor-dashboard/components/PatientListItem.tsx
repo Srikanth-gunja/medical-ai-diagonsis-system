@@ -79,14 +79,14 @@ export default function PatientListItem({
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => onViewHistory(patient.id)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-muted text-text-primary rounded-lg hover:bg-muted/80 transition-base font-medium"
+              className="flex items-center gap-2 px-5 py-2.5 bg-muted text-text-primary rounded-xl hover:brightness-95 transition-base font-medium shadow-sm"
             >
               <Icon name="DocumentTextIcon" size={18} />
               <span>History</span>
             </button>
             <button
               onClick={() => onMessage(patient.id)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-accent text-accent-foreground rounded-lg hover:shadow-elevation-2 transition-base font-medium"
+              className="flex items-center gap-2 px-5 py-2.5 bg-accent text-accent-foreground rounded-xl hover:brightness-110 hover:shadow-elevation-2 transition-base font-medium"
             >
               <Icon name="ChatBubbleLeftRightIcon" size={18} />
               <span>Message</span>
@@ -94,7 +94,7 @@ export default function PatientListItem({
             {onPrescribe && hasActiveAppointment && (
               <button
                 onClick={() => onPrescribe(patient.id)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-warning text-warning-foreground rounded-lg hover:bg-warning/90 transition-base font-medium"
+                className="flex items-center gap-2 px-5 py-2.5 bg-warning text-warning-foreground rounded-xl hover:brightness-110 transition-base font-medium shadow-sm"
               >
                 <Icon name="ClipboardDocumentListIcon" size={18} />
                 <span>Prescribe</span>
@@ -103,7 +103,7 @@ export default function PatientListItem({
             {onFinish && hasActiveAppointment && (
               <button
                 onClick={() => onFinish(patient.id)}
-                className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-base font-medium"
+                className="flex items-center gap-2 px-5 py-2.5 bg-secondary text-secondary-foreground rounded-xl hover:brightness-110 transition-base font-medium shadow-sm"
               >
                 <Icon name="CheckCircleIcon" size={18} />
                 <span>Finish Appointment</span>

@@ -6,7 +6,7 @@ from ..models.appointment import Appointment
 from ..models.doctor import Doctor
 from ..models.patient import Patient
 from ..models.notification import Notification
-from ..database import get_db
+from ..database import get_db, APPOINTMENTS_COLLECTION
 from ..realtime import publish_event
 import json
 from datetime import datetime
@@ -40,6 +40,21 @@ def get_current_user():
     return identity
 
 
+def _doctor_has_patient_access(doctor_id, patient_user_id):
+    """Verify doctor has at least one appointment with this patient."""
+    db = get_db()
+    try:
+        patient_oid = ObjectId(patient_user_id)
+    except Exception:
+        return False
+    return (
+        db[APPOINTMENTS_COLLECTION].find_one(
+            {'doctor_id': doctor_id, 'patient_id': patient_oid}
+        )
+        is not None
+    )
+
+
 @prescriptions_bp.route('/', methods=['POST'])
 @jwt_required()
 def create_prescription():
@@ -49,7 +64,7 @@ def create_prescription():
     if current_user['role'] != 'doctor':
         return jsonify({'error': 'Only doctors can create prescriptions'}), 403
     
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     appointment_id = data.get('appointmentId')
     medications = data.get('medications', [])
     diagnosis = data.get('diagnosis', '')
@@ -242,7 +257,7 @@ def create_prescription_for_patient(patient_id):
     if current_user['role'] != 'doctor':
         return jsonify({'error': 'Only doctors can create prescriptions'}), 403
     
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     medications = data.get('medications', [])
     diagnosis = data.get('diagnosis', '')
     notes = data.get('notes', '')
@@ -264,6 +279,9 @@ def create_prescription_for_patient(patient_id):
     doctor = Doctor.find_by_user_id(current_user['id'])
     if not doctor:
         return jsonify({'error': 'Doctor profile not found'}), 404
+
+    if not _doctor_has_patient_access(doctor['_id'], patient_id):
+        return jsonify({'error': 'Access denied. No appointment history with this patient'}), 403
     
     # Create prescription
     prescription = Prescription.create(

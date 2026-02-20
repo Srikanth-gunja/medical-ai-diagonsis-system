@@ -525,7 +525,7 @@ def complete_appointment(appt_id):
     if current_user["role"] != "doctor":
         return jsonify({"error": "Only doctors can complete appointments"}), 403
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     # Get the appointment
     appointment = Appointment.find_by_id(appt_id)
@@ -602,7 +602,7 @@ def reject_appointment(appt_id):
     if current_user["role"] != "doctor":
         return jsonify({"error": "Only doctors can reject appointments"}), 403
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     reason = data.get("reason", "No reason provided")
 
     # Get the appointment
@@ -668,7 +668,7 @@ def reject_appointment(appt_id):
 def reschedule_appointment(appt_id):
     """Reschedule an appointment to a new date and time."""
     current_user = get_current_user()
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
 
     new_date = data.get("date")
     new_time = data.get("time")

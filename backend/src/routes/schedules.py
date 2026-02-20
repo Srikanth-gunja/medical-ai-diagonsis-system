@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from bson import ObjectId
+from datetime import datetime
 from ..models.schedule import Schedule
 from ..models.doctor import Doctor
 import json
@@ -64,7 +65,7 @@ def update_schedule():
     if not doctor:
         return jsonify({'error': 'Doctor profile not found'}), 404
     
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     weekly_schedule = data.get('weeklySchedule', {})
     blocked_dates = data.get('blockedDates', [])
     slot_duration = data.get('slotDuration', 30)
@@ -90,6 +91,11 @@ def get_available_slots(doctor_id):
     
     if not date:
         return jsonify({'error': 'Date parameter is required'}), 400
+
+    try:
+        datetime.strptime(date, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD.'}), 400
     
     # Verify doctor exists
     doctor = Doctor.find_by_id(doctor_id)
@@ -118,11 +124,16 @@ def add_blocked_date():
     if not doctor:
         return jsonify({'error': 'Doctor profile not found'}), 404
     
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     date = data.get('date')
     
     if not date:
         return jsonify({'error': 'Date is required'}), 400
+
+    try:
+        datetime.strptime(date, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD.'}), 400
     
     schedule = Schedule.find_by_doctor_id(doctor['_id'])
     
@@ -160,11 +171,16 @@ def remove_blocked_date():
     if not doctor:
         return jsonify({'error': 'Doctor profile not found'}), 404
     
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     date = data.get('date')
     
     if not date:
         return jsonify({'error': 'Date is required'}), 400
+
+    try:
+        datetime.strptime(date, '%Y-%m-%d')
+    except ValueError:
+        return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD.'}), 400
     
     schedule = Schedule.find_by_doctor_id(doctor['_id'])
     

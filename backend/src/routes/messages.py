@@ -65,7 +65,7 @@ def get_messages(appointment_id):
 def send_message(appointment_id):
     """Send a new message."""
     current_user = get_current_user()
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     
     if not data.get('content'):
         return jsonify({'error': 'Message content is required'}), 400

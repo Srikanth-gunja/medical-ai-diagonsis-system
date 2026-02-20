@@ -106,14 +106,14 @@ export default function AppointmentRequestCard({
         <div className="flex gap-2">
           <button
             onClick={() => onApprove(request.id)}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-success/90 text-white rounded-xl hover:bg-success hover:shadow-lg hover:shadow-success/20 active:scale-[0.98] transition-all text-sm font-bold"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-success text-success-foreground rounded-xl hover:brightness-110 hover:shadow-lg hover:shadow-success/20 active:scale-[0.98] transition-all text-sm font-bold"
           >
             <Icon name="CheckIcon" size={16} />
             <span>Approve</span>
           </button>
           <button
             onClick={() => onDecline(request.id)}
-            className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 bg-background text-text-primary border border-border shadow-sm rounded-xl hover:bg-error/10 hover:text-error hover:border-error/20 active:scale-[0.98] transition-all text-sm font-bold"
+            className="flex flex-1 items-center justify-center gap-2 px-4 py-2.5 bg-background text-text-primary border border-border shadow-sm rounded-xl hover:bg-error/10 hover:text-error hover:border-error/30 active:scale-[0.98] transition-all text-sm font-bold"
           >
             <Icon name="XMarkIcon" size={16} />
             <span>Decline</span>

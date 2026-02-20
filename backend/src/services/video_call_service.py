@@ -1,6 +1,7 @@
 from getstream import Stream
 from getstream.models import UserRequest
 import os
+import logging
 from datetime import datetime, timedelta, timezone
 
 try:
@@ -9,6 +10,8 @@ except ImportError:  # pragma: no cover - fallback for older Python
     ZoneInfo = None
 from ..database import get_db, APPOINTMENTS_COLLECTION
 from bson import ObjectId
+
+logger = logging.getLogger(__name__)
 
 
 class VideoCallService:
@@ -19,16 +22,16 @@ class VideoCallService:
         if self.api_key and self.api_secret:
             try:
                 self.client = Stream(api_key=self.api_key, api_secret=self.api_secret)
-                print("Stream Video client initialized successfully")
-            except Exception as e:
-                print(f"Error initializing Stream client: {e}")
+                logger.info("Stream Video client initialized successfully")
+            except Exception:
+                logger.exception("Error initializing Stream client")
 
     def generate_user_token(
         self, user_id: str, user_name: str = None, role: str = "patient"
     ):
         """Generate GetStream token for video call authentication"""
         if not self.client:
-            print(
+            logger.warning(
                 "Stream client not initialized - check GETSTREAM_API_KEY and GETSTREAM_API_SECRET"
             )
             return None
@@ -41,8 +44,8 @@ class VideoCallService:
             self._upsert_user_internal(user_id, user_name, role)
 
             return token
-        except Exception as e:
-            print(f"Error generating token: {e}")
+        except Exception:
+            logger.exception("Error generating Stream token")
             return None
 
     def _upsert_user_internal(
@@ -60,8 +63,8 @@ class VideoCallService:
                     role="admin" if role == "doctor" else "user",
                 )
             )
-        except Exception as e:
-            print(f"Error upserting user in Stream: {e}")
+        except Exception:
+            logger.exception("Error upserting user in Stream")
 
     def upsert_user(self, user_id: str, user_name: str = None, role: str = "patient"):
         """Create or update a user in Stream (for the other call participant)"""
@@ -77,8 +80,8 @@ class VideoCallService:
                 )
             )
             return True
-        except Exception as e:
-            print(f"Error upserting user in Stream: {e}")
+        except Exception:
+            logger.exception("Error upserting user in Stream")
             return False
 
     def create_call_id(self, appointment_id: str) -> str:
