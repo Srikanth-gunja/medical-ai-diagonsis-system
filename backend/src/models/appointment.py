@@ -83,10 +83,22 @@ class Appointment:
     @staticmethod
     def to_dict(appointment):
         """Convert appointment to dictionary."""
+        from .patient import Patient
+        
+        patient_name = appointment.get('patient_name')
+        if not patient_name and appointment.get('patient_id'):
+            try:
+                patient = Patient.find_by_user_id(str(appointment['patient_id']))
+                if patient:
+                    patient_name = f"{patient.get('firstName', '')} {patient.get('lastName', '')}".strip()
+            except Exception:
+                pass
+
         return {
             'id': str(appointment['_id']),
-            'patientId': str(appointment['patient_id']),
-            'doctorId': str(appointment['doctor_id']),
+            'patientId': str(appointment.get('patient_id', '')),
+            'patientName': patient_name or 'Unknown Patient',
+            'doctorId': str(appointment.get('doctor_id', '')),
             'doctorName': appointment['doctor_name'],
             'date': appointment['date'],
             'time': appointment['time'],

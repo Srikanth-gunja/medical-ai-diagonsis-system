@@ -1,4 +1,5 @@
 from bson import ObjectId
+from pymongo import DESCENDING
 from ..database import get_db, DOCTORS_COLLECTION
 
 class Doctor:
@@ -51,7 +52,10 @@ class Doctor:
         db = get_db()
         if isinstance(user_id, str):
             user_id = ObjectId(user_id)
-        return db[DOCTORS_COLLECTION].find_one({'user_id': user_id})
+        return db[DOCTORS_COLLECTION].find_one(
+            {'user_id': user_id},
+            sort=[('verified', DESCENDING), ('_id', DESCENDING)]
+        )
     
     @staticmethod
     def update(doctor_id, update_data):

@@ -27,6 +27,11 @@ def create_app(config_class=Config):
         response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
         response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-Requested-With, Accept, Origin'
         response.headers['Access-Control-Expose-Headers'] = 'Content-Type, Authorization'
+        if request.path.startswith('/api/') and 'Cache-Control' not in response.headers:
+            # Prevent browser/proxy cache reuse across different authenticated users.
+            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0, private'
+            response.headers['Pragma'] = 'no-cache'
+            response.headers['Expires'] = '0'
         return response
 
     # Handle preflight OPTIONS requests

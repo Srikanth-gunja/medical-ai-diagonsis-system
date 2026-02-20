@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { useState, ReactNode } from 'react';
+import { useState, useEffect, ReactNode } from 'react';
 
 export function QueryProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({
@@ -21,6 +21,18 @@ export function QueryProvider({ children }: { children: ReactNode }) {
       },
     },
   }));
+
+  useEffect(() => {
+    const handleAuthChanged = () => {
+      // Prevent cross-user stale data when account changes in the same browser session.
+      queryClient.clear();
+    };
+
+    window.addEventListener('medicare:auth-changed', handleAuthChanged);
+    return () => {
+      window.removeEventListener('medicare:auth-changed', handleAuthChanged);
+    };
+  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>

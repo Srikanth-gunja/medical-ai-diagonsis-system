@@ -10,6 +10,11 @@ import json
 from datetime import datetime, timedelta
 
 analytics_bp = Blueprint('analytics', __name__)
+PUBLIC_STATS_CACHE_TTL_SECONDS = 5 * 60
+_public_stats_cache = {
+    'expires_at': 0.0,
+    'data': None,
+}
 
 
 def get_current_user():
@@ -218,6 +223,16 @@ def get_doctor_chart_data():
 @analytics_bp.route('/public-stats', methods=['GET'])
 def get_public_stats():
     """Get public stats for homepage - no auth required."""
+    now_ts = datetime.utcnow().timestamp()
+    cached_data = _public_stats_cache.get('data')
+    if cached_data is not None and now_ts < float(_public_stats_cache.get('expires_at', 0.0)):
+        response = jsonify(cached_data)
+        response.headers['Cache-Control'] = (
+            f'public, max-age={PUBLIC_STATS_CACHE_TTL_SECONDS}, '
+            f's-maxage={PUBLIC_STATS_CACHE_TTL_SECONDS}, stale-while-revalidate=60'
+        )
+        return response
+
     db = get_db()
     
     patients_count = db.patients.count_documents({})
@@ -234,11 +249,20 @@ def get_public_stats():
     else:
         satisfaction_percent = 0
         average_rating = 0
-    
-    return jsonify({
+
+    payload = {
         'activePatients': patients_count,
         'licensedDoctors': doctors_count,
         'completedConsultations': completed_appointments,
         'satisfactionRate': satisfaction_percent,
         'averageRating': average_rating
-    })
+    }
+    _public_stats_cache['data'] = payload
+    _public_stats_cache['expires_at'] = now_ts + PUBLIC_STATS_CACHE_TTL_SECONDS
+
+    response = jsonify(payload)
+    response.headers['Cache-Control'] = (
+        f'public, max-age={PUBLIC_STATS_CACHE_TTL_SECONDS}, '
+        f's-maxage={PUBLIC_STATS_CACHE_TTL_SECONDS}, stale-while-revalidate=60'
+    )
+    return response

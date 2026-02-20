@@ -147,6 +147,14 @@ export interface PatientAnalytics {
   } | null;
 }
 
+export interface PublicStats {
+  activePatients: number;
+  licensedDoctors: number;
+  completedConsultations: number;
+  satisfactionRate: number;
+  averageRating: number;
+}
+
 export interface Schedule {
   doctorId: string;
   weeklySchedule: {
@@ -243,6 +251,8 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   try {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       ...options,
+      // Authenticated dashboard data must never be browser-cached across users.
+      cache: 'no-store',
       headers,
     });
 
@@ -265,6 +275,10 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
   }
 }
 
+const PUBLIC_STATS_CACHE_TTL_MS = 1000 * 60 * 5;
+let cachedPublicStats: { data: PublicStats; expiresAt: number } | null = null;
+let pendingPublicStatsRequest: Promise<PublicStats> | null = null;
+
 // Auth API
 export const authApi = {
   login: async (email: string, password: string): Promise<AuthResponse> => {
@@ -286,6 +300,9 @@ export const authApi = {
 
     setToken(response.access_token);
     setUser(user);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('medicare:auth-changed'));
+    }
 
     return {
       access_token: response.access_token,
@@ -341,6 +358,9 @@ export const authApi = {
 
   logout: (): void => {
     removeToken();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('medicare:auth-changed'));
+    }
   },
 
   getToken,
@@ -491,13 +511,42 @@ export const analyticsApi = {
     statusData: { name: string; value: number; color: string }[];
   }> => fetchApi('/analytics/doctor/chart'),
 
-  getPublicStats: (): Promise<{
-    activePatients: number;
-    licensedDoctors: number;
-    completedConsultations: number;
-    satisfactionRate: number;
-    averageRating: number;
-  }> => fetch(`${API_BASE_URL}/analytics/public-stats`).then((res) => res.json()),
+  getPublicStats: (): Promise<PublicStats> => {
+    const now = Date.now();
+
+    if (cachedPublicStats && now < cachedPublicStats.expiresAt) {
+      return Promise.resolve(cachedPublicStats.data);
+    }
+
+    if (pendingPublicStatsRequest) {
+      return pendingPublicStatsRequest;
+    }
+
+    pendingPublicStatsRequest = fetch(`${API_BASE_URL}/analytics/public-stats`)
+      .then(async (res) => {
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+          throw new ApiRequestError(
+            errorData.error || errorData.message || `HTTP error! status: ${res.status}`,
+            res.status,
+            errorData
+          );
+        }
+        return res.json() as Promise<PublicStats>;
+      })
+      .then((data) => {
+        cachedPublicStats = {
+          data,
+          expiresAt: Date.now() + PUBLIC_STATS_CACHE_TTL_MS,
+        };
+        return data;
+      })
+      .finally(() => {
+        pendingPublicStatsRequest = null;
+      });
+
+    return pendingPublicStatsRequest;
+  },
 };
 
 // Messages API
