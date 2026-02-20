@@ -16,13 +16,20 @@ import RescheduleModal from './RescheduleModal';
 import VideoCallModal from '@/components/video/VideoCallModal';
 import IncomingCallModal from '@/components/video/IncomingCallModal';
 import Icon from '@/components/ui/AppIcon';
+import Pagination from '@/components/ui/Pagination';
 import { useToast } from '@/components/ui/Toast';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { DashboardSkeleton } from '@/components/ui/Skeletons';
 import { useUser } from '../ClientLayout';
 import { useVideoCall } from '@/contexts/VideoCallContext';
 import { useDoctors, doctorKeys } from '@/hooks/useDoctors';
-import { useAppointments, appointmentKeys, useCreateAppointment, useRevokeAppointment, useRescheduleAppointment } from '@/hooks/useAppointments';
+import {
+  useAppointments,
+  appointmentKeys,
+  useCreateAppointment,
+  useRevokeAppointment,
+  useRescheduleAppointment,
+} from '@/hooks/useAppointments';
 import {
   activitiesApi,
   type Doctor as ApiDoctor,
@@ -68,6 +75,8 @@ interface FilterOptions {
   consultationType: 'all' | 'video' | 'in-person';
 }
 
+const ITEMS_PER_PAGE = 5;
+
 const PatientDashboardInteractive = () => {
   const { user } = useUser();
   const [isHydrated, setIsHydrated] = useState(false);
@@ -99,7 +108,11 @@ const PatientDashboardInteractive = () => {
   // React Query hooks for data fetching
   const queryClient = useQueryClient();
   const { data: doctorsData, isLoading: isDoctorsLoading, error: doctorsError } = useDoctors(1, 50);
-  const { data: appointmentsData, isLoading: isAppointmentsLoading, error: appointmentsError } = useAppointments(1, 50);
+  const {
+    data: appointmentsData,
+    isLoading: isAppointmentsLoading,
+    error: appointmentsError,
+  } = useAppointments(1, 50);
   const createAppointmentMutation = useCreateAppointment();
   const revokeAppointmentMutation = useRevokeAppointment();
   const rescheduleAppointmentMutation = useRescheduleAppointment();
@@ -108,15 +121,6 @@ const PatientDashboardInteractive = () => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Pagination states
-  const [visibleAppointments, setVisibleAppointments] = useState(5);
-  const [visibleDoctors, setVisibleDoctors] = useState(5);
-
-  const handleTabChange = (tab: 'upcoming' | 'pending' | 'completed' | 'rejected') => {
-    setAppointmentTab(tab);
-    setVisibleAppointments(5);
-  };
 
   // Filter state
   const [filters, setFilters] = useState<FilterOptions>({
@@ -130,6 +134,13 @@ const PatientDashboardInteractive = () => {
   const [appointmentTab, setAppointmentTab] = useState<
     'upcoming' | 'pending' | 'completed' | 'rejected'
   >('upcoming');
+  const [appointmentsPage, setAppointmentsPage] = useState(1);
+  const [doctorsPage, setDoctorsPage] = useState(1);
+
+  const handleTabChange = (tab: 'upcoming' | 'pending' | 'completed' | 'rejected') => {
+    setAppointmentTab(tab);
+    setAppointmentsPage(1);
+  };
 
   // Process React Query data into component state
   const appointments = useMemo(() => {
@@ -213,9 +224,7 @@ const PatientDashboardInteractive = () => {
           rated: (a as any).rated || false,
           rejectionReason:
             (a as any).rejectionReason ||
-            (derivedStatus === 'rejected' && a.status === 'pending'
-              ? 'Expired (no response)'
-              : ''),
+            (derivedStatus === 'rejected' && a.status === 'pending' ? 'Expired (no response)' : ''),
         };
       });
   }, [appointmentsData]);
@@ -542,45 +551,79 @@ const PatientDashboardInteractive = () => {
     });
   }, [doctors, searchQuery, filters]);
 
+  const totalDoctorPages = Math.max(1, Math.ceil(filteredDoctors.length / ITEMS_PER_PAGE));
+  const paginatedDoctors = useMemo(() => {
+    const start = (doctorsPage - 1) * ITEMS_PER_PAGE;
+    return filteredDoctors.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredDoctors, doctorsPage]);
+
+  useEffect(() => {
+    setDoctorsPage(1);
+  }, [searchQuery, filters]);
+
+  useEffect(() => {
+    setDoctorsPage((prev) => Math.min(prev, totalDoctorPages));
+  }, [totalDoctorPages]);
+
   // Memoized appointment counts for tabs
-  const appointmentCounts = useMemo(() => ({
-    confirmed: appointments.filter((a) => a.status === 'confirmed' || a.status === 'in_progress').length,
-    pending: appointments.filter((a) => a.status === 'pending').length,
-    completed: appointments.filter((a) => a.status === 'completed' || a.status === 'no_show').length,
-    rejected: appointments.filter((a) => a.status === 'rejected').length,
-  }), [appointments]);
+  const appointmentCounts = useMemo(
+    () => ({
+      confirmed: appointments.filter((a) => a.status === 'confirmed' || a.status === 'in_progress')
+        .length,
+      pending: appointments.filter((a) => a.status === 'pending').length,
+      completed: appointments.filter((a) => a.status === 'completed' || a.status === 'no_show')
+        .length,
+      rejected: appointments.filter((a) => a.status === 'rejected').length,
+    }),
+    [appointments]
+  );
 
   // Memoized filtered appointments for each tab
-  const confirmedAppointments = useMemo(() =>
-    appointments.filter((a) => a.status === 'confirmed' || a.status === 'in_progress'),
+  const confirmedAppointments = useMemo(
+    () => appointments.filter((a) => a.status === 'confirmed' || a.status === 'in_progress'),
     [appointments]
   );
 
-  const pendingAppointmentsList = useMemo(() =>
-    appointments.filter((a) => a.status === 'pending'),
+  const pendingAppointmentsList = useMemo(
+    () => appointments.filter((a) => a.status === 'pending'),
     [appointments]
   );
 
-  const completedAppointmentsList = useMemo(() =>
-    appointments.filter((a) => a.status === 'completed' || a.status === 'no_show'),
+  const completedAppointmentsList = useMemo(
+    () => appointments.filter((a) => a.status === 'completed' || a.status === 'no_show'),
     [appointments]
   );
 
-  const rejectedAppointmentsList = useMemo(() =>
-    appointments.filter((a) => a.status === 'rejected'),
+  const rejectedAppointmentsList = useMemo(
+    () => appointments.filter((a) => a.status === 'rejected'),
     [appointments]
   );
 
-  // Filter appointments for upcoming section: confirmed or pending - memoized
-  const upcomingAppointments = useMemo(() =>
-    appointments.filter(
-      (a) => a.status === 'confirmed' || a.status === 'pending' || a.status === 'in_progress'
-    ),
-    [appointments]
-  );
+  const activeAppointmentsList = useMemo(() => {
+    if (appointmentTab === 'pending') return pendingAppointmentsList;
+    if (appointmentTab === 'completed') return completedAppointmentsList;
+    if (appointmentTab === 'rejected') return rejectedAppointmentsList;
+    return confirmedAppointments;
+  }, [
+    appointmentTab,
+    pendingAppointmentsList,
+    completedAppointmentsList,
+    rejectedAppointmentsList,
+    confirmedAppointments,
+  ]);
 
-  // Display all appointments
-  const displayAppointments = appointments;
+  const totalAppointmentPages = Math.max(
+    1,
+    Math.ceil(activeAppointmentsList.length / ITEMS_PER_PAGE)
+  );
+  const paginatedAppointments = useMemo(() => {
+    const start = (appointmentsPage - 1) * ITEMS_PER_PAGE;
+    return activeAppointmentsList.slice(start, start + ITEMS_PER_PAGE);
+  }, [activeAppointmentsList, appointmentsPage]);
+
+  useEffect(() => {
+    setAppointmentsPage((prev) => Math.min(prev, totalAppointmentPages));
+  }, [totalAppointmentPages]);
 
   if (!isHydrated || isLoading) {
     return <DashboardSkeleton />;
@@ -635,56 +678,68 @@ const PatientDashboardInteractive = () => {
                 <div className="flex flex-wrap items-center gap-2 mb-8 bg-muted/30 p-1.5 rounded-2xl w-fit border border-border/50">
                   <button
                     onClick={() => handleTabChange('upcoming')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${appointmentTab === 'upcoming'
-                      ? 'bg-primary text-primary-foreground shadow-sm scale-100'
-                      : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
-                      }`}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${
+                      appointmentTab === 'upcoming'
+                        ? 'bg-primary text-primary-foreground shadow-sm scale-100'
+                        : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                    }`}
                   >
                     Upcoming
                     {appointmentCounts.confirmed > 0 && (
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${appointmentTab === 'upcoming' ? 'bg-primary-foreground/20 text-white' : 'bg-success/10 text-success'}`}>
+                      <span
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${appointmentTab === 'upcoming' ? 'bg-primary-foreground/20 text-white' : 'bg-success/10 text-success'}`}
+                      >
                         {appointmentCounts.confirmed}
                       </span>
                     )}
                   </button>
                   <button
                     onClick={() => handleTabChange('pending')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${appointmentTab === 'pending'
-                      ? 'bg-primary text-primary-foreground shadow-sm scale-100'
-                      : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
-                      }`}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${
+                      appointmentTab === 'pending'
+                        ? 'bg-primary text-primary-foreground shadow-sm scale-100'
+                        : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                    }`}
                   >
                     Pending
                     {appointmentCounts.pending > 0 && (
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${appointmentTab === 'pending' ? 'bg-primary-foreground/20 text-white' : 'bg-warning/10 text-warning'}`}>
+                      <span
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${appointmentTab === 'pending' ? 'bg-primary-foreground/20 text-white' : 'bg-warning/10 text-warning'}`}
+                      >
                         {appointmentCounts.pending}
                       </span>
                     )}
                   </button>
                   <button
                     onClick={() => handleTabChange('completed')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${appointmentTab === 'completed'
-                      ? 'bg-primary text-primary-foreground shadow-sm scale-100'
-                      : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
-                      }`}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${
+                      appointmentTab === 'completed'
+                        ? 'bg-primary text-primary-foreground shadow-sm scale-100'
+                        : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                    }`}
                   >
                     Completed
                     {appointmentCounts.completed > 0 && (
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${appointmentTab === 'completed' ? 'bg-primary-foreground/20 text-white' : 'bg-primary/20 text-primary'}`}>
+                      <span
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${appointmentTab === 'completed' ? 'bg-primary-foreground/20 text-white' : 'bg-primary/20 text-primary'}`}
+                      >
                         {appointmentCounts.completed}
                       </span>
                     )}
                   </button>
                   <button
                     onClick={() => handleTabChange('rejected')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${appointmentTab === 'rejected'
-                      ? 'bg-primary text-primary-foreground shadow-sm scale-100'
-                      : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
-                      }`}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${
+                      appointmentTab === 'rejected'
+                        ? 'bg-primary text-primary-foreground shadow-sm scale-100'
+                        : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                    }`}
                   >
                     Rejected
                     {appointmentCounts.rejected > 0 && (
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${appointmentTab === 'rejected' ? 'bg-primary-foreground/20 text-white' : 'bg-error/10 text-error'}`}>
+                      <span
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${appointmentTab === 'rejected' ? 'bg-primary-foreground/20 text-white' : 'bg-error/10 text-error'}`}
+                      >
                         {appointmentCounts.rejected}
                       </span>
                     )}
@@ -697,7 +752,7 @@ const PatientDashboardInteractive = () => {
                     <>
                       {confirmedAppointments.length > 0 ? (
                         <>
-                          {confirmedAppointments.slice(0, visibleAppointments).map((appointment) => (
+                          {paginatedAppointments.map((appointment) => (
                             <UpcomingAppointmentCard
                               key={appointment.id}
                               appointment={appointment}
@@ -708,12 +763,14 @@ const PatientDashboardInteractive = () => {
                               onReview={handleReview}
                             />
                           ))}
-                          {visibleAppointments < confirmedAppointments.length && (
-                            <div className="flex justify-center mt-6">
-                              <button onClick={() => setVisibleAppointments(v => v + 5)} className="px-6 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl transition-colors">
-                                Load More ({confirmedAppointments.length - visibleAppointments})
-                              </button>
-                            </div>
+                          {confirmedAppointments.length > ITEMS_PER_PAGE && (
+                            <Pagination
+                              currentPage={appointmentsPage}
+                              totalPages={totalAppointmentPages}
+                              onPageChange={setAppointmentsPage}
+                              totalItems={confirmedAppointments.length}
+                              itemsPerPage={ITEMS_PER_PAGE}
+                            />
                           )}
                         </>
                       ) : (
@@ -736,7 +793,7 @@ const PatientDashboardInteractive = () => {
                     <>
                       {pendingAppointmentsList.length > 0 ? (
                         <>
-                          {pendingAppointmentsList.slice(0, visibleAppointments).map((appointment) => (
+                          {paginatedAppointments.map((appointment) => (
                             <UpcomingAppointmentCard
                               key={appointment.id}
                               appointment={appointment}
@@ -747,12 +804,14 @@ const PatientDashboardInteractive = () => {
                               onReview={handleReview}
                             />
                           ))}
-                          {visibleAppointments < pendingAppointmentsList.length && (
-                            <div className="flex justify-center mt-6">
-                              <button onClick={() => setVisibleAppointments(v => v + 5)} className="px-6 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl transition-colors">
-                                Load More ({pendingAppointmentsList.length - visibleAppointments})
-                              </button>
-                            </div>
+                          {pendingAppointmentsList.length > ITEMS_PER_PAGE && (
+                            <Pagination
+                              currentPage={appointmentsPage}
+                              totalPages={totalAppointmentPages}
+                              onPageChange={setAppointmentsPage}
+                              totalItems={pendingAppointmentsList.length}
+                              itemsPerPage={ITEMS_PER_PAGE}
+                            />
                           )}
                         </>
                       ) : (
@@ -775,7 +834,7 @@ const PatientDashboardInteractive = () => {
                     <>
                       {completedAppointmentsList.length > 0 ? (
                         <>
-                          {completedAppointmentsList.slice(0, visibleAppointments).map((appointment) => (
+                          {paginatedAppointments.map((appointment) => (
                             <UpcomingAppointmentCard
                               key={appointment.id}
                               appointment={appointment}
@@ -786,12 +845,14 @@ const PatientDashboardInteractive = () => {
                               onReview={handleReview}
                             />
                           ))}
-                          {visibleAppointments < completedAppointmentsList.length && (
-                            <div className="flex justify-center mt-6">
-                              <button onClick={() => setVisibleAppointments(v => v + 5)} className="px-6 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl transition-colors">
-                                Load More ({completedAppointmentsList.length - visibleAppointments})
-                              </button>
-                            </div>
+                          {completedAppointmentsList.length > ITEMS_PER_PAGE && (
+                            <Pagination
+                              currentPage={appointmentsPage}
+                              totalPages={totalAppointmentPages}
+                              onPageChange={setAppointmentsPage}
+                              totalItems={completedAppointmentsList.length}
+                              itemsPerPage={ITEMS_PER_PAGE}
+                            />
                           )}
                         </>
                       ) : (
@@ -814,7 +875,7 @@ const PatientDashboardInteractive = () => {
                     <>
                       {rejectedAppointmentsList.length > 0 ? (
                         <>
-                          {rejectedAppointmentsList.slice(0, visibleAppointments).map((appointment) => (
+                          {paginatedAppointments.map((appointment) => (
                             <UpcomingAppointmentCard
                               key={appointment.id}
                               appointment={appointment}
@@ -825,12 +886,14 @@ const PatientDashboardInteractive = () => {
                               onReview={handleReview}
                             />
                           ))}
-                          {visibleAppointments < rejectedAppointmentsList.length && (
-                            <div className="flex justify-center mt-6">
-                              <button onClick={() => setVisibleAppointments(v => v + 5)} className="px-6 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl transition-colors">
-                                Load More ({rejectedAppointmentsList.length - visibleAppointments})
-                              </button>
-                            </div>
+                          {rejectedAppointmentsList.length > ITEMS_PER_PAGE && (
+                            <Pagination
+                              currentPage={appointmentsPage}
+                              totalPages={totalAppointmentPages}
+                              onPageChange={setAppointmentsPage}
+                              totalItems={rejectedAppointmentsList.length}
+                              itemsPerPage={ITEMS_PER_PAGE}
+                            />
                           )}
                         </>
                       ) : (
@@ -887,15 +950,17 @@ const PatientDashboardInteractive = () => {
                 <div className="xl:col-span-3 space-y-4">
                   {filteredDoctors.length > 0 ? (
                     <>
-                      {filteredDoctors.slice(0, visibleDoctors).map((doctor) => (
+                      {paginatedDoctors.map((doctor) => (
                         <DoctorCard key={doctor.id} doctor={doctor} onBook={handleBookDoctor} />
                       ))}
-                      {visibleDoctors < filteredDoctors.length && (
-                        <div className="flex justify-center mt-6">
-                          <button onClick={() => setVisibleDoctors(v => v + 5)} className="px-6 py-2.5 bg-primary/10 hover:bg-primary/20 text-primary font-bold rounded-xl transition-colors">
-                            Load More Doctors ({filteredDoctors.length - visibleDoctors})
-                          </button>
-                        </div>
+                      {filteredDoctors.length > ITEMS_PER_PAGE && (
+                        <Pagination
+                          currentPage={doctorsPage}
+                          totalPages={totalDoctorPages}
+                          onPageChange={setDoctorsPage}
+                          totalItems={filteredDoctors.length}
+                          itemsPerPage={ITEMS_PER_PAGE}
+                        />
                       )}
                     </>
                   ) : (
@@ -923,16 +988,16 @@ const PatientDashboardInteractive = () => {
                 activities.length > 0
                   ? activities
                   : [
-                    {
-                      id: '1',
-                      type: 'appointment' as const,
-                      title: 'Welcome!',
-                      description: 'Start by booking your first appointment',
-                      timestamp: 'Just now',
-                      icon: 'SparklesIcon',
-                      color: 'bg-primary',
-                    },
-                  ]
+                      {
+                        id: '1',
+                        type: 'appointment' as const,
+                        title: 'Welcome!',
+                        description: 'Start by booking your first appointment',
+                        timestamp: 'Just now',
+                        icon: 'SparklesIcon',
+                        color: 'bg-primary',
+                      },
+                    ]
               }
             />
           </div>
@@ -995,10 +1060,7 @@ const PatientDashboardInteractive = () => {
       )}
 
       {/* Incoming Call Modal */}
-      <IncomingCallModal
-        isOpen={!!incomingCall}
-        onClose={() => { }}
-      />
+      <IncomingCallModal isOpen={!!incomingCall} onClose={() => {}} />
 
       {/* Confirmation Dialog */}
       {ConfirmDialogComponent}
