@@ -151,8 +151,6 @@ const UpcomingAppointmentCard = ({
 
         {/* Divider for Ticket Feel */}
         <div className="hidden sm:block w-px bg-border/40 my-4 relative">
-          <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-4 h-4 bg-background border-b border-border/40 rounded-full" />
-          <div className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-4 h-4 bg-background border-t border-border/40 rounded-full" />
         </div>
         <div className="sm:hidden h-px w-full bg-border/40 mx-4 relative border-dashed"></div>
 
