@@ -1,13 +1,24 @@
 import os
+import time
 from flask import current_app
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from ..models.doctor import Doctor
 from ..models.chat_history import ChatHistory
 
+_DOCTORS_CONTEXT_CACHE = {
+    'value': None,
+    'expires_at': 0.0,
+}
+
 
 def get_doctors_context():
     """Get formatted doctors information for the LLM context."""
+    now_ts = time.time()
+    ttl_seconds = int(current_app.config.get('CHATBOT_DOCTORS_CONTEXT_CACHE_TTL_SECONDS', 120))
+    if _DOCTORS_CONTEXT_CACHE['value'] and now_ts < _DOCTORS_CONTEXT_CACHE['expires_at']:
+        return _DOCTORS_CONTEXT_CACHE['value']
+
     doctors = Doctor.find_all()
     if not doctors:
         return "No doctors available in the system."
@@ -20,7 +31,10 @@ def get_doctors_context():
             f"located at {doc_dict['location']}, rating: {doc_dict['rating']}/5"
         )
     
-    return "\n".join(doctors_info)
+    context = "\n".join(doctors_info)
+    _DOCTORS_CONTEXT_CACHE['value'] = context
+    _DOCTORS_CONTEXT_CACHE['expires_at'] = now_ts + max(1, ttl_seconds)
+    return context
 
 
 def get_system_prompt():

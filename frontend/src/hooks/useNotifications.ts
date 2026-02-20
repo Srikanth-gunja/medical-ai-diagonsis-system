@@ -24,12 +24,12 @@ export function useNotifications(limit: number = 20, unreadOnly: boolean = false
 /**
  * Hook to fetch unread notification count
  */
-export function useUnreadNotificationCount() {
+export function useUnreadNotificationCount(enablePolling: boolean = true) {
   return useQuery({
     queryKey: notificationKeys.count(),
     queryFn: () => notificationsApi.getUnreadCount(),
     staleTime: 1000 * 30, // 30 seconds
-    refetchInterval: 30000, // Poll every 30 seconds
+    refetchInterval: enablePolling ? 30000 : false,
   });
 }
 

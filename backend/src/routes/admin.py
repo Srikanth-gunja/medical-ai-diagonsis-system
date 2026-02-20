@@ -5,6 +5,7 @@ from ..models.doctor import Doctor
 from ..models.patient import Patient
 from ..models.user import User
 from ..database import get_db
+from ..utils.pagination import get_pagination_params
 import json
 
 admin_bp = Blueprint('admin', __name__)
@@ -78,40 +79,83 @@ def get_stats():
 @jwt_required()
 @require_admin
 def get_doctors():
-    """Get all doctors with optional status filter."""
+    """Get doctors with optional status filter and pagination."""
     status = request.args.get('status')  # pending, verified, rejected, or all
-    
-    if status and status != 'all':
-        doctors = Doctor.find_by_verification_status(status)
-    else:
-        doctors = Doctor.find_all(verified_only=False)
-    
-    # Get user email for each doctor
+    page, per_page = get_pagination_params(default_per_page=20, max_per_page=100)
+    db = get_db()
+
+    query = {'verification_status': status} if status and status != 'all' else {}
+    total_items = db.doctors.count_documents(query)
+    skip = (page - 1) * per_page
+    doctors = list(
+        db.doctors.find(query)
+        .sort([('_id', -1)])
+        .skip(skip)
+        .limit(per_page)
+    )
+
+    # Bulk-load user emails for current page
+    user_ids = [doc.get('user_id') for doc in doctors if doc.get('user_id')]
+    users = list(db.users.find({'_id': {'$in': user_ids}})) if user_ids else []
+    email_map = {str(user['_id']): user.get('email', '') for user in users}
+
     result = []
     for doctor in doctors:
         doctor_dict = Doctor.to_dict(doctor)
-        user = User.find_by_id(doctor.get('user_id'))
-        if user:
-            doctor_dict['email'] = user.get('email', '')
+        doctor_dict['email'] = email_map.get(str(doctor.get('user_id')), '')
         result.append(doctor_dict)
-    
-    return jsonify({'doctors': result})
+
+    total_pages = max(1, (total_items + per_page - 1) // per_page)
+    return jsonify({
+        'doctors': result,
+        'pagination': {
+            'current_page': page,
+            'per_page': per_page,
+            'total_pages': total_pages,
+            'total_items': total_items,
+            'has_next': page < total_pages,
+            'has_prev': page > 1,
+            'next_page': page + 1 if page < total_pages else None,
+            'prev_page': page - 1 if page > 1 else None,
+        },
+    })
 
 
 @admin_bp.route('/patients', methods=['GET'])
 @jwt_required()
 @require_admin
 def get_patients():
-    """Get all patients."""
+    """Get patients with pagination."""
     db = get_db()
-    patients = list(db.patients.find())
-    
+    page, per_page = get_pagination_params(default_per_page=20, max_per_page=100)
+    total_items = db.patients.count_documents({})
+    skip = (page - 1) * per_page
+    patients = list(
+        db.patients.find()
+        .sort([('_id', -1)])
+        .skip(skip)
+        .limit(per_page)
+    )
+
     result = []
     for patient in patients:
         patient_dict = Patient.to_dict(patient)
         result.append(patient_dict)
-    
-    return jsonify({'patients': result})
+
+    total_pages = max(1, (total_items + per_page - 1) // per_page)
+    return jsonify({
+        'patients': result,
+        'pagination': {
+            'current_page': page,
+            'per_page': per_page,
+            'total_pages': total_pages,
+            'total_items': total_items,
+            'has_next': page < total_pages,
+            'has_prev': page > 1,
+            'next_page': page + 1 if page < total_pages else None,
+            'prev_page': page - 1 if page > 1 else None,
+        },
+    })
 
 
 @admin_bp.route('/doctors/<doctor_id>/verify', methods=['POST'])

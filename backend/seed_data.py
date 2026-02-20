@@ -5,6 +5,7 @@ Run this script to insert doctors, patients, and sample medical records.
 """
 
 import os
+import logging
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -12,6 +13,9 @@ from pymongo import MongoClient
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
 from bson import ObjectId
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
+logger = logging.getLogger(__name__)
 
 # MongoDB connection - reads from environment variables with fallback
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://127.0.0.1:27017/")
@@ -32,7 +36,7 @@ def seed_database():
     db = client[MONGO_DB_NAME]
 
     # Clear existing data
-    print("Clearing existing data...")
+    logger.info("Clearing existing data...")
     db.users.delete_many({})
     db.doctors.delete_many({})
     db.patients.delete_many({})
@@ -44,7 +48,7 @@ def seed_database():
     db.ratings.delete_many({})
     db.notifications.delete_many({})
 
-    print("Seeding database...")
+    logger.info("Seeding database...")
 
     # Create admin user with strong credentials
     admin_user = {
@@ -55,7 +59,7 @@ def seed_database():
         "created_at": datetime.utcnow(),
     }
     db.users.insert_one(admin_user)
-    print(f"✓ Created admin user")
+    logger.info(f"✓ Created admin user")
 
     # Create doctor users
     doctor_users = [
@@ -244,7 +248,7 @@ def seed_database():
     # Insert all users
     all_users = doctor_users + patient_users
     db.users.insert_many(all_users)
-    print(f"✓ Created {len(all_users)} users")
+    logger.info(f"✓ Created {len(all_users)} users")
 
     # Create doctor profiles - start with 0 rating (will be calculated from reviews)
     doctors = [
@@ -509,7 +513,7 @@ def seed_database():
         doctor["image"] = DEFAULT_DOCTOR_PROFILE_IMAGE
 
     db.doctors.insert_many(doctors)
-    print(f"✓ Created {len(doctors)} doctor profiles")
+    logger.info(f"✓ Created {len(doctors)} doctor profiles")
 
     # Create patient profiles with enhanced data
     patients = [
@@ -702,7 +706,7 @@ def seed_database():
         patient["image"] = DEFAULT_PATIENT_PROFILE_IMAGE
 
     db.patients.insert_many(patients)
-    print(f"✓ Created {len(patients)} patient profiles")
+    logger.info(f"✓ Created {len(patients)} patient profiles")
 
     # Calculate dates for appointments
     today = datetime.utcnow().strftime('%Y-%m-%d')
@@ -1121,7 +1125,7 @@ def seed_database():
         appt.setdefault("slot_duration", 30)
 
     db.appointments.insert_many(appointments)
-    print(f"✓ Created {len(appointments)} sample appointments")
+    logger.info(f"✓ Created {len(appointments)} sample appointments")
 
     # Create medical records
     medical_records = [
@@ -1251,7 +1255,7 @@ def seed_database():
         ]
     )
     db.medical_records.insert_many(medical_records)
-    print(f"✓ Created {len(medical_records)} medical records")
+    logger.info(f"✓ Created {len(medical_records)} medical records")
 
     # Create activities for patients
     activities = [
@@ -1404,7 +1408,7 @@ def seed_database():
         ]
     )
     db.activities.insert_many(activities)
-    print(f"✓ Created {len(activities)} patient activities")
+    logger.info(f"✓ Created {len(activities)} patient activities")
 
     # Create doctor schedules
     schedules = [
@@ -1610,7 +1614,7 @@ def seed_database():
         ]
     )
     db.schedules.insert_many(schedules)
-    print(f"✓ Created {len(schedules)} doctor schedules")
+    logger.info(f"✓ Created {len(schedules)} doctor schedules")
 
     # Create sample prescriptions linked to completed appointments
     prescriptions = [
@@ -1702,7 +1706,7 @@ def seed_database():
         ]
     )
     db.prescriptions.insert_many(prescriptions)
-    print(f"✓ Created {len(prescriptions)} prescriptions")
+    logger.info(f"✓ Created {len(prescriptions)} prescriptions")
 
     # Create realistic ratings linked to ACTUAL completed appointments
     # Each rating corresponds to a real completed appointment relationship
@@ -1870,10 +1874,10 @@ def seed_database():
         ]
     )
     db.ratings.insert_many(ratings)
-    print(f"✓ Created {len(ratings)} ratings")
+    logger.info(f"✓ Created {len(ratings)} ratings")
 
     # Calculate and update actual doctor ratings based on inserted reviews
-    print("\n📊 Calculating doctor ratings from reviews...")
+    logger.info("\n📊 Calculating doctor ratings from reviews...")
     for doctor in doctors:
         doctor_ratings = [r for r in ratings if r["doctor_id"] == doctor["_id"]]
         if doctor_ratings:
@@ -1887,30 +1891,30 @@ def seed_database():
                     "review_count": rating_count
                 }}
             )
-            print(f"   {doctor['name']}: {round(avg_rating, 1)} stars ({rating_count} reviews)")
+            logger.info(f"   {doctor['name']}: {round(avg_rating, 1)} stars ({rating_count} reviews)")
         else:
-            print(f"   {doctor['name']}: No reviews yet")
+            logger.info(f"   {doctor['name']}: No reviews yet")
 
-    print("\n" + "=" * 50)
-    print("Database seeded successfully!")
-    print("=" * 50)
-    print("\nTest credentials:")
-    print("-" * 50)
+    logger.info("\n" + "=" * 50)
+    logger.info("Database seeded successfully!")
+    logger.info("=" * 50)
+    logger.info("\nTest credentials:")
+    logger.info("-" * 50)
    
-    print()
-    print("Patients:")
+    logger.info("")
+    logger.info("Patients:")
     for user in patient_users:
-        print(f"  Email: {user['email']}")
-        print("  Password: password")
-        print()
+        logger.info(f"  Email: {user['email']}")
+        logger.info("  Password: password")
+        logger.info("")
 
-    print("Doctors:")
+    logger.info("Doctors:")
     for user in doctor_users:
-        print(f"  Email: {user['email']}")
-        print("  Password: password")
-        print()
+        logger.info(f"  Email: {user['email']}")
+        logger.info("  Password: password")
+        logger.info("")
 
-    print("-" * 50)
+    logger.info("-" * 50)
 
     client.close()
 

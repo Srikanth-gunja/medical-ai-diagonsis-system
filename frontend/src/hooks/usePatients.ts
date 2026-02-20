@@ -27,10 +27,11 @@ export function usePatientProfile() {
 /**
  * Hook to fetch all patients for the current doctor
  */
-export function useDoctorPatients() {
+export function useDoctorPatients(enabled: boolean = true) {
   return useQuery({
     queryKey: patientKeys.doctor(),
     queryFn: () => patientsApi.getDoctorPatients(),
+    enabled,
     staleTime: 1000 * 60 * 2, // 2 minutes
   });
 }

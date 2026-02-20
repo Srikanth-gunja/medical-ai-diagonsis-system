@@ -159,26 +159,35 @@ def get_doctor_patients():
     if not doctor:
         return jsonify({'error': 'Doctor profile not found'}), 404
     
-    # Get all appointments for this doctor
-    appointments = Appointment.find_by_doctor_id(doctor['_id'])
-    appointments = mark_expired_appointments(appointments)
-    
-    # Build unique patient list
-    patient_ids = set()
+    db = get_db()
+    # Pull one latest appointment row per patient for this doctor in a single query.
+    pipeline = [
+        {'$match': {'doctor_id': doctor['_id']}},
+        {'$sort': {'date': -1, 'time': -1, 'created_at': -1}},
+        {
+            '$group': {
+                '_id': '$patient_id',
+                'lastAppointmentDate': {'$first': '$date'},
+                'lastAppointmentStatus': {'$first': '$status'},
+            }
+        },
+    ]
+    patient_appointments = list(db.appointments.aggregate(pipeline))
+
+    patient_ids = [row['_id'] for row in patient_appointments]
+    patients = Patient.find_by_user_ids(patient_ids)
+    patient_map = {str(patient.get('user_id')): patient for patient in patients}
+
     patients_data = []
-    
-    for appt in appointments:
-        patient_id = str(appt['patient_id'])
-        if patient_id not in patient_ids:
-            patient_ids.add(patient_id)
-            patient = Patient.find_by_user_id(patient_id)
-            if patient:
-                patient_dict = Patient.to_dict(patient)
-                # Add last appointment info
-                patient_dict['lastAppointmentDate'] = appt.get('date', '')
-                patient_dict['lastAppointmentStatus'] = appt.get('status', '')
-                patients_data.append(patient_dict)
-    
+    for row in patient_appointments:
+        patient = patient_map.get(str(row.get('_id')))
+        if not patient:
+            continue
+        patient_dict = Patient.to_dict(patient)
+        patient_dict['lastAppointmentDate'] = row.get('lastAppointmentDate', '')
+        patient_dict['lastAppointmentStatus'] = row.get('lastAppointmentStatus', '')
+        patients_data.append(patient_dict)
+
     return jsonify(patients_data)
 
 
@@ -206,20 +215,22 @@ def get_patient_history(patient_id):
     # Get medical records
     records = MedicalRecord.find_by_patient_user_id(patient_id)
     
-    # Get appointments with this doctor
-    all_appointments = Appointment.find_by_patient_id(patient_id)
-    all_appointments = mark_expired_appointments(all_appointments)
-    doctor_appointments = [
-        Appointment.to_dict(a) for a in all_appointments 
-        if str(a.get('doctor_id')) == str(doctor['_id'])
-    ]
-    
-    # Get prescriptions from this doctor
-    prescriptions = Prescription.find_by_patient_id(patient_id)
-    doctor_prescriptions = [
-        Prescription.to_dict(p) for p in prescriptions 
-        if str(p.get('doctor_id')) == str(doctor['_id'])
-    ]
+    db = get_db()
+
+    # Get appointments with this doctor directly from MongoDB.
+    doctor_appointments_raw = list(
+        db.appointments.find({'patient_id': ObjectId(patient_id), 'doctor_id': doctor['_id']})
+        .sort([('date', -1), ('time', -1), ('created_at', -1)])
+    )
+    doctor_appointments = mark_expired_appointments(doctor_appointments_raw)
+    doctor_appointments = [Appointment.to_dict(a) for a in doctor_appointments]
+
+    # Get prescriptions from this doctor directly from MongoDB.
+    doctor_prescriptions_raw = list(
+        db.prescriptions.find({'patient_id': ObjectId(patient_id), 'doctor_id': doctor['_id']})
+        .sort('created_at', -1)
+    )
+    doctor_prescriptions = [Prescription.to_dict(p) for p in doctor_prescriptions_raw]
     
     return jsonify({
         'patient': Patient.to_dict(patient),

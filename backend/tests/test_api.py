@@ -1,4 +1,8 @@
 import requests
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
+logger = logging.getLogger(__name__)
 
 # Test Login and fetch appointments
 def test():
@@ -9,11 +13,11 @@ def test():
     })
     
     if not resp.ok:
-        print("Login failed:", resp.text)
+        logger.info("Login failed: %s", resp.text)
         return
         
     token = resp.json().get("access_token")
-    print("Logged in!")
+    logger.info("Logged in!")
     
     # Fetch appointments
     headers = {"Authorization": f"Bearer {token}"}
@@ -21,7 +25,7 @@ def test():
     
     appts = appts_resp.json().get('items', [])
     for a in appts:
-        print(f"Appt {a['id']}: patientName='{a.get('patientName', 'MISSING')}' | patientId='{a.get('patientId')}'")
+        logger.info(f"Appt {a['id']}: patientName='{a.get('patientName', 'MISSING')}' | patientId='{a.get('patientId')}'")
 
 if __name__ == '__main__':
     test()

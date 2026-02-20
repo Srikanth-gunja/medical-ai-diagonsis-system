@@ -24,6 +24,13 @@ class Config:
     # MongoDB Configuration
     MONGO_URI = os.environ.get("MONGO_URI") or "mongodb://127.0.0.1:27017/"
     MONGO_DB_NAME = os.environ.get("MONGO_DB_NAME") or "medical_project"
+    MONGO_MAX_POOL_SIZE = int(os.environ.get("MONGO_MAX_POOL_SIZE", "100"))
+    MONGO_MIN_POOL_SIZE = int(os.environ.get("MONGO_MIN_POOL_SIZE", "5"))
+    MONGO_SERVER_SELECTION_TIMEOUT_MS = int(
+        os.environ.get("MONGO_SERVER_SELECTION_TIMEOUT_MS", "5000")
+    )
+    MONGO_CONNECT_TIMEOUT_MS = int(os.environ.get("MONGO_CONNECT_TIMEOUT_MS", "10000"))
+    MONGO_SOCKET_TIMEOUT_MS = int(os.environ.get("MONGO_SOCKET_TIMEOUT_MS", "10000"))
 
     # Google Gemini API Configuration
     GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY") or ""
@@ -62,6 +69,9 @@ class Config:
     CHATBOT_MAX_MESSAGE_LENGTH = int(
         os.environ.get("CHATBOT_MAX_MESSAGE_LENGTH", "2000")
     )
+    CHATBOT_RATE_LIMIT_USE_DB = _is_truthy(
+        os.environ.get("CHATBOT_RATE_LIMIT_USE_DB", "true")
+    )
 
     # API query bounds
     NOTIFICATIONS_MAX_LIMIT = int(os.environ.get("NOTIFICATIONS_MAX_LIMIT", "100"))
@@ -70,4 +80,15 @@ class Config:
     REALTIME_MAX_SSE_TOKENS = int(os.environ.get("REALTIME_MAX_SSE_TOKENS", "10000"))
     SSE_TOKEN_CLEANUP_INTERVAL_SECONDS = int(
         os.environ.get("SSE_TOKEN_CLEANUP_INTERVAL_SECONDS", "60")
+    )
+
+    # Analytics/report performance controls
+    DOCTOR_ANALYTICS_CACHE_TTL_SECONDS = int(
+        os.environ.get("DOCTOR_ANALYTICS_CACHE_TTL_SECONDS", "60")
+    )
+    REPORTS_ENABLE_AI_SUMMARY = _is_truthy(
+        os.environ.get("REPORTS_ENABLE_AI_SUMMARY")
+    )
+    CHATBOT_DOCTORS_CONTEXT_CACHE_TTL_SECONDS = int(
+        os.environ.get("CHATBOT_DOCTORS_CONTEXT_CACHE_TTL_SECONDS", "120")
     )

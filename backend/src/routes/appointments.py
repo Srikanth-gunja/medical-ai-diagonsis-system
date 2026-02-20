@@ -9,7 +9,7 @@ from ..models.notification import Notification
 from ..models.schedule import Schedule
 from ..database import get_db, APPOINTMENTS_COLLECTION
 from ..realtime import publish_event
-from ..utils.pagination import paginate, get_pagination_params
+from ..utils.pagination import get_pagination_params
 from ..utils.appointment_time import (
     mark_expired_appointments,
     mark_expired_no_show,
@@ -104,40 +104,82 @@ def get_appointments():
 
     # Get pagination parameters
     page, per_page = get_pagination_params(default_per_page=10, max_per_page=50)
+    sort_order = [("date", -1), ("time", -1), ("created_at", -1)]
+    current_page = page
 
     if role == "patient":
-        appointments = Appointment.find_by_patient_id(user_id)
+        total_items = Appointment.count_by_patient_id(user_id)
+        total_pages = max(1, (total_items + per_page - 1) // per_page)
+        current_page = min(page, total_pages)
+        skip = (current_page - 1) * per_page
+        appointments = Appointment.find_by_patient_id(
+            user_id,
+            skip=skip,
+            limit=per_page,
+            sort=sort_order,
+        )
         appointments = mark_expired_appointments(appointments)
         result = [Appointment.to_dict(appt) for appt in appointments]
     else:
         # For doctors, find by doctor profile's _id and include patient names
         doctor = Doctor.find_by_user_id(user_id)
         if doctor:
-            appointments = Appointment.find_by_doctor_id(doctor["_id"])
+            total_items = Appointment.count_by_doctor_id(doctor["_id"])
+            total_pages = max(1, (total_items + per_page - 1) // per_page)
+            current_page = min(page, total_pages)
+            skip = (current_page - 1) * per_page
+            appointments = Appointment.find_by_doctor_id(
+                doctor["_id"],
+                skip=skip,
+                limit=per_page,
+                sort=sort_order,
+            )
         else:
+            total_items = 0
+            total_pages = 1
+            current_page = 1
             appointments = []
 
         appointments = mark_expired_appointments(appointments)
 
-        # Enrich with patient names
+        # Enrich page appointments with patient names in bulk (no N+1 calls)
+        patient_ids = list(
+            {
+                str(appt.get("patient_id"))
+                for appt in appointments
+                if appt.get("patient_id")
+            }
+        )
+        patients = Patient.find_by_user_ids(patient_ids)
+        patient_name_map = {
+            str(p.get("user_id")): f"{p.get('firstName', '')} {p.get('lastName', '')}".strip()
+            for p in patients
+        }
+
         result = []
         for appt in appointments:
             appt_dict = Appointment.to_dict(appt)
-            # Get patient info
-            patient = Patient.find_by_user_id(str(appt["patient_id"]))
-            if patient:
-                appt_dict["patientName"] = (
-                    f"{patient.get('firstName', '')} {patient.get('lastName', '')}".strip()
-                )
-            else:
-                appt_dict["patientName"] = "Unknown Patient"
+            appt_dict["patientName"] = (
+                patient_name_map.get(str(appt.get("patient_id"))) or "Unknown Patient"
+            )
             # Add type if not present
             if "type" not in appt_dict:
                 appt_dict["type"] = appt.get("type", "video")
             result.append(appt_dict)
 
-    # Apply pagination
-    paginated_result = paginate(result, page, per_page)
+    paginated_result = {
+        "items": result,
+        "pagination": {
+            "current_page": current_page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "total_items": total_items,
+            "has_next": current_page < total_pages,
+            "has_prev": current_page > 1,
+            "next_page": current_page + 1 if current_page < total_pages else None,
+            "prev_page": current_page - 1 if current_page > 1 else None,
+        },
+    }
     return jsonify(paginated_result)
 
 

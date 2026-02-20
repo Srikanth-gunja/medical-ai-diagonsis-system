@@ -16,10 +16,15 @@ export const appointmentKeys = {
  * Hook to fetch paginated list of appointments
  * Automatically caches data and handles background refetching
  */
-export function useAppointments(page: number = 1, perPage: number = 10) {
+export function useAppointments(
+  page: number = 1,
+  perPage: number = 10,
+  enabled: boolean = true
+) {
   return useQuery({
     queryKey: appointmentKeys.list(page, perPage),
     queryFn: () => appointmentsApi.getAll(page, perPage),
+    enabled,
     // Keep data fresh for 1 minute
     staleTime: 1000 * 60 * 1,
     // Keep unused data in cache for 5 minutes

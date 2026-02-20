@@ -1,3 +1,9 @@
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
+logger = logging.getLogger(__name__)
+
+
 def test():
     from src.models.appointment import Appointment
     from src.models.patient import Patient
@@ -9,7 +15,7 @@ def test():
         db = get_db()
         
         appts = list(db.appointments.find())
-        print(f"Total appointments in DB: {len(appts)}")
+        logger.info(f"Total appointments in DB: {len(appts)}")
         
         unknowns = []
         for appt in appts:
@@ -17,26 +23,26 @@ def test():
             if not patient:
                 unknowns.append(appt)
         
-        print(f"Total unknowns: {len(unknowns)}")
+        logger.info(f"Total unknowns: {len(unknowns)}")
         for u in unknowns:
-            print(f"Appt {u['_id']}:")
-            print(f"  Doctor Name: {u.get('doctor_name')}")
-            print(f"  Time: {u.get('date')} {u.get('time')}")
-            print(f"  Status: {u.get('status')}")
-            print(f"  patient_id field: {u.get('patient_id')}")
+            logger.info(f"Appt {u['_id']}:")
+            logger.info(f"  Doctor Name: {u.get('doctor_name')}")
+            logger.info(f"  Time: {u.get('date')} {u.get('time')}")
+            logger.info(f"  Status: {u.get('status')}")
+            logger.info(f"  patient_id field: {u.get('patient_id')}")
             
             # Why is patient not found?
             # Check by raw _id
             p_by_id = db.patients.find_one({'_id': u.get('patient_id')})
             if p_by_id:
-                print(f"  Wait! Found this patient by _id: {p_by_id.get('firstName')} {p_by_id.get('lastName')}")
+                logger.info(f"  Wait! Found this patient by _id: {p_by_id.get('firstName')} {p_by_id.get('lastName')}")
             
             # Check if this user_id exists in users collection
             u_user = db.users.find_one({'_id': u.get('patient_id')})
             if u_user:
-                print(f"  Found in users! Role: {u_user.get('role')} Email: {u_user.get('email')}")
+                logger.info(f"  Found in users! Role: {u_user.get('role')} Email: {u_user.get('email')}")
             else:
-                print(f"  NOT even found in users collection!")
+                logger.info(f"  NOT even found in users collection!")
 
 if __name__ == '__main__':
     test()

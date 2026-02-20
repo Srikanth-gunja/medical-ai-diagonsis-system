@@ -1,19 +1,18 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import json
-import time
 import logging
-from collections import defaultdict, deque
+from datetime import datetime, timedelta
 
 from ..services.chatbot_service import (
     process_message,
     get_chat_history,
     clear_chat_history
 )
+from ..database import get_db, CHATBOT_RATE_LIMITS_COLLECTION
 
 chatbot_bp = Blueprint('chatbot', __name__)
 logger = logging.getLogger(__name__)
-_CHATBOT_RATE_BUCKETS = defaultdict(deque)
 
 
 def get_current_user():
@@ -25,13 +24,24 @@ def get_current_user():
 
 
 def _is_chatbot_rate_limited(user_id: str, limit: int, window_seconds: int) -> bool:
-    now = time.time()
-    bucket = _CHATBOT_RATE_BUCKETS[user_id]
-    while bucket and now - bucket[0] > window_seconds:
-        bucket.popleft()
-    if len(bucket) >= limit:
+    if limit <= 0:
+        return False
+
+    if not current_app.config.get('CHATBOT_RATE_LIMIT_USE_DB', True):
+        return False
+
+    db = get_db()
+    now = datetime.utcnow()
+    window_start = now - timedelta(seconds=window_seconds)
+    filter_query = {'user_id': user_id, 'created_at': {'$gte': window_start}}
+
+    count = db[CHATBOT_RATE_LIMITS_COLLECTION].count_documents(filter_query)
+    if count >= limit:
         return True
-    bucket.append(now)
+
+    db[CHATBOT_RATE_LIMITS_COLLECTION].insert_one(
+        {'user_id': user_id, 'created_at': now}
+    )
     return False
 
 

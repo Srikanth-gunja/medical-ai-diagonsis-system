@@ -32,7 +32,7 @@ import { useAppointments, appointmentKeys, useUpdateAppointmentStatus, useComple
 import { useMySchedule } from '@/hooks/useSchedules';
 import { useDoctorPatients, patientKeys } from '@/hooks/usePatients';
 import { useDoctorAnalytics, useDoctorChartData, analyticsKeys } from '@/hooks/useAnalytics';
-import { useUnreadNotificationCount } from '@/hooks/useNotifications';
+import { useUnreadNotificationCount, notificationKeys } from '@/hooks/useNotifications';
 import {
   appointmentsApi,
   authApi,
@@ -234,12 +234,14 @@ export default function DoctorDashboardInteractive() {
 
   // React Query hooks for data fetching
   const { data: doctorProfile, isLoading: isProfileLoading } = useDoctorProfile();
-  const { data: appointmentsData, isLoading: isAppointmentsLoading } = useAppointments(1, 50);
-  const { data: patientsData, isLoading: isPatientsLoading } = useDoctorPatients();
-  const { data: analytics, isLoading: isAnalyticsLoading } = useDoctorAnalytics();
-  const { data: chartData, isLoading: isChartDataLoading } = useDoctorChartData();
-  const { data: scheduleData, isLoading: isScheduleLoading } = useMySchedule();
-  const { data: notificationCountData } = useUnreadNotificationCount();
+  const shouldLoadCoreData = isHydrated && Boolean(doctorProfile);
+  const shouldLoadPatients = isHydrated && activeTab === 'patients';
+  const { data: appointmentsData, isLoading: isAppointmentsLoading } = useAppointments(1, 20, shouldLoadCoreData);
+  const { data: patientsData } = useDoctorPatients(shouldLoadPatients);
+  const { data: analytics, isLoading: isAnalyticsLoading } = useDoctorAnalytics(shouldLoadCoreData);
+  const { data: chartData, isLoading: isChartDataLoading } = useDoctorChartData(shouldLoadCoreData);
+  const { data: scheduleData, isLoading: isScheduleLoading } = useMySchedule(shouldLoadCoreData);
+  const { data: notificationCountData } = useUnreadNotificationCount(false);
 
   // Mutations
   const updateAppointmentStatusMutation = useUpdateAppointmentStatus();
@@ -248,6 +250,8 @@ export default function DoctorDashboardInteractive() {
 
   // Derived state
   const [slotDuration, setSlotDuration] = useState(30);
+  const [visibleAppointmentsCount, setVisibleAppointmentsCount] = useState(12);
+  const [visiblePatientsCount, setVisiblePatientsCount] = useState(12);
 
   // Memoized derived data
   const slotDurationFromSchedule = useMemo(() => {
@@ -262,7 +266,7 @@ export default function DoctorDashboardInteractive() {
   }, [slotDurationFromSchedule]);
 
   // Combined loading state
-  const isLoading = isProfileLoading || isAppointmentsLoading || isPatientsLoading || isAnalyticsLoading || isChartDataLoading || isScheduleLoading;
+  const isLoading = isProfileLoading || isAppointmentsLoading || isAnalyticsLoading || isChartDataLoading || isScheduleLoading;
 
   // Notification count from React Query
   const notificationCount = notificationCountData?.count ?? 0;
@@ -460,6 +464,23 @@ export default function DoctorDashboardInteractive() {
     }));
   }, [patientsData]);
 
+  const visibleAppointments = useMemo(
+    () => appointments.slice(0, visibleAppointmentsCount),
+    [appointments, visibleAppointmentsCount]
+  );
+  const visiblePatients = useMemo(
+    () => patients.slice(0, visiblePatientsCount),
+    [patients, visiblePatientsCount]
+  );
+
+  useEffect(() => {
+    setVisibleAppointmentsCount(12);
+  }, [appointments.length]);
+
+  useEffect(() => {
+    setVisiblePatientsCount(12);
+  }, [patients.length]);
+
   // Hydration effect
   useEffect(() => {
     setIsHydrated(true);
@@ -486,6 +507,54 @@ export default function DoctorDashboardInteractive() {
     let active = true;
     let eventSource: EventSource | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let invalidateTimer: ReturnType<typeof setTimeout> | null = null;
+    const pendingInvalidations = {
+      appointments: false,
+      patients: false,
+      analytics: false,
+      chart: false,
+      notifications: false,
+    };
+
+    const flushInvalidations = () => {
+      if (!active) return;
+      if (pendingInvalidations.appointments) {
+        queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
+      }
+      if (pendingInvalidations.patients) {
+        queryClient.invalidateQueries({ queryKey: patientKeys.doctor() });
+      }
+      if (pendingInvalidations.analytics) {
+        queryClient.invalidateQueries({ queryKey: analyticsKeys.doctor() });
+      }
+      if (pendingInvalidations.chart) {
+        queryClient.invalidateQueries({ queryKey: analyticsKeys.doctorChart() });
+      }
+      if (pendingInvalidations.notifications) {
+        queryClient.invalidateQueries({ queryKey: notificationKeys.count() });
+      }
+      pendingInvalidations.appointments = false;
+      pendingInvalidations.patients = false;
+      pendingInvalidations.analytics = false;
+      pendingInvalidations.chart = false;
+      pendingInvalidations.notifications = false;
+      invalidateTimer = null;
+    };
+
+    const queueInvalidation = (updates: Partial<typeof pendingInvalidations>) => {
+      pendingInvalidations.appointments =
+        pendingInvalidations.appointments || Boolean(updates.appointments);
+      pendingInvalidations.patients =
+        pendingInvalidations.patients || Boolean(updates.patients);
+      pendingInvalidations.analytics =
+        pendingInvalidations.analytics || Boolean(updates.analytics);
+      pendingInvalidations.chart = pendingInvalidations.chart || Boolean(updates.chart);
+      pendingInvalidations.notifications =
+        pendingInvalidations.notifications || Boolean(updates.notifications);
+      if (!invalidateTimer) {
+        invalidateTimer = setTimeout(flushInvalidations, 250);
+      }
+    };
 
     const connect = async () => {
       if (!active || !getToken()) return;
@@ -494,19 +563,21 @@ export default function DoctorDashboardInteractive() {
         if (!active) return;
         const streamUrl = `${API_BASE_URL}/events/stream?token=${encodeURIComponent(token)}`;
         eventSource = new EventSource(streamUrl, { withCredentials: true });
-        const handleUpdate = () => {
-          // Invalidate React Query caches
-          queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
-          queryClient.invalidateQueries({ queryKey: patientKeys.doctor() });
-          queryClient.invalidateQueries({ queryKey: analyticsKeys.doctor() });
-        };
-
-        eventSource.addEventListener('appointments.updated', handleUpdate);
-        eventSource.addEventListener('activities.updated', handleUpdate);
-        eventSource.addEventListener('notifications.updated', handleUpdate);
-        eventSource.addEventListener('prescriptions.updated', handleUpdate);
-        eventSource.addEventListener('messages.updated', handleUpdate);
-        eventSource.addEventListener('message', handleUpdate);
+        eventSource.addEventListener('appointments.updated', () =>
+          queueInvalidation({ appointments: true, patients: true, analytics: true, chart: true })
+        );
+        eventSource.addEventListener('activities.updated', () =>
+          queueInvalidation({ analytics: true })
+        );
+        eventSource.addEventListener('notifications.updated', () =>
+          queueInvalidation({ notifications: true })
+        );
+        eventSource.addEventListener('prescriptions.updated', () =>
+          queueInvalidation({ analytics: true })
+        );
+        eventSource.addEventListener('messages.updated', () =>
+          queueInvalidation({ notifications: true })
+        );
         eventSource.onerror = (err) => {
           logger.error('SSE connection error (doctor dashboard):', err);
           if (!active) return;
@@ -530,6 +601,9 @@ export default function DoctorDashboardInteractive() {
       }
       if (reconnectTimer) {
         clearTimeout(reconnectTimer);
+      }
+      if (invalidateTimer) {
+        clearTimeout(invalidateTimer);
       }
     };
   }, [isHydrated, queryClient]);
@@ -743,6 +817,7 @@ export default function DoctorDashboardInteractive() {
     if (success) {
       // Invalidate appointments query to refresh data
       queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: analyticsKeys.doctor() });
     }
     setShowPrescriptionForm(false);
     setSelectedPatientId('');
@@ -975,7 +1050,7 @@ export default function DoctorDashboardInteractive() {
           {activeTab === 'appointments' && (
             <div className="space-y-4">
               {appointments.length > 0 ? (
-                appointments.map((appointment) => (
+                visibleAppointments.map((appointment) => (
                   <AppointmentCard
                     key={appointment.id}
                     appointment={appointment}
@@ -997,13 +1072,24 @@ export default function DoctorDashboardInteractive() {
                   <p className="text-text-secondary">No appointments scheduled for today</p>
                 </div>
               )}
+              {appointments.length > visibleAppointments.length && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setVisibleAppointmentsCount((count) => count + 12)}
+                    className="text-sm font-medium text-primary hover:text-primary/80 transition-base"
+                  >
+                    Load more appointments
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
           {activeTab === 'patients' && (
             <div className="space-y-4">
               {patients.length > 0 ? (
-                patients.map((patient) => (
+                visiblePatients.map((patient) => (
                   <PatientListItem
                     key={patient.id}
                     patient={patient}
@@ -1022,6 +1108,17 @@ export default function DoctorDashboardInteractive() {
                     className="mx-auto text-text-secondary mb-4"
                   />
                   <p className="text-text-secondary">No patients to display</p>
+                </div>
+              )}
+              {patients.length > visiblePatients.length && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setVisiblePatientsCount((count) => count + 12)}
+                    className="text-sm font-medium text-primary hover:text-primary/80 transition-base"
+                  >
+                    Load more patients
+                  </button>
                 </div>
               )}
             </div>

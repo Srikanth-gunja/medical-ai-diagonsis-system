@@ -49,6 +49,25 @@ class Patient:
         if isinstance(user_id, str):
             user_id = ObjectId(user_id)
         return db[PATIENTS_COLLECTION].find_one({'user_id': user_id})
+
+    @staticmethod
+    def find_by_user_ids(user_ids):
+        """Find patients by a list of user IDs."""
+        db = get_db()
+        normalized_ids = []
+        for user_id in user_ids:
+            if not user_id:
+                continue
+            if isinstance(user_id, str):
+                try:
+                    normalized_ids.append(ObjectId(user_id))
+                except Exception:
+                    continue
+            else:
+                normalized_ids.append(user_id)
+        if not normalized_ids:
+            return []
+        return list(db[PATIENTS_COLLECTION].find({'user_id': {'$in': normalized_ids}}))
     
     @staticmethod
     def update(patient_id, update_data):

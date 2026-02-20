@@ -30,6 +30,12 @@ def get_llm():
 
 def generate_ai_summary(prescription_data: dict, patient_name: str, doctor_name: str) -> str:
     """Use LangChain to generate an AI-enhanced summary of the prescription."""
+    if not current_app.config.get("REPORTS_ENABLE_AI_SUMMARY", False):
+        return (
+            f"This prescription was issued by Dr. {doctor_name} for {patient_name}. "
+            "Please follow medication and follow-up instructions exactly as prescribed."
+        )
+
     try:
         llm = get_llm()
         
@@ -62,7 +68,7 @@ Generate a brief professional summary for this prescription report.
         response = llm.invoke(messages)
         return response.content
         
-    except Exception as e:
+    except Exception:
         # Fallback to a simple summary if AI fails
         return f"This prescription was issued for {prescription_data.get('diagnosis', 'your medical condition')}. Please follow the medication instructions as directed by your doctor."
 

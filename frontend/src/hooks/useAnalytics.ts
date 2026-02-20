@@ -13,10 +13,11 @@ export const analyticsKeys = {
 /**
  * Hook to fetch doctor analytics
  */
-export function useDoctorAnalytics() {
+export function useDoctorAnalytics(enabled: boolean = true) {
   return useQuery({
     queryKey: analyticsKeys.doctor(),
     queryFn: () => analyticsApi.getDoctor(),
+    enabled,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
@@ -24,10 +25,11 @@ export function useDoctorAnalytics() {
 /**
  * Hook to fetch doctor chart data
  */
-export function useDoctorChartData() {
+export function useDoctorChartData(enabled: boolean = true) {
   return useQuery({
     queryKey: analyticsKeys.doctorChart(),
     queryFn: () => analyticsApi.getDoctorChartData(),
+    enabled,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }

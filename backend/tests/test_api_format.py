@@ -1,3 +1,9 @@
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s [%(name)s] %(message)s")
+logger = logging.getLogger(__name__)
+
+
 def test():
     from src.models.appointment import Appointment
     from src.models.patient import Patient
@@ -17,9 +23,9 @@ def test():
                 appt_dict["patientName"] = f"{patient.get('firstName', '')} {patient.get('lastName', '')}".strip()
             result.append(appt_dict)
             
-        print("API Response items[0]:")
+        logger.info("API Response items[0]:")
         import json
-        print(json.dumps(result[0], indent=2))
+        logger.info(json.dumps(result[0], indent=2))
 
 if __name__ == '__main__':
     test()

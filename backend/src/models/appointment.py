@@ -1,9 +1,6 @@
 from bson import ObjectId
 from datetime import datetime
-import logging
 from ..database import get_db, APPOINTMENTS_COLLECTION
-
-logger = logging.getLogger(__name__)
 
 class Appointment:
     """Appointment model."""
@@ -28,20 +25,50 @@ class Appointment:
         return appointment_data
     
     @staticmethod
-    def find_by_patient_id(patient_id):
-        """Get all appointments for a patient (by user_id stored as patient_id)."""
+    def find_by_patient_id(patient_id, skip=0, limit=None, sort=None):
+        """Get appointments for a patient (by user_id stored as patient_id)."""
         db = get_db()
         if isinstance(patient_id, str):
             patient_id = ObjectId(patient_id)
-        return list(db[APPOINTMENTS_COLLECTION].find({'patient_id': patient_id}))
+        query = db[APPOINTMENTS_COLLECTION].find({'patient_id': patient_id})
+        if sort:
+            query = query.sort(sort)
+        if skip:
+            query = query.skip(max(0, int(skip)))
+        if limit is not None:
+            query = query.limit(max(0, int(limit)))
+        return list(query)
+
+    @staticmethod
+    def count_by_patient_id(patient_id):
+        """Count appointments for a patient."""
+        db = get_db()
+        if isinstance(patient_id, str):
+            patient_id = ObjectId(patient_id)
+        return db[APPOINTMENTS_COLLECTION].count_documents({'patient_id': patient_id})
     
     @staticmethod
-    def find_by_doctor_id(doctor_id):
-        """Get all appointments for a doctor."""
+    def find_by_doctor_id(doctor_id, skip=0, limit=None, sort=None):
+        """Get appointments for a doctor."""
         db = get_db()
         if isinstance(doctor_id, str):
             doctor_id = ObjectId(doctor_id)
-        return list(db[APPOINTMENTS_COLLECTION].find({'doctor_id': doctor_id}))
+        query = db[APPOINTMENTS_COLLECTION].find({'doctor_id': doctor_id})
+        if sort:
+            query = query.sort(sort)
+        if skip:
+            query = query.skip(max(0, int(skip)))
+        if limit is not None:
+            query = query.limit(max(0, int(limit)))
+        return list(query)
+
+    @staticmethod
+    def count_by_doctor_id(doctor_id):
+        """Count appointments for a doctor."""
+        db = get_db()
+        if isinstance(doctor_id, str):
+            doctor_id = ObjectId(doctor_id)
+        return db[APPOINTMENTS_COLLECTION].count_documents({'doctor_id': doctor_id})
     
     @staticmethod
     def find_by_id(appointment_id):
@@ -86,19 +113,7 @@ class Appointment:
     @staticmethod
     def to_dict(appointment):
         """Convert appointment to dictionary."""
-        from .patient import Patient
-        
         patient_name = appointment.get('patient_name')
-        if not patient_name and appointment.get('patient_id'):
-            try:
-                patient = Patient.find_by_user_id(str(appointment['patient_id']))
-                if patient:
-                    patient_name = f"{patient.get('firstName', '')} {patient.get('lastName', '')}".strip()
-            except Exception:
-                logger.warning(
-                    "Failed to resolve patient name for appointment %s",
-                    appointment.get('_id'),
-                )
 
         return {
             'id': str(appointment['_id']),

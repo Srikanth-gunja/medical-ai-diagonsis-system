@@ -107,12 +107,12 @@ const PatientDashboardInteractive = () => {
 
   // React Query hooks for data fetching
   const queryClient = useQueryClient();
-  const { data: doctorsData, isLoading: isDoctorsLoading, error: doctorsError } = useDoctors(1, 50);
+  const { data: doctorsData, isLoading: isDoctorsLoading, error: doctorsError } = useDoctors(1, 20);
   const {
     data: appointmentsData,
     isLoading: isAppointmentsLoading,
     error: appointmentsError,
-  } = useAppointments(1, 50);
+  } = useAppointments(1, 20);
   const createAppointmentMutation = useCreateAppointment();
   const revokeAppointmentMutation = useRevokeAppointment();
   const rescheduleAppointmentMutation = useRescheduleAppointment();

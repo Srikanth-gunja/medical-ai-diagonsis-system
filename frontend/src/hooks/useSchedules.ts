@@ -12,10 +12,11 @@ export const scheduleKeys = {
 /**
  * Hook to fetch the current doctor's schedule
  */
-export function useMySchedule() {
+export function useMySchedule(enabled: boolean = true) {
   return useQuery({
     queryKey: scheduleKeys.my(),
     queryFn: () => schedulesApi.getMySchedule(),
+    enabled,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }

@@ -1,13 +1,12 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..models.doctor import Doctor
-from ..models.patient import Patient
-from ..models.appointment import Appointment
 from ..models.rating import Rating
-from ..models.prescription import Prescription
 from ..database import get_db, APPOINTMENTS_COLLECTION
 import json
 from datetime import datetime, timedelta
+import threading
+from bson import ObjectId
 
 analytics_bp = Blueprint('analytics', __name__)
 PUBLIC_STATS_CACHE_TTL_SECONDS = 5 * 60
@@ -15,6 +14,27 @@ _public_stats_cache = {
     'expires_at': 0.0,
     'data': None,
 }
+_doctor_cache_lock = threading.Lock()
+_doctor_analytics_cache = {}
+_doctor_chart_cache = {}
+
+
+def _cache_get(cache, key):
+    now_ts = datetime.utcnow().timestamp()
+    with _doctor_cache_lock:
+        entry = cache.get(key)
+        if not entry:
+            return None
+        if now_ts >= entry['expires_at']:
+            cache.pop(key, None)
+            return None
+        return entry['data']
+
+
+def _cache_set(cache, key, data, ttl_seconds):
+    expires_at = datetime.utcnow().timestamp() + max(1, int(ttl_seconds))
+    with _doctor_cache_lock:
+        cache[key] = {'data': data, 'expires_at': expires_at}
 
 
 def get_current_user():
@@ -39,6 +59,12 @@ def get_doctor_analytics():
         return jsonify({'error': 'Doctor profile not found'}), 404
     
     doctor_id = doctor['_id']
+    cache_ttl = int(current_app.config.get('DOCTOR_ANALYTICS_CACHE_TTL_SECONDS', 60))
+    cache_key = str(doctor_id)
+    cached_payload = _cache_get(_doctor_analytics_cache, cache_key)
+    if cached_payload is not None:
+        return jsonify(cached_payload)
+
     db = get_db()
     
     now = datetime.utcnow()
@@ -84,9 +110,9 @@ def get_doctor_analytics():
     rating_stats = Rating.calculate_average(doctor_id)
     
     # Get prescriptions count
-    prescriptions = Prescription.find_by_doctor_id(doctor_id)
+    prescriptions_count = db.prescriptions.count_documents({'doctor_id': doctor_id})
 
-    return jsonify({
+    payload = {
         'totalAppointments': stats.get('total', 0),
         'appointmentsByStatus': {
             'pending': stats.get('pending', 0),
@@ -99,8 +125,10 @@ def get_doctor_analytics():
         'todayAppointments': stats.get('todayAppointments', 0),
         'rating': rating_stats['average'],
         'ratingCount': rating_stats['count'],
-        'prescriptionsWritten': len(prescriptions)
-    })
+        'prescriptionsWritten': prescriptions_count
+    }
+    _cache_set(_doctor_analytics_cache, cache_key, payload, cache_ttl)
+    return jsonify(payload)
 
 
 @analytics_bp.route('/patient', methods=['GET'])
@@ -113,37 +141,50 @@ def get_patient_analytics():
         return jsonify({'error': 'Only patients can access this endpoint'}), 403
     
     db = get_db()
-    
-    # Get all appointments for this patient
-    appointments = Appointment.find_by_patient_id(current_user['id'])
-    
-    # Calculate stats
-    total_appointments = len(appointments)
-    upcoming = sum(1 for a in appointments if a['status'] in ['pending', 'confirmed'])
-    completed = sum(1 for a in appointments if a['status'] == 'completed')
-    
-    # Get prescriptions
-    prescriptions = Prescription.find_by_patient_id(current_user['id'])
-    
-    # Get unique doctors visited
-    unique_doctors = len(set(str(a['doctor_id']) for a in appointments if a['status'] == 'completed'))
-    
-    # Next appointment
+    patient_id = current_user['id']
+    try:
+        patient_oid = ObjectId(patient_id)
+    except Exception:
+        return jsonify({'error': 'Invalid user id'}), 400
+
+    total_appointments = db.appointments.count_documents({'patient_id': patient_oid})
+    upcoming = db.appointments.count_documents(
+        {'patient_id': patient_oid, 'status': {'$in': ['pending', 'confirmed']}}
+    )
+    completed = db.appointments.count_documents(
+        {'patient_id': patient_oid, 'status': 'completed'}
+    )
+
+    prescriptions_count = db.prescriptions.count_documents({'patient_id': patient_oid})
+    unique_doctors = len(
+        db.appointments.distinct(
+            'doctor_id',
+            {'patient_id': patient_oid, 'status': 'completed'},
+        )
+    )
+
     next_appointment = None
-    for appt in sorted(appointments, key=lambda x: (x.get('date', ''), x.get('time', ''))):
-        if appt['status'] in ['pending', 'confirmed']:
-            next_appointment = {
-                'date': appt['date'],
-                'time': appt['time'],
-                'doctorName': appt['doctor_name']
-            }
-            break
+    today = datetime.utcnow().strftime('%Y-%m-%d')
+    next_appt_doc = db.appointments.find_one(
+        {
+            'patient_id': patient_oid,
+            'status': {'$in': ['pending', 'confirmed']},
+            'date': {'$gte': today},
+        },
+        sort=[('date', 1), ('time', 1), ('created_at', 1)],
+    )
+    if next_appt_doc:
+        next_appointment = {
+            'date': next_appt_doc.get('date', ''),
+            'time': next_appt_doc.get('time', ''),
+            'doctorName': next_appt_doc.get('doctor_name', ''),
+        }
     
     return jsonify({
         'totalAppointments': total_appointments,
         'upcomingAppointments': upcoming,
         'completedAppointments': completed,
-        'prescriptionsReceived': len(prescriptions),
+        'prescriptionsReceived': prescriptions_count,
         'doctorsVisited': unique_doctors,
         'nextAppointment': next_appointment
     })
@@ -163,6 +204,12 @@ def get_doctor_chart_data():
         return jsonify({'error': 'Doctor profile not found'}), 404
     
     doctor_id = doctor['_id']
+    cache_ttl = int(current_app.config.get('DOCTOR_ANALYTICS_CACHE_TTL_SECONDS', 60))
+    cache_key = str(doctor_id)
+    cached_payload = _cache_get(_doctor_chart_cache, cache_key)
+    if cached_payload is not None:
+        return jsonify(cached_payload)
+
     db = get_db()
     
     # Appointments for the last 7 days
@@ -214,10 +261,12 @@ def get_doctor_chart_data():
         {'name': 'Completed', 'value': pct(status_counts.get('completed', 0)), 'color': '#10B981'},
     ]
     
-    return jsonify({
+    payload = {
         'appointmentsData': appointments_data,
         'statusData': status_data
-    })
+    }
+    _cache_set(_doctor_chart_cache, cache_key, payload, cache_ttl)
+    return jsonify(payload)
 
 
 @analytics_bp.route('/public-stats', methods=['GET'])
