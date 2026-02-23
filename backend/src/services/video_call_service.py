@@ -102,6 +102,7 @@ class VideoCallService:
         Returns (appointment_details, None) if valid, (None, error_message) otherwise.
         """
         from ..models.doctor import Doctor
+        from ..models.patient import Patient
         import logging
 
         logger = logging.getLogger(__name__)
@@ -120,9 +121,17 @@ class VideoCallService:
             return None, "Appointment not found"
 
         # Check if user is participant
-        # For patients: patient_id IS the user_id
+        # patient_id may be user_id (current format) or Patient._id (legacy format)
         appt_patient_id = str(appointment.get("patient_id"))
         is_patient = appt_patient_id == user_id
+        if not is_patient:
+            try:
+                patient = Patient.find_by_id(appt_patient_id)
+                if patient:
+                    is_patient = str(patient.get("user_id")) == user_id
+            except Exception:
+                # Keep is_patient=False if lookup fails for malformed legacy records
+                pass
 
         logger.info(
             f"Access check - user_id: {user_id}, role: {role}, appt_patient_id: {appt_patient_id}, is_patient: {is_patient}"

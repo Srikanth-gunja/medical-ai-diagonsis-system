@@ -14,7 +14,6 @@ import ReviewDoctorModal from './ReviewDoctorModal';
 import BookingModal from './BookingModal';
 import RescheduleModal from './RescheduleModal';
 import VideoCallModal from '@/components/video/VideoCallModal';
-import IncomingCallModal from '@/components/video/IncomingCallModal';
 import Icon from '@/components/ui/AppIcon';
 import Pagination from '@/components/ui/Pagination';
 import { useToast } from '@/components/ui/Toast';
@@ -99,7 +98,7 @@ const PatientDashboardInteractive = () => {
   const [videoCallDoctorName, setVideoCallDoctorName] = useState<string>('Doctor');
 
   // Video call context for ringing support
-  const { incomingCall, isClientReady, activeCall } = useVideoCall();
+  const { isClientReady, activeCall } = useVideoCall();
 
   // Toast notifications and confirmation dialogs
   const { showToast } = useToast();
@@ -1054,9 +1053,6 @@ const PatientDashboardInteractive = () => {
           otherUserName={videoCallDoctorName || (activeCall?.state?.custom?.callerName as string) || 'Doctor'}
         />
       )}
-
-      {/* Incoming Call Modal */}
-      <IncomingCallModal isOpen={!!incomingCall} onClose={() => { }} />
 
       {/* Confirmation Dialog */}
       {ConfirmDialogComponent}

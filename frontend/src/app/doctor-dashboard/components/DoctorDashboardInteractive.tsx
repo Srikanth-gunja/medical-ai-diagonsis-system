@@ -21,7 +21,6 @@ import ReviewsSection from './ReviewsSection';
 import ConsultationModal, { type ConsultationData } from './ConsultationModal';
 import RejectReasonModal from './RejectReasonModal';
 import VideoCallModal from '@/components/video/VideoCallModal';
-import IncomingCallModal from '@/components/video/IncomingCallModal';
 import Icon from '@/components/ui/AppIcon';
 import { useVideoCall } from '@/contexts/VideoCallContext';
 import { useToast } from '@/components/ui/Toast';
@@ -231,7 +230,7 @@ export default function DoctorDashboardInteractive() {
   const [videoCallPatientName, setVideoCallPatientName] = useState<string>('Patient');
 
   // Video call context for ringing support
-  const { incomingCall, isClientReady, activeCall } = useVideoCall();
+  const { isClientReady, activeCall } = useVideoCall();
 
   // Toast and confirmation dialogs
   const { showToast } = useToast();
@@ -1267,9 +1266,6 @@ export default function DoctorDashboardInteractive() {
           otherUserName={videoCallPatientName || (activeCall?.state?.custom?.callerName as string) || 'Patient'}
         />
       )}
-
-      {/* Incoming Call Modal */}
-      <IncomingCallModal isOpen={!!incomingCall} onClose={() => { }} />
 
       {/* Confirmation Dialog */}
       {ConfirmDialogComponent}

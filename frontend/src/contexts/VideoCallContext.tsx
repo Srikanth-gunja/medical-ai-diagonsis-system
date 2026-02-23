@@ -10,7 +10,7 @@ import {
   useCalls,
 } from '@stream-io/video-react-sdk';
 import { useAuth } from './AuthContext';
-import { ApiRequestError, getToken, videoCallsApi } from '@/lib/api';
+import { API_BASE_URL, ApiRequestError, eventsApi, getToken, videoCallsApi } from '@/lib/api';
 import { logger } from '@/lib/logger';
 
 // WhatsApp-like timeouts
@@ -23,6 +23,13 @@ interface IncomingCall {
   call: Call;
   appointmentId: string;
   callerName: string;
+}
+
+interface VideoCallStartedEvent {
+  appointment_id?: string;
+  caller_id?: string;
+  caller_name?: string;
+  call_id?: string;
 }
 
 interface VideoCallContextType {
@@ -56,7 +63,8 @@ function useCallWatcher(
   onOutgoingCallAnswered: () => void,
   onOutgoingCallEnded: () => void,
   activeCallId?: string,
-  pendingAppointmentId?: string | null
+  pendingAppointmentId?: string | null,
+  recentlyCancelled?: { id: string; timestamp: number } | null
 ) {
   const calls = useCalls();
 
@@ -69,7 +77,12 @@ function useCallWatcher(
     // calling now would trigger isCreatedByMe=false and seem like an incoming call.
     const incomingCalls = calls.filter((call) => {
       const customApptId = call.state.custom?.appointmentId;
-      const isRecentlyCancelled = customApptId && recentlyCancelled && customApptId === recentlyCancelled.id && (now - recentlyCancelled.timestamp < 8000);
+      const isRecentlyCancelled = Boolean(
+        customApptId &&
+          recentlyCancelled &&
+          customApptId === recentlyCancelled.id &&
+          now - recentlyCancelled.timestamp < 8000
+      );
 
       return call.id !== activeCallId &&
         customApptId !== pendingAppointmentId &&
@@ -101,7 +114,15 @@ function useCallWatcher(
     if (endedCalls.length > 0) {
       onOutgoingCallEnded();
     }
-  }, [calls, activeCallId, onIncomingCall, onOutgoingCallAnswered, onOutgoingCallEnded]);
+  }, [
+    calls,
+    activeCallId,
+    pendingAppointmentId,
+    recentlyCancelled,
+    onIncomingCall,
+    onOutgoingCallAnswered,
+    onOutgoingCallEnded,
+  ]);
 }
 
 function CallWatcherWrapper({
@@ -119,7 +140,14 @@ function CallWatcherWrapper({
   pendingAppointmentId?: string | null;
   recentlyCancelled?: { id: string; timestamp: number } | null;
 }) {
-  useCallWatcher(onIncomingCall, onOutgoingCallAnswered, onOutgoingCallEnded, activeCallId, pendingAppointmentId, recentlyCancelled);
+  useCallWatcher(
+    onIncomingCall,
+    onOutgoingCallAnswered,
+    onOutgoingCallEnded,
+    activeCallId,
+    pendingAppointmentId,
+    recentlyCancelled
+  );
   return null;
 }
 
@@ -171,6 +199,22 @@ const getFriendlyError = (error: unknown): string => {
   return 'Something went wrong with the call. Please try again.';
 };
 
+const isTransientJoinError = (error: unknown): boolean => {
+  const message =
+    typeof error === 'string'
+      ? error
+      : error instanceof Error
+        ? error.message
+        : JSON.stringify(error || '');
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('not found') ||
+    normalized.includes('404') ||
+    normalized.includes('metadata') ||
+    normalized.includes('does not exist')
+  );
+};
+
 export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   const { user, isLoading: isAuthLoading } = useAuth();
   const [client, setClient] = useState<StreamVideoClient | null>(null);
@@ -201,6 +245,11 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   const isRingingRef = useRef(false);
   const isConnectingRef = useRef(false);
   const activeCallRef = useRef<Call | null>(null);
+  const incomingCallRef = useRef<IncomingCall | null>(null);
+  const isClientReadyRef = useRef(false);
+  const recentlyCancelledRef = useRef<{ id: string; timestamp: number } | null>(null);
+  const pendingAppointmentIdRef = useRef<string | null>(null);
+  const pendingIncomingEventRef = useRef<VideoCallStartedEvent | null>(null);
 
   const streamMock = typeof window !== 'undefined' ? (window as any).__STREAM_MOCK__ : null;
   const isMockMode = !!streamMock;
@@ -223,6 +272,73 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   }, [activeCall]);
 
   useEffect(() => {
+    incomingCallRef.current = incomingCall;
+  }, [incomingCall]);
+
+  useEffect(() => {
+    isClientReadyRef.current = isClientReady;
+  }, [isClientReady]);
+
+  useEffect(() => {
+    recentlyCancelledRef.current = recentlyCancelled;
+  }, [recentlyCancelled]);
+
+  useEffect(() => {
+    pendingAppointmentIdRef.current = pendingAppointmentId;
+  }, [pendingAppointmentId]);
+
+  const handleIncomingCallStartedEvent = useCallback(
+    (eventData: VideoCallStartedEvent) => {
+      const callId = eventData.call_id;
+      if (!callId) return;
+
+      const appointmentId = eventData.appointment_id || '';
+      const callerName = eventData.caller_name || 'Incoming Caller';
+      const now = Date.now();
+      const recentCancel = recentlyCancelledRef.current;
+      const isRecentlyCancelled = Boolean(
+        appointmentId &&
+          recentCancel &&
+          appointmentId === recentCancel.id &&
+          now - recentCancel.timestamp < 8000
+      );
+
+      if (isRecentlyCancelled) {
+        return;
+      }
+
+      // Ignore fallback signal while already in an active call.
+      if (activeCallRef.current) return;
+      if (incomingCallRef.current?.call?.id === callId) return;
+      if (
+        appointmentId &&
+        pendingAppointmentIdRef.current &&
+        appointmentId === pendingAppointmentIdRef.current
+      ) {
+        return;
+      }
+
+      if (!clientRef.current || !isClientReadyRef.current) {
+        pendingIncomingEventRef.current = eventData;
+        return;
+      }
+
+      const incoming = clientRef.current.call('default', callId);
+      setIncomingCall({
+        call: incoming,
+        appointmentId,
+        callerName,
+      });
+      setCallError(null);
+      if (appointmentId) {
+        setPendingAppointmentId(appointmentId);
+      }
+      pendingIncomingEventRef.current = null;
+    },
+    []
+  );
+
+  useEffect(() => {
     return () => {
       if (clientRef.current) {
         try {
@@ -233,6 +349,70 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       }
     };
   }, []);
+
+  // Global SSE fallback for incoming call notification.
+  useEffect(() => {
+    let active = true;
+    let eventSource: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const connect = async () => {
+      if (!active || !getToken() || !user) return;
+      try {
+        const { token } = await eventsApi.getStreamToken();
+        if (!active) return;
+
+        const streamUrl = `${API_BASE_URL}/events/stream?token=${encodeURIComponent(token)}`;
+        eventSource = new EventSource(streamUrl, { withCredentials: true });
+
+        const onVideoCallStarted = (event: Event) => {
+          try {
+            const messageEvent = event as MessageEvent<string>;
+            const payload = JSON.parse(messageEvent.data || '{}') as VideoCallStartedEvent;
+
+            // Ignore self events
+            if (payload.caller_id && user && payload.caller_id === user.id) {
+              return;
+            }
+            handleIncomingCallStartedEvent(payload);
+          } catch (error) {
+            logger.error('Failed to parse video.call.started event:', error);
+          }
+        };
+
+        eventSource.addEventListener('video.call.started', onVideoCallStarted);
+        eventSource.onerror = () => {
+          if (!active) return;
+          eventSource?.close();
+          eventSource = null;
+          reconnectTimer = setTimeout(connect, 3000);
+        };
+      } catch (error) {
+        if (!active) return;
+        logger.error('Failed to initialize video call SSE listener:', error);
+        reconnectTimer = setTimeout(connect, 5000);
+      }
+    };
+
+    connect();
+
+    return () => {
+      active = false;
+      if (eventSource) {
+        eventSource.close();
+      }
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer);
+      }
+    };
+  }, [user, handleIncomingCallStartedEvent]);
+
+  // Process any queued incoming-call fallback event once client becomes ready.
+  useEffect(() => {
+    if (!client || !isClientReady) return;
+    if (!pendingIncomingEventRef.current) return;
+    handleIncomingCallStartedEvent(pendingIncomingEventRef.current);
+  }, [client, isClientReady, handleIncomingCallStartedEvent]);
 
   // Clear all timers
   const clearAllTimers = useCallback(() => {
@@ -814,7 +994,24 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       // Small delay to ensure UI updates before heavy operation
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      await joinCall(incomingCall.call);
+      let joined = false;
+      let lastError: unknown = null;
+      for (let attempt = 0; attempt < 3 && !joined; attempt += 1) {
+        try {
+          await joinCall(incomingCall.call);
+          joined = true;
+        } catch (error) {
+          lastError = error;
+          if (!isTransientJoinError(error) || attempt === 2) {
+            throw error;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+        }
+      }
+
+      if (!joined && lastError) {
+        throw lastError;
+      }
       logger.log('✅ Call accepted successfully');
     } catch (error) {
       logger.error('❌ Error accepting incoming call:', error);

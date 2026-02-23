@@ -1,12 +1,15 @@
 'use client';
 
 import { SessionTimeoutWarning, useSessionTimeout } from '@/components/ui/SessionTimeoutWarning';
+import IncomingCallModal from '@/components/video/IncomingCallModal';
+import { useVideoCall } from '@/contexts/VideoCallContext';
 import { useRouter } from 'next/navigation';
 import { authApi } from '@/lib/api';
 
 export function ClientLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { expiryTime } = useSessionTimeout();
+  const { incomingCall } = useVideoCall();
 
   const handleLogout = () => {
     authApi.logout();
@@ -26,6 +29,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
         onLogout={handleLogout}
         onExtend={handleExtendSession}
       />
+      <IncomingCallModal isOpen={!!incomingCall} onClose={() => { }} />
     </>
   );
 }

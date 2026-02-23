@@ -4,6 +4,7 @@ from ..services.video_call_service import VideoCallService
 from ..models.patient import Patient
 from ..models.doctor import Doctor
 from ..models.appointment import Appointment
+from ..realtime import publish_event
 import json
 import os
 from datetime import datetime
@@ -130,20 +131,23 @@ def create_call(appointment_id):
         other_role = "doctor"
     else:
         # Current is doctor, other is patient
-        # IMPORTANT: patient_id in appointments is the Patient collection _id, not user_id
-        # We need to find the patient and get their user_id for Stream
-        patient_doc_id = str(appointment.get("patient_id"))
-        patient = Patient.find_by_id(patient_doc_id)
+        # Appointment records may store patient_id either as user_id (current format)
+        # or as Patient document _id (legacy data). Support both.
+        raw_patient_id = str(appointment.get("patient_id"))
+        patient = Patient.find_by_user_id(raw_patient_id)
+        if not patient:
+            patient = Patient.find_by_id(raw_patient_id)
+
         if patient:
-            other_user_id = str(patient.get("user_id"))
+            other_user_id = str(patient.get("user_id", raw_patient_id))
             other_user_name = (
                 f"{patient.get('firstName', '')} {patient.get('lastName', '')}".strip()
             )
             if not other_user_name:
                 other_user_name = appointment.get("patient_name", "Patient")
         else:
-            # Fallback: use patient_doc_id directly (shouldn't happen in normal flow)
-            other_user_id = patient_doc_id
+            # Fallback for malformed data: still return a participant id for Stream
+            other_user_id = raw_patient_id
             other_user_name = appointment.get("patient_name", "Patient")
         other_role = "patient"
 
@@ -159,6 +163,24 @@ def create_call(appointment_id):
         Appointment.update_status(appointment_id, "in_progress")
         # We could also record call start time here
         Appointment.update(appointment_id, {"call_started_at": datetime.utcnow()})
+
+    # Fallback real-time signal for callee to show incoming call UI even if SDK ringing is missed
+    try:
+        if other_user_id and str(other_user_id) != str(user_id):
+            publish_event(
+                [str(other_user_id)],
+                "video.call.started",
+                {
+                    "appointment_id": appointment_id,
+                    "caller_id": user_id,
+                    "caller_name": user_name,
+                    "call_id": call_id,
+                    "started_at": datetime.utcnow().isoformat() + "Z",
+                },
+            )
+    except Exception:
+        # Do not fail call setup if fallback signal fails
+        pass
 
     # SECURITY: API key is loaded from frontend env, not returned from backend
     return jsonify(
