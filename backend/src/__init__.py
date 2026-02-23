@@ -1,5 +1,4 @@
 from flask import Flask, request
-from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from .config import Config
 from .database import init_db, close_mongo_client
@@ -12,30 +11,31 @@ def create_app(config_class=Config):
     # Disable strict slashes to prevent 308 redirects that break CORS
     app.url_map.strict_slashes = False
 
-    # Extensions - Enhanced CORS to handle preflight requests properly
-    CORS(app)
+    # Extensions
     JWTManager(app)
 
-    if not app.config.get("SECRET_KEY") or not app.config.get("JWT_SECRET_KEY"):
-        raise RuntimeError(
-            "SECRET_KEY and JWT_SECRET_KEY must be set via environment variables."
-        )
+    def _allowed_origins():
+        raw = app.config.get("CORS_ORIGINS", "")
+        return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
-    # Add CORS headers to ALL responses including error responses
-    @app.after_request
-    def after_request(response):
-        allowed_origins = (
-            app.config.get("CORS_ORIGINS", "").split(",")
-            if app.config.get("CORS_ORIGINS")
-            else []
-        )
+    def _set_cors_headers(response):
+        allowed_origins = _allowed_origins()
         origin = request.headers.get("Origin")
-        if origin in allowed_origins or not allowed_origins:
-            response.headers["Access-Control-Allow-Origin"] = (
-                origin if origin in allowed_origins else "*"
-            )
-        else:
+
+        # Credentialed requests (including EventSource with credentials) require
+        # a concrete origin, never "*".
+        if origin:
+            if not allowed_origins or origin in allowed_origins:
+                response.headers["Access-Control-Allow-Origin"] = origin
+                existing_vary = response.headers.get("Vary", "")
+                if "Origin" not in existing_vary:
+                    response.headers["Vary"] = (
+                        f"{existing_vary}, Origin" if existing_vary else "Origin"
+                    )
+        elif not allowed_origins:
+            # Allow non-browser clients when CORS_ORIGINS is not configured.
             response.headers["Access-Control-Allow-Origin"] = "*"
+
         response.headers["Access-Control-Allow-Credentials"] = "true"
         response.headers["Access-Control-Allow-Methods"] = (
             "GET, POST, PUT, PATCH, DELETE, OPTIONS"
@@ -46,6 +46,17 @@ def create_app(config_class=Config):
         response.headers["Access-Control-Expose-Headers"] = (
             "Content-Type, Authorization"
         )
+        return response
+
+    if not app.config.get("SECRET_KEY") or not app.config.get("JWT_SECRET_KEY"):
+        raise RuntimeError(
+            "SECRET_KEY and JWT_SECRET_KEY must be set via environment variables."
+        )
+
+    # Add CORS headers to ALL responses including error responses
+    @app.after_request
+    def after_request(response):
+        response = _set_cors_headers(response)
         if request.path.startswith("/api/") and "Cache-Control" not in response.headers:
             # Prevent browser/proxy cache reuse across different authenticated users.
             response.headers["Cache-Control"] = (
@@ -65,25 +76,7 @@ def create_app(config_class=Config):
             from flask import make_response
 
             response = make_response()
-            allowed_origins = (
-                app.config.get("CORS_ORIGINS", "").split(",")
-                if app.config.get("CORS_ORIGINS")
-                else []
-            )
-            origin = request.headers.get("Origin")
-            if origin in allowed_origins or not allowed_origins:
-                response.headers["Access-Control-Allow-Origin"] = (
-                    origin if origin in allowed_origins else "*"
-                )
-            else:
-                response.headers["Access-Control-Allow-Origin"] = "*"
-            response.headers["Access-Control-Allow-Methods"] = (
-                "GET, POST, PUT, PATCH, DELETE, OPTIONS"
-            )
-            response.headers["Access-Control-Allow-Headers"] = (
-                "Content-Type, Authorization, X-Requested-With, Accept, Origin"
-            )
-            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response = _set_cors_headers(response)
             response.headers["Access-Control-Max-Age"] = "86400"
             return response
 
