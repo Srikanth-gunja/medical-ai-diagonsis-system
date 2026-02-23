@@ -30,7 +30,6 @@ interface VideoCallStartedEvent {
   caller_id?: string;
   caller_name?: string;
   call_id?: string;
-  started_at?: string;
 }
 
 interface VideoCallContextType {
@@ -298,11 +297,6 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       const appointmentId = eventData.appointment_id || '';
       const callerName = eventData.caller_name || 'Incoming Caller';
       const now = Date.now();
-      const startedAt = eventData.started_at ? Date.parse(eventData.started_at) : NaN;
-      if (!Number.isNaN(startedAt) && now - startedAt > RINGING_TIMEOUT_MS + 10000) {
-        // Ignore stale pending invites if caller has likely already timed out/cancelled.
-        return;
-      }
       const recentCancel = recentlyCancelledRef.current;
       const isRecentlyCancelled = Boolean(
         appointmentId &&
@@ -421,34 +415,6 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     if (!pendingIncomingEventRef.current) return;
     handleIncomingCallStartedEvent(pendingIncomingEventRef.current);
   }, [client, isClientReady, handleIncomingCallStartedEvent]);
-
-  // Recover missed incoming-call event when callee initialized late.
-  useEffect(() => {
-    let cancelled = false;
-
-    const recoverPendingInvite = async () => {
-      if (!client || !isClientReady || !user || !getToken()) return;
-      try {
-        const { pending_call } = await videoCallsApi.getPendingCallInvite(true);
-        if (cancelled || !pending_call?.call_id) return;
-
-        if (pending_call.caller_id && pending_call.caller_id === user.id) {
-          return;
-        }
-
-        handleIncomingCallStartedEvent(pending_call);
-      } catch (error) {
-        if (!cancelled) {
-          logger.error('Failed to recover pending video call invite:', error);
-        }
-      }
-    };
-
-    recoverPendingInvite();
-    return () => {
-      cancelled = true;
-    };
-  }, [client, isClientReady, user, handleIncomingCallStartedEvent]);
 
   // Clear all timers
   const clearAllTimers = useCallback(() => {

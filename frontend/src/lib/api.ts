@@ -786,14 +786,6 @@ export interface StreamToken {
   expires_in: number;
 }
 
-export interface PendingCallInvite {
-  appointment_id?: string;
-  caller_id?: string;
-  caller_name?: string;
-  call_id?: string;
-  started_at?: string;
-}
-
 // Events API (SSE)
 export const eventsApi = {
   getStreamToken: (): Promise<StreamToken> =>
@@ -808,13 +800,6 @@ export const videoCallsApi = {
     fetchApi<VideoCallToken>('/video-calls/token', {
       method: 'POST',
     }),
-
-  getPendingCallInvite: (
-    consume: boolean = true
-  ): Promise<{ pending_call: PendingCallInvite | null }> =>
-    fetchApi<{ pending_call: PendingCallInvite | null }>(
-      `/video-calls/pending?consume=${consume ? '1' : '0'}`
-    ),
 
   createCall: (appointmentId: string): Promise<CallDetails> =>
     fetchApi<CallDetails>(`/video-calls/call/${appointmentId}`, {

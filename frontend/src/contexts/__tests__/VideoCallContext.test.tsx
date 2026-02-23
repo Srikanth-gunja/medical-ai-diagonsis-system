@@ -22,7 +22,6 @@ jest.mock('../../lib/api', () => ({
   getToken: jest.fn(() => 'mock-jwt'),
   videoCallsApi: {
     getToken: jest.fn(),
-    getPendingCallInvite: jest.fn(),
     createCall: jest.fn(),
     endCall: jest.fn(),
   },
@@ -74,9 +73,6 @@ describe('VideoCallContext', () => {
       token: 'token',
       user_id: 'u1',
       user_name: 'Patient',
-    });
-    videoCallsApi.getPendingCallInvite.mockResolvedValue({
-      pending_call: null,
     });
     videoCallsApi.createCall.mockResolvedValue({
       call_id: 'call1',

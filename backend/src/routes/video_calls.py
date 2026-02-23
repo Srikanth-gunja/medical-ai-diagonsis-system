@@ -4,13 +4,9 @@ from ..services.video_call_service import VideoCallService
 from ..models.patient import Patient
 from ..models.doctor import Doctor
 from ..models.appointment import Appointment
-from ..realtime import (
-    publish_event,
-    store_pending_video_call_invite,
-    get_pending_video_call_invite,
-    clear_pending_video_call_invite,
-)
+from ..realtime import publish_event
 import json
+import os
 from datetime import datetime
 
 video_calls_bp = Blueprint("video_calls", __name__)
@@ -29,12 +25,6 @@ def get_current_user():
     if isinstance(identity, str):
         return json.loads(identity)
     return identity
-
-
-def _query_bool(value, default=True):
-    if value is None:
-        return default
-    return str(value).strip().lower() not in {"0", "false", "no", "off"}
 
 
 @video_calls_bp.route("/token", methods=["POST"])
@@ -74,16 +64,6 @@ def generate_token():
             "user_name": user_name,
         }
     )
-
-
-@video_calls_bp.route("/pending", methods=["GET"])
-@jwt_required()
-def get_pending_call():
-    current_user = get_current_user()
-    user_id = str(current_user["id"])
-    consume = _query_bool(request.args.get("consume"), default=True)
-    pending = get_pending_video_call_invite(user_id, consume=consume)
-    return jsonify({"pending_call": pending})
 
 
 @video_calls_bp.route("/call/<appointment_id>", methods=["POST"])
@@ -184,23 +164,19 @@ def create_call(appointment_id):
         # We could also record call start time here
         Appointment.update(appointment_id, {"call_started_at": datetime.utcnow()})
 
-    # Fallback real-time signal for callee to show incoming call UI even if SDK ringing is missed.
-    # Also store a short-lived pending invite for recovery when callee client initializes late.
+    # Fallback real-time signal for callee to show incoming call UI even if SDK ringing is missed
     try:
         if other_user_id and str(other_user_id) != str(user_id):
-            started_at = datetime.utcnow().isoformat() + "Z"
-            invite_payload = {
-                "appointment_id": appointment_id,
-                "caller_id": user_id,
-                "caller_name": user_name,
-                "call_id": call_id,
-                "started_at": started_at,
-            }
-            store_pending_video_call_invite(str(other_user_id), invite_payload)
             publish_event(
                 [str(other_user_id)],
                 "video.call.started",
-                invite_payload,
+                {
+                    "appointment_id": appointment_id,
+                    "caller_id": user_id,
+                    "caller_name": user_name,
+                    "call_id": call_id,
+                    "started_at": datetime.utcnow().isoformat() + "Z",
+                },
             )
     except Exception:
         # Do not fail call setup if fallback signal fails
@@ -264,22 +240,5 @@ def end_call(appointment_id):
     # For now just log the call end.
 
     Appointment.update(appointment_id, updates)
-
-    # Clear short-lived pending invite for both participants for this call.
-    call_id = get_video_service().create_call_id(appointment_id)
-    clear_pending_video_call_invite(str(user_id), call_id)
-
-    if role == "patient":
-        doctor_doc_id = str(appointment.get("doctor_id"))
-        doctor = Doctor.find_by_id(doctor_doc_id)
-        if doctor and doctor.get("user_id"):
-            clear_pending_video_call_invite(str(doctor.get("user_id")), call_id)
-    else:
-        raw_patient_id = str(appointment.get("patient_id"))
-        patient = Patient.find_by_user_id(raw_patient_id)
-        if not patient:
-            patient = Patient.find_by_id(raw_patient_id)
-        other_user_id = str(patient.get("user_id", raw_patient_id)) if patient else raw_patient_id
-        clear_pending_video_call_invite(other_user_id, call_id)
 
     return jsonify({"message": "Call ended logged successfully"})
