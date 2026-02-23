@@ -264,9 +264,28 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+      const contentType = response.headers.get('content-type') || '';
+      let errorData: ApiError | { error: string; raw?: string };
+
+      if (contentType.includes('application/json')) {
+        errorData = await response.json().catch(() => ({
+          error: response.statusText || `Request failed (${response.status})`,
+        }));
+      } else {
+        const rawBody = await response.text().catch(() => '');
+        const cleanedBody = rawBody
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .slice(0, 300);
+        errorData = {
+          error: cleanedBody || response.statusText || `Request failed (${response.status})`,
+          raw: rawBody || undefined,
+        };
+      }
+
       throw new ApiRequestError(
-        errorData.error || errorData.message || `HTTP error! status: ${response.status}`,
+        errorData.error || `HTTP error! status: ${response.status}`,
         response.status,
         errorData
       );

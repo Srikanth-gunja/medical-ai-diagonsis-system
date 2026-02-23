@@ -21,6 +21,49 @@ def get_current_user():
     return identity
 
 
+def _safe_patient_name(patient_id):
+    """Resolve patient name from a rating row without crashing on malformed IDs."""
+    if not patient_id:
+        return 'Anonymous'
+
+    try:
+        patient = Patient.find_by_user_id(str(patient_id))
+    except Exception:
+        logger.warning("Failed to resolve patient profile for rating patient_id=%r", patient_id)
+        return 'Anonymous'
+
+    if not patient:
+        return 'Anonymous'
+
+    full_name = f"{patient.get('firstName', '')} {patient.get('lastName', '')}".strip()
+    return full_name or 'Anonymous'
+
+
+def _safe_rating_dict(rating):
+    """Convert a rating row to API payload even when legacy fields are malformed/missing."""
+    try:
+        return Rating.to_dict(rating)
+    except Exception:
+        logger.warning("Malformed rating row encountered while serializing: %r", rating.get('_id'))
+        created_at = rating.get('created_at')
+        created_at_iso = created_at.isoformat() if hasattr(created_at, 'isoformat') else ''
+        score = rating.get('score', 0)
+        try:
+            score = int(score)
+        except (ValueError, TypeError):
+            score = 0
+
+        return {
+            'id': str(rating.get('_id', '')),
+            'patientId': str(rating.get('patient_id', '')),
+            'doctorId': str(rating.get('doctor_id', '')),
+            'appointmentId': str(rating.get('appointment_id', '')),
+            'score': score,
+            'comment': rating.get('comment', '') or '',
+            'createdAt': created_at_iso,
+        }
+
+
 @ratings_bp.route('/', methods=['POST'])
 @jwt_required()
 def create_rating():
@@ -146,31 +189,31 @@ def check_rating(appointment_id):
 @jwt_required()
 def get_my_reviews():
     """Get reviews for the logged-in doctor."""
-    current_user = get_current_user()
-    
-    if current_user['role'] != 'doctor':
-        return jsonify({'error': 'Only doctors can access this endpoint'}), 403
-    
-    doctor = Doctor.find_by_user_id(current_user['id'])
-    if not doctor:
-        return jsonify({'error': 'Doctor profile not found'}), 404
-    
-    ratings = Rating.find_by_doctor_id(doctor['_id'])
-    stats = Rating.calculate_average(doctor['_id'])
-    
-    # Enrich with patient names
-    result = []
-    for r in ratings:
-        rating_dict = Rating.to_dict(r)
-        patient = Patient.find_by_user_id(str(r.get('patient_id', '')))
-        if patient:
-            rating_dict['patientName'] = f"{patient.get('firstName', '')} {patient.get('lastName', '')}"
-        else:
-            rating_dict['patientName'] = 'Anonymous'
-        result.append(rating_dict)
-    
-    return jsonify({
-        'reviews': result,
-        'average': stats['average'],
-        'count': stats['count']
-    })
+    try:
+        current_user = get_current_user()
+
+        if current_user['role'] != 'doctor':
+            return jsonify({'error': 'Only doctors can access this endpoint'}), 403
+
+        doctor = Doctor.find_by_user_id(current_user['id'])
+        if not doctor:
+            return jsonify({'error': 'Doctor profile not found'}), 404
+
+        ratings = Rating.find_by_doctor_id(doctor['_id'])
+        stats = Rating.calculate_average(doctor['_id'])
+
+        # Enrich with patient names; tolerate malformed legacy rows.
+        result = []
+        for r in ratings:
+            rating_dict = _safe_rating_dict(r)
+            rating_dict['patientName'] = _safe_patient_name(r.get('patient_id'))
+            result.append(rating_dict)
+
+        return jsonify({
+            'reviews': result,
+            'average': stats['average'],
+            'count': stats['count']
+        })
+    except Exception:
+        logger.exception("Failed to fetch my reviews")
+        return jsonify({'error': 'Failed to fetch reviews'}), 500

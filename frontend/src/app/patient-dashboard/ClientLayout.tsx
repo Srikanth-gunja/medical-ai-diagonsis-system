@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import {
+  ApiRequestError,
   patientsApi,
   authApi,
   appointmentsApi,
@@ -52,6 +53,7 @@ export default function PatientDashboardClientLayout({
   const pathname = usePathname();
   const [user, setUser] = useState<UserContextType['user']>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [notificationCount, setNotificationCount] = useState(0);
   const [appointmentStatus, setAppointmentStatus] = useState<{
     type: 'upcoming' | 'ongoing' | 'completed';
@@ -69,10 +71,11 @@ export default function PatientDashboardClientLayout({
   };
 
   const fetchUser = async () => {
+    setProfileError(null);
     try {
       const token = authApi.getToken();
       if (!token) {
-        router.push('/login');
+        router.replace('/login');
         return;
       }
 
@@ -165,11 +168,19 @@ export default function PatientDashboardClientLayout({
 
       // Fetch notification count
       await refreshNotificationCount();
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to fetch user profile:', error);
-      // Token might be invalid
-      authApi.logout();
-      router.push('/login');
+      const isAuthError =
+        error instanceof ApiRequestError && (error.status === 401 || error.status === 403);
+
+      if (isAuthError) {
+        // Only clear session for explicit auth failures.
+        authApi.logout();
+        router.replace('/login');
+        return;
+      }
+
+      setProfileError('Unable to load your profile right now. Please retry in a moment.');
     } finally {
       setIsLoading(false);
     }
@@ -248,6 +259,20 @@ export default function PatientDashboardClientLayout({
           }}
           notificationCount={notificationCount}
         />
+
+        {profileError && (
+          <div className="container mx-auto px-4 sm:px-6 pt-4">
+            <div className="rounded-lg border border-error/30 bg-error/10 px-4 py-3 text-sm text-error flex items-center justify-between gap-3">
+              <span>{profileError}</span>
+              <button
+                onClick={fetchUser}
+                className="shrink-0 rounded-md border border-error/40 px-3 py-1 hover:bg-error/10 transition-base"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        )}
 
         {appointmentStatus && (
           <StatusIndicatorBar appointmentStatus={appointmentStatus} chatAvailable={true} />
