@@ -61,17 +61,21 @@ function useCallWatcher(
   const calls = useCalls();
 
   useEffect(() => {
+    const now = Date.now();
     // Filter for ringing calls that are NOT our current active call
     // AND that don't match the appointment we are actively trying to call.
     // We don't use isCreatedByMe because Stream preserves the original creator 
     // of a call ID permanently, so if patient joined first previously, the doctor
     // calling now would trigger isCreatedByMe=false and seem like an incoming call.
-    const incomingCalls = calls.filter(
-      (call) =>
-        call.id !== activeCallId &&
-        call.state.custom?.appointmentId !== pendingAppointmentId &&
-        call.state.callingState === CallingState.RINGING
-    );
+    const incomingCalls = calls.filter((call) => {
+      const customApptId = call.state.custom?.appointmentId;
+      const isRecentlyCancelled = customApptId && recentlyCancelled && customApptId === recentlyCancelled.id && (now - recentlyCancelled.timestamp < 8000);
+
+      return call.id !== activeCallId &&
+        customApptId !== pendingAppointmentId &&
+        !isRecentlyCancelled &&
+        call.state.callingState === CallingState.RINGING;
+    });
 
     if (incomingCalls.length > 0) {
       onIncomingCall(incomingCalls[0]);
@@ -874,6 +878,9 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         setIsRinging(false);
         setIsConnecting(false);
         setIncomingCall(null);
+        if (pendingAppointmentId) {
+          setRecentlyCancelled({ id: pendingAppointmentId, timestamp: Date.now() });
+        }
         setPendingAppointmentId(null);
         callStartedAtRef.current = null;
         setCallError(null);
