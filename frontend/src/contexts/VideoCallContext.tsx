@@ -749,7 +749,6 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       // Create a ringing call with both participants as members
       await call.getOrCreate({
         ring: true,
-        notify: true,
         video: true,
         data: {
           members: [{ user_id: callDetails.user_id }, { user_id: callDetails.other_user_id }],
