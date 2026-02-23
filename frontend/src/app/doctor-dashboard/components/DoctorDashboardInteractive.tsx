@@ -231,7 +231,7 @@ export default function DoctorDashboardInteractive() {
   const [videoCallPatientName, setVideoCallPatientName] = useState<string>('Patient');
 
   // Video call context for ringing support
-  const { incomingCall, isClientReady } = useVideoCall();
+  const { incomingCall, isClientReady, activeCall } = useVideoCall();
 
   // Toast and confirmation dialogs
   const { showToast } = useToast();
@@ -1192,11 +1192,10 @@ export default function DoctorDashboardInteractive() {
                         </div>
                       </div>
                       <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium border ${
-                          appointment.status === 'No Show'
-                            ? 'bg-warning/10 text-warning border-warning/20'
-                            : 'bg-primary/10 text-primary border-primary/20'
-                        }`}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border ${appointment.status === 'No Show'
+                          ? 'bg-warning/10 text-warning border-warning/20'
+                          : 'bg-primary/10 text-primary border-primary/20'
+                          }`}
                       >
                         {appointment.status}
                       </span>
@@ -1256,21 +1255,21 @@ export default function DoctorDashboardInteractive() {
         }}
       />
 
-      {/* Video Call Modal for outgoing calls */}
-      {videoCallAppointmentId && (
+      {/* Video Call Modal */}
+      {(videoCallAppointmentId || activeCall) && (
         <VideoCallModal
-          isOpen={isVideoCallModalOpen}
+          isOpen={isVideoCallModalOpen || !!activeCall}
           onClose={() => {
             setIsVideoCallModalOpen(false);
             setVideoCallAppointmentId(null);
           }}
-          appointmentId={videoCallAppointmentId}
-          otherUserName={videoCallPatientName}
+          appointmentId={videoCallAppointmentId || (activeCall?.state?.custom?.appointmentId as string)}
+          otherUserName={videoCallPatientName || (activeCall?.state?.custom?.callerName as string) || 'Patient'}
         />
       )}
 
       {/* Incoming Call Modal */}
-      <IncomingCallModal isOpen={!!incomingCall} onClose={() => {}} />
+      <IncomingCallModal isOpen={!!incomingCall} onClose={() => { }} />
 
       {/* Confirmation Dialog */}
       {ConfirmDialogComponent}

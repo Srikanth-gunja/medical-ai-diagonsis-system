@@ -129,7 +129,7 @@ function VideoCallRoomInner({ onLeave }: { onLeave: () => void }) {
   // Handle call end states
   useEffect(() => {
     // Check for call end states using string comparison since CallingState enum values may vary
-    const endStates = ['left', 'ended', 'idle', 'rejected'];
+    const endStates = ['left', 'ended', 'rejected'];
     if (endStates.includes(callingState as string)) {
       if (!hasHandledEndRef.current) {
         hasHandledEndRef.current = true;

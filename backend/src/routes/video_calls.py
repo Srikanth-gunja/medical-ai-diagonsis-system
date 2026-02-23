@@ -130,16 +130,20 @@ def create_call(appointment_id):
         other_role = "doctor"
     else:
         # Current is doctor, other is patient
-        # patient_id in appointments IS the user_id (stored correctly)
-        other_user_id = str(appointment.get("patient_id"))
-        patient = Patient.find_by_user_id(other_user_id)
+        # IMPORTANT: patient_id in appointments is the Patient collection _id, not user_id
+        # We need to find the patient and get their user_id for Stream
+        patient_doc_id = str(appointment.get("patient_id"))
+        patient = Patient.find_by_id(patient_doc_id)
         if patient:
+            other_user_id = str(patient.get("user_id"))
             other_user_name = (
                 f"{patient.get('firstName', '')} {patient.get('lastName', '')}".strip()
             )
             if not other_user_name:
                 other_user_name = appointment.get("patient_name", "Patient")
         else:
+            # Fallback: use patient_doc_id directly (shouldn't happen in normal flow)
+            other_user_id = patient_doc_id
             other_user_name = appointment.get("patient_name", "Patient")
         other_role = "patient"
 

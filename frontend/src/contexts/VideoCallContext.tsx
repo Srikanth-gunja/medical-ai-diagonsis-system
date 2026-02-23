@@ -54,33 +54,42 @@ const VideoCallContext = createContext<VideoCallContextType | undefined>(undefin
 function useCallWatcher(
   onIncomingCall: (call: Call) => void,
   onOutgoingCallAnswered: () => void,
-  onOutgoingCallEnded: () => void
+  onOutgoingCallEnded: () => void,
+  activeCallId?: string,
+  pendingAppointmentId?: string | null
 ) {
   const calls = useCalls();
 
   useEffect(() => {
-    // Filter for ringing calls that we didn't create (incoming)
+    // Filter for ringing calls that are NOT our current active call
+    // AND that don't match the appointment we are actively trying to call.
+    // We don't use isCreatedByMe because Stream preserves the original creator 
+    // of a call ID permanently, so if patient joined first previously, the doctor
+    // calling now would trigger isCreatedByMe=false and seem like an incoming call.
     const incomingCalls = calls.filter(
-      (call) => call.isCreatedByMe === false && call.state.callingState === CallingState.RINGING
+      (call) =>
+        call.id !== activeCallId &&
+        call.state.custom?.appointmentId !== pendingAppointmentId &&
+        call.state.callingState === CallingState.RINGING
     );
 
     if (incomingCalls.length > 0) {
       onIncomingCall(incomingCalls[0]);
     }
 
-    // Filter for outgoing calls that are no longer ringing (answered)
+    // Filter for our active call that is no longer ringing (answered)
     const answeredCalls = calls.filter(
-      (call) => call.isCreatedByMe === true && call.state.callingState === CallingState.JOINED
+      (call) => call.id === activeCallId && call.state.callingState === CallingState.JOINED
     );
 
     if (answeredCalls.length > 0) {
       onOutgoingCallAnswered();
     }
 
-    // Filter for outgoing calls that ended
+    // Filter for our active call that ended
     const endedCalls = calls.filter(
       (call) =>
-        call.isCreatedByMe === true &&
+        call.id === activeCallId &&
         (call.state.callingState === CallingState.LEFT ||
           (call.state.callingState as string) === 'ended')
     );
@@ -88,19 +97,25 @@ function useCallWatcher(
     if (endedCalls.length > 0) {
       onOutgoingCallEnded();
     }
-  }, [calls, onIncomingCall, onOutgoingCallAnswered, onOutgoingCallEnded]);
+  }, [calls, activeCallId, onIncomingCall, onOutgoingCallAnswered, onOutgoingCallEnded]);
 }
 
 function CallWatcherWrapper({
   onIncomingCall,
   onOutgoingCallAnswered,
   onOutgoingCallEnded,
+  activeCallId,
+  pendingAppointmentId,
+  recentlyCancelled,
 }: {
   onIncomingCall: (call: Call) => void;
   onOutgoingCallAnswered: () => void;
   onOutgoingCallEnded: () => void;
+  activeCallId?: string;
+  pendingAppointmentId?: string | null;
+  recentlyCancelled?: { id: string; timestamp: number } | null;
 }) {
-  useCallWatcher(onIncomingCall, onOutgoingCallAnswered, onOutgoingCallEnded);
+  useCallWatcher(onIncomingCall, onOutgoingCallAnswered, onOutgoingCallEnded, activeCallId, pendingAppointmentId, recentlyCancelled);
   return null;
 }
 
@@ -166,6 +181,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   const [initElapsedTime, setInitElapsedTime] = useState(0);
   const [callError, setCallError] = useState<string | null>(null);
   const [pendingAppointmentId, setPendingAppointmentId] = useState<string | null>(null);
+  const [recentlyCancelled, setRecentlyCancelled] = useState<{ id: string; timestamp: number } | null>(null);
 
   const callStartedAtRef = useRef<number | null>(null);
   const initializingRef = useRef(false);
@@ -338,7 +354,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
             streamMock?.client ||
             ({
               call: () => streamMock?.call || null,
-              disconnectUser: () => {},
+              disconnectUser: () => { },
             } as unknown as StreamVideoClient);
           if (mountedRef.current) {
             setClient(mockClient);
@@ -690,6 +706,10 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     setCallError(null);
     clearAllTimers(); // This now clears ringing and connection timeouts too
 
+    if (pendingAppointmentId) {
+      setRecentlyCancelled({ id: pendingAppointmentId, timestamp: Date.now() });
+    }
+
     if (activeCall) {
       try {
         await activeCall.endCall();
@@ -702,8 +722,8 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         logger.error('Error leaving canceled call:', error);
       }
       setActiveCall(null);
-      setPendingAppointmentId(null);
     }
+    setPendingAppointmentId(null);
   };
 
   const joinCall = async (call: Call): Promise<void> => {
@@ -809,7 +829,11 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     try {
       logger.log('📞 Rejecting incoming call...');
       await incomingCall.call.leave({ reject: true, reason: 'decline' });
+      const apptId = incomingCall.appointmentId;
       setIncomingCall(null);
+      if (apptId) {
+        setRecentlyCancelled({ id: apptId, timestamp: Date.now() });
+      }
       setPendingAppointmentId(null);
       callStartedAtRef.current = null;
       setCallError(null);
@@ -891,6 +915,9 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         setIsRinging(false);
         setIsConnecting(false);
         setIncomingCall(null);
+        if (pendingAppointmentId) {
+          setRecentlyCancelled({ id: pendingAppointmentId, timestamp: Date.now() });
+        }
         setPendingAppointmentId(null);
         callStartedAtRef.current = null;
         setCallError(null);
@@ -940,6 +967,9 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
             onIncomingCall={handleIncomingCall}
             onOutgoingCallAnswered={handleOutgoingCallAnswered}
             onOutgoingCallEnded={handleOutgoingCallEnded}
+            activeCallId={activeCall?.id}
+            pendingAppointmentId={pendingAppointmentId}
+            recentlyCancelled={recentlyCancelled}
           />
           {children}
         </StreamVideo>

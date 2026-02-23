@@ -99,7 +99,7 @@ const PatientDashboardInteractive = () => {
   const [videoCallDoctorName, setVideoCallDoctorName] = useState<string>('Doctor');
 
   // Video call context for ringing support
-  const { incomingCall, isClientReady } = useVideoCall();
+  const { incomingCall, isClientReady, activeCall } = useVideoCall();
 
   // Toast notifications and confirmation dialogs
   const { showToast } = useToast();
@@ -678,11 +678,10 @@ const PatientDashboardInteractive = () => {
                 <div className="flex flex-wrap items-center gap-2 mb-8 bg-muted/30 p-1.5 rounded-2xl w-fit border border-border/50">
                   <button
                     onClick={() => handleTabChange('upcoming')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${
-                      appointmentTab === 'upcoming'
-                        ? 'bg-primary text-primary-foreground shadow-sm scale-100'
-                        : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
-                    }`}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${appointmentTab === 'upcoming'
+                      ? 'bg-primary text-primary-foreground shadow-sm scale-100'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                      }`}
                   >
                     Upcoming
                     {appointmentCounts.confirmed > 0 && (
@@ -695,11 +694,10 @@ const PatientDashboardInteractive = () => {
                   </button>
                   <button
                     onClick={() => handleTabChange('pending')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${
-                      appointmentTab === 'pending'
-                        ? 'bg-primary text-primary-foreground shadow-sm scale-100'
-                        : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
-                    }`}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${appointmentTab === 'pending'
+                      ? 'bg-primary text-primary-foreground shadow-sm scale-100'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                      }`}
                   >
                     Pending
                     {appointmentCounts.pending > 0 && (
@@ -712,11 +710,10 @@ const PatientDashboardInteractive = () => {
                   </button>
                   <button
                     onClick={() => handleTabChange('completed')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${
-                      appointmentTab === 'completed'
-                        ? 'bg-primary text-primary-foreground shadow-sm scale-100'
-                        : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
-                    }`}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${appointmentTab === 'completed'
+                      ? 'bg-primary text-primary-foreground shadow-sm scale-100'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                      }`}
                   >
                     Completed
                     {appointmentCounts.completed > 0 && (
@@ -729,11 +726,10 @@ const PatientDashboardInteractive = () => {
                   </button>
                   <button
                     onClick={() => handleTabChange('rejected')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${
-                      appointmentTab === 'rejected'
-                        ? 'bg-primary text-primary-foreground shadow-sm scale-100'
-                        : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
-                    }`}
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${appointmentTab === 'rejected'
+                      ? 'bg-primary text-primary-foreground shadow-sm scale-100'
+                      : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
+                      }`}
                   >
                     Rejected
                     {appointmentCounts.rejected > 0 && (
@@ -988,16 +984,16 @@ const PatientDashboardInteractive = () => {
                 activities.length > 0
                   ? activities
                   : [
-                      {
-                        id: '1',
-                        type: 'appointment' as const,
-                        title: 'Welcome!',
-                        description: 'Start by booking your first appointment',
-                        timestamp: 'Just now',
-                        icon: 'SparklesIcon',
-                        color: 'bg-primary',
-                      },
-                    ]
+                    {
+                      id: '1',
+                      type: 'appointment' as const,
+                      title: 'Welcome!',
+                      description: 'Start by booking your first appointment',
+                      timestamp: 'Just now',
+                      icon: 'SparklesIcon',
+                      color: 'bg-primary',
+                    },
+                  ]
               }
             />
           </div>
@@ -1046,21 +1042,21 @@ const PatientDashboardInteractive = () => {
         />
       )}
 
-      {/* Video Call Modal for outgoing calls */}
-      {videoCallAppointmentId && (
+      {/* Video Call Modal */}
+      {(videoCallAppointmentId || activeCall) && (
         <VideoCallModal
-          isOpen={isVideoCallModalOpen}
+          isOpen={isVideoCallModalOpen || !!activeCall}
           onClose={() => {
             setIsVideoCallModalOpen(false);
             setVideoCallAppointmentId(null);
           }}
-          appointmentId={videoCallAppointmentId}
-          otherUserName={videoCallDoctorName}
+          appointmentId={videoCallAppointmentId || (activeCall?.state?.custom?.appointmentId as string)}
+          otherUserName={videoCallDoctorName || (activeCall?.state?.custom?.callerName as string) || 'Doctor'}
         />
       )}
 
       {/* Incoming Call Modal */}
-      <IncomingCallModal isOpen={!!incomingCall} onClose={() => {}} />
+      <IncomingCallModal isOpen={!!incomingCall} onClose={() => { }} />
 
       {/* Confirmation Dialog */}
       {ConfirmDialogComponent}
