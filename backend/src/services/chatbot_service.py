@@ -1,28 +1,40 @@
 import os
 import time
+import threading
+from functools import lru_cache
 from flask import current_app
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from ..models.doctor import Doctor
 from ..models.chat_history import ChatHistory
 
+_doctors_cache_lock = threading.Lock()
+_CHAT_MODEL_CACHE = None
 _DOCTORS_CONTEXT_CACHE = {
-    'value': None,
-    'expires_at': 0.0,
+    "value": None,
+    "expires_at": 0.0,
 }
 
 
 def get_doctors_context():
     """Get formatted doctors information for the LLM context."""
+    global _DOCTORS_CONTEXT_CACHE
     now_ts = time.time()
-    ttl_seconds = int(current_app.config.get('CHATBOT_DOCTORS_CONTEXT_CACHE_TTL_SECONDS', 120))
-    if _DOCTORS_CONTEXT_CACHE['value'] and now_ts < _DOCTORS_CONTEXT_CACHE['expires_at']:
-        return _DOCTORS_CONTEXT_CACHE['value']
+    ttl_seconds = int(
+        current_app.config.get("CHATBOT_DOCTORS_CONTEXT_CACHE_TTL_SECONDS", 120)
+    )
+
+    with _doctors_cache_lock:
+        if (
+            _DOCTORS_CONTEXT_CACHE["value"]
+            and now_ts < _DOCTORS_CONTEXT_CACHE["expires_at"]
+        ):
+            return _DOCTORS_CONTEXT_CACHE["value"]
 
     doctors = Doctor.find_all()
     if not doctors:
         return "No doctors available in the system."
-    
+
     doctors_info = []
     for doc in doctors:
         doc_dict = Doctor.to_dict(doc)
@@ -30,17 +42,19 @@ def get_doctors_context():
             f"- Dr. {doc_dict['name']}: {doc_dict['specialty']} specialist, "
             f"located at {doc_dict['location']}, rating: {doc_dict['rating']}/5"
         )
-    
+
     context = "\n".join(doctors_info)
-    _DOCTORS_CONTEXT_CACHE['value'] = context
-    _DOCTORS_CONTEXT_CACHE['expires_at'] = now_ts + max(1, ttl_seconds)
+
+    with _doctors_cache_lock:
+        _DOCTORS_CONTEXT_CACHE["value"] = context
+        _DOCTORS_CONTEXT_CACHE["expires_at"] = now_ts + max(1, ttl_seconds)
     return context
 
 
 def get_system_prompt():
     """Get the system prompt for the chatbot."""
     doctors_context = get_doctors_context()
-    
+
     return f"""You are a helpful medical assistant chatbot for a healthcare platform. Your role is to:
 
 1. Listen to patients describe their symptoms
@@ -63,34 +77,62 @@ GUIDELINES:
 Remember: You are NOT a replacement for professional medical advice. Always encourage patients to book an appointment with the recommended doctor."""
 
 
-def create_chat_model():
-    """Create and configure the Gemini chat model."""
-    api_key = current_app.config.get('GOOGLE_API_KEY') or os.environ.get('GOOGLE_API_KEY')
-    
+@lru_cache(maxsize=1)
+def _create_chat_model_uncached():
+    """Create and configure the Gemini chat model (uncached)."""
+    api_key = current_app.config.get("GOOGLE_API_KEY") or os.environ.get(
+        "GOOGLE_API_KEY"
+    )
+
     if not api_key:
         if getattr(current_app, "testing", False):
             api_key = "test-key"
         else:
-            raise ValueError("GOOGLE_API_KEY is not configured. Please set it in environment variables.")
-    
+            raise ValueError(
+                "GOOGLE_API_KEY is not configured. Please set it in environment variables."
+            )
+
     return ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",
         google_api_key=api_key,
         temperature=0.7,
-        convert_system_message_to_human=True
+        convert_system_message_to_human=True,
+    )
+
+
+def create_chat_model():
+    """Get or create the Gemini chat model with caching."""
+    global _CHAT_MODEL_CACHE
+    if _CHAT_MODEL_CACHE is None:
+        _CHAT_MODEL_CACHE = _create_chat_model_uncached()
+    return _CHAT_MODEL_CACHE
+
+    if not api_key:
+        if getattr(current_app, "testing", False):
+            api_key = "test-key"
+        else:
+            raise ValueError(
+                "GOOGLE_API_KEY is not configured. Please set it in environment variables."
+            )
+
+    return ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash",
+        google_api_key=api_key,
+        temperature=0.7,
+        convert_system_message_to_human=True,
     )
 
 
 def build_messages_from_history(history_messages):
     """Convert stored messages to LangChain message format."""
     messages = []
-    
+
     for msg in history_messages:
-        if msg['role'] == 'user':
-            messages.append(HumanMessage(content=msg['content']))
-        elif msg['role'] == 'assistant':
-            messages.append(AIMessage(content=msg['content']))
-    
+        if msg["role"] == "user":
+            messages.append(HumanMessage(content=msg["content"]))
+        elif msg["role"] == "assistant":
+            messages.append(AIMessage(content=msg["content"]))
+
     return messages
 
 
@@ -98,23 +140,23 @@ def process_message(user_id, user_message):
     """Process a user message and return AI response."""
     # Get the chat model
     llm = create_chat_model()
-    
+
     # Get existing chat history
     history_messages = ChatHistory.get_messages(user_id)
-    
+
     # Build the message list
     messages = [SystemMessage(content=get_system_prompt())]
     messages.extend(build_messages_from_history(history_messages))
     messages.append(HumanMessage(content=user_message))
-    
+
     # Get AI response
     response = llm.invoke(messages)
     ai_response = response.content
-    
+
     # Store messages in history
-    ChatHistory.add_message(user_id, 'user', user_message)
-    ChatHistory.add_message(user_id, 'assistant', ai_response)
-    
+    ChatHistory.add_message(user_id, "user", user_message)
+    ChatHistory.add_message(user_id, "assistant", ai_response)
+
     return ai_response
 
 

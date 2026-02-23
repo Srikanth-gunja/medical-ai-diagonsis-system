@@ -274,9 +274,13 @@ async function fetchApi<T>(endpoint: string, options: RequestInit = {}): Promise
 
     return response.json();
   } catch (error) {
-    // Check if it's a network error (backend not running)
+    // Check if it's a network error (backend not running, CORS issues, etc.)
     if (error instanceof TypeError && error.message === 'Failed to fetch') {
       throw new Error('Backend server is not running. Please start the backend server.');
+    }
+    // Check for network errors via cause (modern browsers)
+    if (error instanceof TypeError && error.cause && typeof error.cause === 'object' && 'name' in error.cause && error.cause.name === 'TypeError') {
+      throw new Error('Network error. Please check your connection and ensure the backend server is running.');
     }
     throw error;
   }
@@ -539,17 +543,16 @@ export const analyticsApi = {
             errorData
           );
         }
-        return res.json() as Promise<PublicStats>;
-      })
-      .then((data) => {
+        const data = await res.json();
         cachedPublicStats = {
           data,
           expiresAt: Date.now() + PUBLIC_STATS_CACHE_TTL_MS,
         };
         return data;
       })
-      .finally(() => {
+      .catch((error) => {
         pendingPublicStatsRequest = null;
+        throw error;
       });
 
     return pendingPublicStatsRequest;
@@ -670,8 +673,15 @@ export const reportsApi = {
       headers: {
         Authorization: `Bearer ${getToken()}`,
       },
-    }).then((res) => {
-      if (!res.ok) throw new Error('Failed to download prescription');
+    }).then(async (res) => {
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to download prescription' }));
+        throw new ApiRequestError(
+          errorData.error || `HTTP error! status: ${res.status}`,
+          res.status,
+          errorData
+        );
+      }
       return res.blob();
     }),
 
@@ -681,8 +691,15 @@ export const reportsApi = {
       headers: {
         Authorization: `Bearer ${getToken()}`,
       },
-    }).then((res) => {
-      if (!res.ok) throw new Error('Failed to download medical record');
+    }).then(async (res) => {
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Failed to download medical record' }));
+        throw new ApiRequestError(
+          errorData.error || `HTTP error! status: ${res.status}`,
+          res.status,
+          errorData
+        );
+      }
       return res.blob();
     }),
 };

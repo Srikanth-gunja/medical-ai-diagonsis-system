@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    productionBrowserSourceMaps: true,
+    productionBrowserSourceMaps: process.env.NODE_ENV !== 'production',
     distDir: process.env.DIST_DIR || '.next',
     images: {
         remotePatterns: [

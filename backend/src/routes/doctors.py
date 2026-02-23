@@ -69,9 +69,7 @@ def get_doctors():
     skip = (page - 1) * per_page
 
     db = get_db()
-    verified_query = {
-        "$or": [{"verified": True}, {"verification_status": "verified"}]
-    }
+    verified_query = {"$or": [{"verified": True}, {"verification_status": "verified"}]}
 
     # Use aggregation pipeline to fetch doctors with schedules in one query
     pipeline = [
@@ -351,7 +349,13 @@ def _generate_time_slots_fast(start_time, end_time, duration_minutes):
 
     current = start
     while current < end:
-        slots.append(current.strftime("%-I:%M %p").replace(" 0", " "))
+        # Use portable format that works on both Linux and Windows
+        hour = current.hour
+        ampm = "AM" if hour < 12 else "PM"
+        hour_12 = hour if hour == 0 else (hour if hour <= 12 else hour - 12)
+        if hour_12 == 0:
+            hour_12 = 12
+        slots.append(f"{hour_12}:{current.strftime('%M')} {ampm}")
         current += timedelta(minutes=duration_minutes)
 
     return slots

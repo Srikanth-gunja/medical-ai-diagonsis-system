@@ -140,11 +140,14 @@ export function useSessionTimeout() {
       try {
         const base64Url = token.split('.')[1];
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const payload = JSON.parse(window.atob(base64));
-
-        if (payload.exp) {
-          // JWT exp is in seconds, convert to milliseconds
-          setExpiryTime(payload.exp * 1000);
+        let payload: { exp?: number } = {};
+        try {
+          payload = JSON.parse(window.atob(base64));
+          if (payload.exp) {
+            setExpiryTime(payload.exp * 1000);
+          }
+        } catch {
+          // Invalid token format - ignore silently
         }
       } catch {
         // Invalid token format

@@ -9,7 +9,13 @@ import os
 from datetime import datetime
 
 video_calls_bp = Blueprint("video_calls", __name__)
-video_service = VideoCallService()
+
+
+def get_video_service():
+    """Get or create video service instance lazily."""
+    if not hasattr(video_calls_bp, "_video_service"):
+        video_calls_bp._video_service = VideoCallService()
+    return video_calls_bp._video_service
 
 
 def get_current_user():
@@ -41,7 +47,7 @@ def generate_token():
         if doctor:
             user_name = doctor.get("name", "")
 
-    token = video_service.generate_user_token(user_id, user_name, role)
+    token = get_video_service().generate_user_token(user_id, user_name, role)
 
     if not token:
         return jsonify(
@@ -68,7 +74,7 @@ def create_call(appointment_id):
     role = current_user["role"]
 
     # Validate appointment and permissions
-    appointment, error_message = video_service.validate_call_access(
+    appointment, error_message = get_video_service().validate_call_access(
         user_id,
         appointment_id,
         role,
@@ -81,7 +87,7 @@ def create_call(appointment_id):
         ), 403
 
     # Generate call ID
-    call_id = video_service.create_call_id(appointment_id)
+    call_id = get_video_service().create_call_id(appointment_id)
 
     # Get current user details
     user_name = "User"
@@ -97,7 +103,7 @@ def create_call(appointment_id):
             user_name = doctor.get("name", "")
 
     # Generate token for current user (this also upserts them to Stream)
-    token = video_service.generate_user_token(user_id, user_name, role)
+    token = get_video_service().generate_user_token(user_id, user_name, role)
     if not token:
         return jsonify(
             {"error": "Failed to generate token. Service not configured."}
@@ -141,7 +147,7 @@ def create_call(appointment_id):
     if not other_user_id:
         return jsonify({"error": "Other participant not found for appointment"}), 404
 
-    video_service.upsert_user(other_user_id, other_user_name, other_role)
+    get_video_service().upsert_user(other_user_id, other_user_name, other_role)
 
     # If doctor is joining, we can optionally mark appointment as "in_progress"
     # if it was confirmed
@@ -173,7 +179,7 @@ def end_call(appointment_id):
     role = current_user["role"]
 
     # Validate access
-    appointment, error_message = video_service.validate_call_access(
+    appointment, error_message = get_video_service().validate_call_access(
         user_id,
         appointment_id,
         role,

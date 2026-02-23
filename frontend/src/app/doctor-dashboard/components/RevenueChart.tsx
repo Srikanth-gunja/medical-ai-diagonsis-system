@@ -37,9 +37,9 @@ export default function RevenueChart({ className = '', chartData }: RevenueChart
   ];
 
   const statusData = chartData?.statusData || [
-    { name: 'Confirmed', value: 0, color: '#3B82F6' },
-    { name: 'Pending', value: 0, color: '#F59E0B' },
-    { name: 'Completed', value: 0, color: '#10B981' },
+    { name: 'Confirmed', value: 0, color: '#10b981' }, // emerald-500
+    { name: 'Pending', value: 0, color: '#f59e0b' },   // amber-500
+    { name: 'Completed', value: 0, color: '#6366f1' }, // indigo-500
   ];
 
   // Calculate max for Y axis
@@ -50,9 +50,9 @@ export default function RevenueChart({ className = '', chartData }: RevenueChart
   return (
     <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 ${className}`}>
       {/* Appointments Line Chart */}
-      <div className="bg-card border border-border rounded-lg p-6">
+      <div className="bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm">
         <div className="mb-4">
-          <h2 className="text-lg font-semibold text-text-primary">Appointments (last 7 days)</h2>
+          <h2 className="text-lg font-bold text-slate-900 tracking-tight">Appointments (last 7 days)</h2>
         </div>
 
         <div className="w-full h-64" aria-label="Weekly Appointments Line Chart">
@@ -76,19 +76,22 @@ export default function RevenueChart({ className = '', chartData }: RevenueChart
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'var(--color-card)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
                   fontSize: '14px',
+                  fontWeight: 500,
+                  color: '#0f172a'
                 }}
               />
               <Line
                 type="monotone"
                 dataKey="appointments"
-                stroke="#3B82F6"
-                strokeWidth={2}
-                dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
-                activeDot={{ r: 6 }}
+                stroke="#6366f1"
+                strokeWidth={3}
+                dot={{ fill: '#6366f1', strokeWidth: 2, r: 4, stroke: '#ffffff' }}
+                activeDot={{ r: 6, strokeWidth: 0 }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -96,9 +99,9 @@ export default function RevenueChart({ className = '', chartData }: RevenueChart
       </div>
 
       {/* Status Breakdown Donut Chart */}
-      <div className="bg-card border border-border rounded-lg p-6">
+      <div className="bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm">
         <div className="mb-4">
-          <h2 className="text-lg font-semibold text-text-primary">Status Breakdown</h2>
+          <h2 className="text-lg font-bold text-slate-900 tracking-tight">Status Breakdown</h2>
         </div>
 
         <div
@@ -115,22 +118,22 @@ export default function RevenueChart({ className = '', chartData }: RevenueChart
                     cy="50"
                     r="35"
                     fill="none"
-                    stroke="rgba(148, 163, 184, 0.3)"
+                    stroke="#f1f5f9"
                     strokeWidth="15"
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-sm text-text-tertiary text-center px-4">No data</span>
+                  <span className="text-sm font-medium text-slate-400 text-center px-4">No data</span>
                 </div>
               </div>
               <div className="flex gap-4 mt-4">
                 {statusData.map((entry, index) => (
-                  <div key={index} className="flex items-center gap-1.5">
+                  <div key={index} className="flex items-center gap-2">
                     <div
-                      className="w-2.5 h-2.5 rounded-full"
+                      className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: entry.color }}
                     />
-                    <span className="text-sm text-text-secondary">{entry.name}</span>
+                    <span className="text-sm font-medium text-slate-600">{entry.name}</span>
                   </div>
                 ))}
               </div>
@@ -153,10 +156,13 @@ export default function RevenueChart({ className = '', chartData }: RevenueChart
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: 'var(--color-card)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '8px',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
                     fontSize: '14px',
+                    fontWeight: 500,
+                    color: '#0f172a'
                   }}
                   formatter={(value: number, name: string) => [`${value}%`, name]}
                 />
@@ -167,7 +173,7 @@ export default function RevenueChart({ className = '', chartData }: RevenueChart
                   iconType="circle"
                   iconSize={10}
                   formatter={(value) => (
-                    <span style={{ color: 'var(--color-text-primary)', fontSize: '14px' }}>
+                    <span style={{ color: '#0f172a', fontSize: '14px', fontWeight: 500 }}>
                       {value}
                     </span>
                   )}

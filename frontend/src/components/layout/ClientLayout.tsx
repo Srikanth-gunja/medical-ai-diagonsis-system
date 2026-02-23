@@ -14,9 +14,7 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
   };
 
   const handleExtendSession = () => {
-    // In a real app, you would refresh the token here
-    // For now, we'll just reload the page to get a fresh token
-    window.location.reload();
+    router.refresh();
   };
 
   return (

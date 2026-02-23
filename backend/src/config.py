@@ -15,6 +15,8 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY")
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
     DEBUG = _is_truthy(os.environ.get("FLASK_DEBUG"))
+    # CORS allowed origins (comma-separated list)
+    CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "")
     JWT_TOKEN_LOCATION = ["headers"]
     JWT_QUERY_STRING_NAME = "token"
 
@@ -86,9 +88,7 @@ class Config:
     DOCTOR_ANALYTICS_CACHE_TTL_SECONDS = int(
         os.environ.get("DOCTOR_ANALYTICS_CACHE_TTL_SECONDS", "60")
     )
-    REPORTS_ENABLE_AI_SUMMARY = _is_truthy(
-        os.environ.get("REPORTS_ENABLE_AI_SUMMARY")
-    )
+    REPORTS_ENABLE_AI_SUMMARY = _is_truthy(os.environ.get("REPORTS_ENABLE_AI_SUMMARY"))
     CHATBOT_DOCTORS_CONTEXT_CACHE_TTL_SECONDS = int(
         os.environ.get("CHATBOT_DOCTORS_CONTEXT_CACHE_TTL_SECONDS", "120")
     )

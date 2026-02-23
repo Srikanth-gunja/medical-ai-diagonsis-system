@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import Icon from '@/components/ui/AppIcon';
 import AppImage from '@/components/ui/AppImage';
@@ -50,15 +50,16 @@ const AuthenticatedHeader = ({
   }, [notificationCount]);
 
   // Close notifications when clicking outside
+  const handleClickOutside = useCallback((event: MouseEvent) => {
+    if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
+      setIsNotificationsOpen(false);
+    }
+  }, []);
+
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
-        setIsNotificationsOpen(false);
-      }
-    };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [handleClickOutside]);
 
   // Re-render periodically to update "time ago" labels
   useEffect(() => {
