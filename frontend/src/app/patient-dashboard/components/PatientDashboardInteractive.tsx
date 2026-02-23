@@ -96,6 +96,7 @@ const PatientDashboardInteractive = () => {
   const [isVideoCallModalOpen, setIsVideoCallModalOpen] = useState(false);
   const [videoCallAppointmentId, setVideoCallAppointmentId] = useState<string | null>(null);
   const [videoCallDoctorName, setVideoCallDoctorName] = useState<string>('Doctor');
+  const [isWaitingForVideoService, setIsWaitingForVideoService] = useState(false);
 
   // Video call context for ringing support
   const { isClientReady, activeCall } = useVideoCall();
@@ -275,6 +276,17 @@ const PatientDashboardInteractive = () => {
     fetchActivities();
   }, [fetchActivities]);
 
+  useEffect(() => {
+    if (isClientReady && isWaitingForVideoService) {
+      showToast({
+        type: 'success',
+        title: 'Video Service Ready',
+        message: 'Video call service initialized successfully. You can join the call now.',
+      });
+      setIsWaitingForVideoService(false);
+    }
+  }, [isClientReady, isWaitingForVideoService, showToast]);
+
   // Listen for shared SSE updates from the patient dashboard layout
   useEffect(() => {
     if (!isHydrated) return;
@@ -391,6 +403,7 @@ const PatientDashboardInteractive = () => {
         title: 'Video Service Initializing',
         message: 'Video call service is still initializing. Please wait a moment and try again.',
       });
+      setIsWaitingForVideoService(true);
       return;
     }
 

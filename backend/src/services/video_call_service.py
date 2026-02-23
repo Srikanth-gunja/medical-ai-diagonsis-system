@@ -2,6 +2,7 @@ from getstream import Stream
 from getstream.models import UserRequest
 import os
 import logging
+import uuid
 from datetime import datetime, timedelta, timezone
 
 try:
@@ -85,8 +86,12 @@ class VideoCallService:
             return False
 
     def create_call_id(self, appointment_id: str) -> str:
-        """Generate call ID from appointment ID"""
-        return f"appointment_{appointment_id}"
+        """Generate a unique call ID for each ring attempt.
+
+        Stream recommends unique IDs for ring calls to avoid stale ringing state.
+        We keep appointment_id embedded for traceability.
+        """
+        return f"appointment_{appointment_id}_{uuid.uuid4().hex[:12]}"
 
     def validate_call_access(
         self,

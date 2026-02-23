@@ -28,6 +28,7 @@ export default function VideoCallModal({
 }: VideoCallModalProps) {
   const {
     activeCall,
+    hasLocalJoined,
     isRinging,
     isInitializing,
     isConnecting,
@@ -293,7 +294,7 @@ export default function VideoCallModal({
   }
 
   // Show outgoing call / ringing state
-  if (isRinging && activeCall) {
+  if (isRinging && activeCall && !hasLocalJoined) {
     return (
       <Transition appear show={isOpen} as={Fragment}>
         <Dialog as="div" className="relative z-50" onClose={() => {}}>

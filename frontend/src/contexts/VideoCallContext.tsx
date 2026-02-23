@@ -35,6 +35,7 @@ interface VideoCallStartedEvent {
 interface VideoCallContextType {
   client: StreamVideoClient | null;
   activeCall: Call | null;
+  hasLocalJoined: boolean;
   incomingCall: IncomingCall | null;
   isInitializing: boolean;
   isRinging: boolean;
@@ -219,6 +220,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   const { user, isLoading: isAuthLoading } = useAuth();
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [activeCall, setActiveCall] = useState<Call | null>(null);
+  const [hasLocalJoined, setHasLocalJoined] = useState(false);
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const [isRinging, setIsRinging] = useState(false);
@@ -671,7 +673,10 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   const handleIncomingCall = useCallback((call: Call) => {
     // Extract appointment ID from call custom data
     const appointmentId = call.state.custom?.appointmentId || '';
-    const callerName = call.state.createdBy?.name || 'Unknown Caller';
+    const callerName =
+      (call.state.custom?.callerName as string | undefined) ||
+      call.state.createdBy?.name ||
+      'Unknown Caller';
 
     setIncomingCall({
       call,
@@ -744,6 +749,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       // Create a ringing call with both participants as members
       await call.getOrCreate({
         ring: true,
+        notify: true,
         video: true,
         data: {
           members: [{ user_id: callDetails.user_id }, { user_id: callDetails.other_user_id }],
@@ -767,6 +773,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
           logger.error('Error leaving canceled call:', error);
         }
         setActiveCall(null);
+        setHasLocalJoined(false);
         setIsRinging(false);
         setPendingAppointmentId(null);
         setIsInitializing(false);
@@ -804,6 +811,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
             logger.error('Error leaving timed-out call:', e);
           }
           setActiveCall(null);
+          setHasLocalJoined(false);
           setIsRinging(false);
           setPendingAppointmentId(null);
           stopConnectionTimer();
@@ -829,6 +837,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
             clearTimeout(ringingTimeoutRef.current);
           }
 
+          setHasLocalJoined(true);
           setIsRinging(true); // Now waiting for other party
           stopConnectionTimer();
           if (!callStartedAtRef.current) {
@@ -858,6 +867,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
             logger.error('Error leaving failed call:', error);
           }
           setActiveCall(null);
+          setHasLocalJoined(false);
           setIsRinging(false);
           setPendingAppointmentId(null);
           throw joinError;
@@ -886,6 +896,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
     initCancelledRef.current = true;
     setIsInitializing(false);
     setIsRinging(false);
+    setHasLocalJoined(false);
     setIsConnecting(false);
     setCallError(null);
     clearAllTimers(); // This now clears ringing and connection timeouts too
@@ -944,6 +955,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
       }
 
       setActiveCall(call);
+      setHasLocalJoined(true);
       setIncomingCall(null);
       setIsRinging(false);
       setIsConnecting(false);
@@ -1036,6 +1048,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
         setRecentlyCancelled({ id: apptId, timestamp: Date.now() });
       }
       setPendingAppointmentId(null);
+      setHasLocalJoined(false);
       callStartedAtRef.current = null;
       setCallError(null);
       logger.log('✅ Call rejected');
@@ -1072,6 +1085,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
           logger.error('Error leaving call:', error);
         }
         setActiveCall(null);
+        setHasLocalJoined(false);
         setIsRinging(false);
         setIsConnecting(false);
         setIncomingCall(null);
@@ -1116,6 +1130,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
           logger.error('Error leaving call:', error);
         }
         setActiveCall(null);
+        setHasLocalJoined(false);
         setIsRinging(false);
         setIsConnecting(false);
         setIncomingCall(null);
@@ -1135,6 +1150,7 @@ export function VideoCallProvider({ children }: { children: React.ReactNode }) {
   const contextValue: VideoCallContextType = {
     client,
     activeCall,
+    hasLocalJoined,
     incomingCall,
     isInitializing,
     isRinging,

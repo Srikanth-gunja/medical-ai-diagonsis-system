@@ -228,6 +228,7 @@ export default function DoctorDashboardInteractive() {
   const [isVideoCallModalOpen, setIsVideoCallModalOpen] = useState(false);
   const [videoCallAppointmentId, setVideoCallAppointmentId] = useState<string | null>(null);
   const [videoCallPatientName, setVideoCallPatientName] = useState<string>('Patient');
+  const [isWaitingForVideoService, setIsWaitingForVideoService] = useState(false);
 
   // Video call context for ringing support
   const { isClientReady, activeCall } = useVideoCall();
@@ -525,6 +526,17 @@ export default function DoctorDashboardInteractive() {
     }
   }, []);
 
+  useEffect(() => {
+    if (isClientReady && isWaitingForVideoService) {
+      showToast({
+        type: 'success',
+        title: 'Video Service Ready',
+        message: 'Video call service initialized successfully. You can start the call now.',
+      });
+      setIsWaitingForVideoService(false);
+    }
+  }, [isClientReady, isWaitingForVideoService, showToast]);
+
   // SSE Connection for real-time updates
   useEffect(() => {
     if (!isHydrated) return;
@@ -752,6 +764,7 @@ export default function DoctorDashboardInteractive() {
         title: 'Video Service Initializing',
         message: 'Please wait a moment and try again.',
       });
+      setIsWaitingForVideoService(true);
       return;
     }
 
