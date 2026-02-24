@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from bson import ObjectId
 from ..models.appointment import Appointment
 from ..models.doctor import Doctor
@@ -47,9 +47,25 @@ ALLOWED_TRANSITIONS = {
 def get_current_user():
     """Parse JWT identity and return user dict."""
     identity = get_jwt_identity()
-    if isinstance(identity, str):
-        return json.loads(identity)
-    return identity
+    claims = get_jwt()
+
+    user = {}
+    if isinstance(identity, dict):
+        user = dict(identity)
+    elif isinstance(identity, str):
+        try:
+            parsed = json.loads(identity)
+            if isinstance(parsed, dict):
+                user = parsed
+            else:
+                user = {"id": str(parsed)}
+        except (TypeError, json.JSONDecodeError):
+            user = {"id": identity}
+
+    if claims.get("role") and "role" not in user:
+        user["role"] = claims["role"]
+
+    return user
 
 
 def _parse_date(value: str):
@@ -99,8 +115,12 @@ def create_activity(
 def get_appointments():
     """Get appointments with pagination support."""
     current_user = get_current_user()
-    user_id = current_user["id"]
-    role = current_user["role"]
+    user_id = str(current_user.get("id", "")).strip()
+    role = current_user.get("role")
+    if not user_id or not role:
+        return jsonify({"error": "Invalid token payload. Please log in again."}), 401
+    if not ObjectId.is_valid(user_id):
+        return jsonify({"error": "Invalid token user id. Please log in again."}), 401
 
     # Get pagination parameters
     page, per_page = get_pagination_params(default_per_page=10, max_per_page=50)

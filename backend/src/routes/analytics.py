@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify, current_app
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 from ..models.doctor import Doctor
 from ..models.rating import Rating
 from ..database import get_db, APPOINTMENTS_COLLECTION
@@ -40,9 +40,25 @@ def _cache_set(cache, key, data, ttl_seconds):
 def get_current_user():
     """Parse JWT identity and return user dict."""
     identity = get_jwt_identity()
-    if isinstance(identity, str):
-        return json.loads(identity)
-    return identity
+    claims = get_jwt()
+
+    user = {}
+    if isinstance(identity, dict):
+        user = dict(identity)
+    elif isinstance(identity, str):
+        try:
+            parsed = json.loads(identity)
+            if isinstance(parsed, dict):
+                user = parsed
+            else:
+                user = {"id": str(parsed)}
+        except (TypeError, json.JSONDecodeError):
+            user = {"id": identity}
+
+    if claims.get("role") and "role" not in user:
+        user["role"] = claims["role"]
+
+    return user
 
 
 @analytics_bp.route('/doctor', methods=['GET'])
@@ -50,11 +66,17 @@ def get_current_user():
 def get_doctor_analytics():
     """Get analytics for doctor dashboard."""
     current_user = get_current_user()
+    user_id = str(current_user.get('id', '')).strip()
+    role = current_user.get('role')
+    if not user_id or not role:
+        return jsonify({'error': 'Invalid token payload. Please log in again.'}), 401
+    if not ObjectId.is_valid(user_id):
+        return jsonify({'error': 'Invalid token user id. Please log in again.'}), 401
     
-    if current_user['role'] != 'doctor':
+    if role != 'doctor':
         return jsonify({'error': 'Only doctors can access this endpoint'}), 403
     
-    doctor = Doctor.find_by_user_id(current_user['id'])
+    doctor = Doctor.find_by_user_id(user_id)
     if not doctor:
         return jsonify({'error': 'Doctor profile not found'}), 404
     
@@ -136,12 +158,18 @@ def get_doctor_analytics():
 def get_patient_analytics():
     """Get analytics for patient dashboard."""
     current_user = get_current_user()
+    user_id = str(current_user.get('id', '')).strip()
+    role = current_user.get('role')
+    if not user_id or not role:
+        return jsonify({'error': 'Invalid token payload. Please log in again.'}), 401
+    if not ObjectId.is_valid(user_id):
+        return jsonify({'error': 'Invalid token user id. Please log in again.'}), 401
     
-    if current_user['role'] != 'patient':
+    if role != 'patient':
         return jsonify({'error': 'Only patients can access this endpoint'}), 403
     
     db = get_db()
-    patient_id = current_user['id']
+    patient_id = user_id
     try:
         patient_oid = ObjectId(patient_id)
     except Exception:
@@ -195,11 +223,17 @@ def get_patient_analytics():
 def get_doctor_chart_data():
     """Get chart data for doctor dashboard."""
     current_user = get_current_user()
+    user_id = str(current_user.get('id', '')).strip()
+    role = current_user.get('role')
+    if not user_id or not role:
+        return jsonify({'error': 'Invalid token payload. Please log in again.'}), 401
+    if not ObjectId.is_valid(user_id):
+        return jsonify({'error': 'Invalid token user id. Please log in again.'}), 401
     
-    if current_user['role'] != 'doctor':
+    if role != 'doctor':
         return jsonify({'error': 'Only doctors can access this endpoint'}), 403
     
-    doctor = Doctor.find_by_user_id(current_user['id'])
+    doctor = Doctor.find_by_user_id(user_id)
     if not doctor:
         return jsonify({'error': 'Doctor profile not found'}), 404
     

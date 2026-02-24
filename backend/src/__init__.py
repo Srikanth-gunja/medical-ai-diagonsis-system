@@ -1,7 +1,7 @@
 from flask import Flask, request
 from flask_jwt_extended import JWTManager
 from .config import Config
-from .database import init_db, close_mongo_client
+from .database import init_db
 
 
 def create_app(config_class=Config):
@@ -82,7 +82,6 @@ def create_app(config_class=Config):
 
     # Initialize database
     init_db(app)
-    app.teardown_appcontext(close_mongo_client)
 
     @app.route("/api/health")
     def health_check():
