@@ -53,10 +53,11 @@ export function useNextAvailableSlots() {
 /**
  * Hook to fetch doctor profile
  */
-export function useDoctorProfile() {
+export function useDoctorProfile(enabled: boolean = true) {
   return useQuery({
     queryKey: doctorKeys.profile(),
     queryFn: () => doctorsApi.getProfile(),
+    enabled,
     staleTime: 1000 * 60 * 5,
   });
 }

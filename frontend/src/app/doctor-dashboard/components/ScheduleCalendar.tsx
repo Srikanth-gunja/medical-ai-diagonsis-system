@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Icon from '@/components/ui/AppIcon';
-import { appointmentsApi, schedulesApi, Appointment, Schedule } from '@/lib/api';
+import type { Appointment, Schedule } from '@/lib/api';
 
 interface TimeSlot {
   time: string;
@@ -21,35 +21,24 @@ interface DayData {
 
 interface ScheduleCalendarProps {
   onManageSchedule: () => void;
+  appointmentsData: Appointment[];
+  scheduleData: Schedule | null;
+  isLoadingData?: boolean;
 }
 
-export default function ScheduleCalendar({ onManageSchedule }: ScheduleCalendarProps) {
+export default function ScheduleCalendar({
+  onManageSchedule,
+  appointmentsData,
+  scheduleData,
+  isLoadingData = false,
+}: ScheduleCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return new Date().toISOString().split('T')[0];
   });
   const [viewMode, setViewMode] = useState<'day' | 'week'>('week');
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [schedule, setSchedule] = useState<Schedule | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    try {
-      const [appointmentsResponse, scheduleData] = await Promise.all([
-        appointmentsApi.getAll(),
-        schedulesApi.getMySchedule(),
-      ]);
-      setAppointments(appointmentsResponse.items || []);
-      setSchedule(scheduleData);
-    } catch (error) {
-      console.error('Failed to fetch data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const appointments = appointmentsData;
+  const schedule = scheduleData;
+  const isLoading = isLoadingData;
 
   // Convert 24-hour time to 12-hour format
   const formatTime = (time24: string): string => {

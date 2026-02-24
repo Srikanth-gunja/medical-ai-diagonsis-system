@@ -218,13 +218,15 @@ const UpcomingAppointmentCard = ({
                     >
                       <span>Reschedule</span>
                     </button>
-                    <button
-                      onClick={() => onCancel(appointment.id)}
-                      className="flex items-center justify-center p-1.5 w-8 text-error bg-background border border-border shadow-sm hover:bg-error/10 hover:border-error/20 rounded-xl transition-colors shrink-0"
-                      title="Cancel"
-                    >
-                      <Icon name="XMarkIcon" size={16} />
-                    </button>
+                    {(appointment.status === 'pending' || appointment.status === 'confirmed') && (
+                      <button
+                        onClick={() => onCancel(appointment.id)}
+                        className="flex items-center justify-center p-1.5 w-8 text-error bg-background border border-border shadow-sm hover:bg-error/10 hover:border-error/20 rounded-xl transition-colors shrink-0"
+                        title="Cancel"
+                      >
+                        <Icon name="XMarkIcon" size={16} />
+                      </button>
+                    )}
                   </>
                 )}
 

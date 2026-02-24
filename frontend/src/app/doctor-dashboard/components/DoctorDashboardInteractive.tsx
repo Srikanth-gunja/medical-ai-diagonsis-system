@@ -48,6 +48,7 @@ import {
   type DoctorAnalytics,
   type Appointment as ApiAppointment,
   type Doctor as ApiDoctor,
+  type PaginatedResponse,
 } from '@/lib/api';
 import { checkVideoCallWindow } from '@/lib/videoCallWindow';
 import { logger } from '@/lib/logger';
@@ -239,7 +240,7 @@ export default function DoctorDashboardInteractive() {
   const queryClient = useQueryClient();
 
   // React Query hooks for data fetching
-  const { data: doctorProfile, isLoading: isProfileLoading } = useDoctorProfile();
+  const { data: doctorProfile, isLoading: isProfileLoading } = useDoctorProfile(isHydrated);
   const shouldLoadCoreData = isHydrated && Boolean(doctorProfile);
   const shouldLoadPatients = isHydrated && activeTab === 'patients';
   const { data: appointmentsData, isLoading: isAppointmentsLoading } = useAppointments(
@@ -727,9 +728,29 @@ export default function DoctorDashboardInteractive() {
 
   const handleApproveRequest = async (id: string) => {
     if (!isHydrated) return;
+    const previousAppointmentLists = queryClient.getQueriesData<PaginatedResponse<ApiAppointment>>({
+      queryKey: appointmentKeys.lists(),
+    });
+
+    queryClient.setQueriesData<PaginatedResponse<ApiAppointment>>(
+      { queryKey: appointmentKeys.lists() },
+      (oldData) => {
+        if (!oldData?.items) return oldData;
+        return {
+          ...oldData,
+          items: oldData.items.map((appt) =>
+            appt.id === id ? { ...appt, status: 'confirmed' } : appt
+          ),
+        };
+      }
+    );
+
     try {
       await updateAppointmentStatusMutation.mutateAsync({ id, status: 'confirmed' });
     } catch (err) {
+      previousAppointmentLists.forEach(([queryKey, previousData]) => {
+        queryClient.setQueryData(queryKey, previousData);
+      });
       logger.error('Failed to approve request:', err);
     }
   };
@@ -945,7 +966,12 @@ export default function DoctorDashboardInteractive() {
         </div>
 
         <div id="schedule" className="mb-8">
-          <ScheduleCalendar onManageSchedule={handleManageSchedule} />
+          <ScheduleCalendar
+            onManageSchedule={handleManageSchedule}
+            appointmentsData={appointmentsData?.items ?? []}
+            scheduleData={scheduleData ?? null}
+            isLoadingData={isAppointmentsLoading || isScheduleLoading}
+          />
         </div>
 
         <div className="bg-card border border-border rounded-lg p-6 mb-8">
