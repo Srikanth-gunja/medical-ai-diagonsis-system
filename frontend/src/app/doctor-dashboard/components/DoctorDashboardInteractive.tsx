@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import AuthenticatedHeader from '@/components/common/AuthenticatedHeader';
@@ -197,6 +197,7 @@ export default function DoctorDashboardInteractive() {
   >('appointments');
   const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState<string>('');
+  const prescriptionFormRef = useRef<HTMLDivElement | null>(null);
   const [showPatientHistory, setShowPatientHistory] = useState(false);
   const [historyPatientId, setHistoryPatientId] = useState<string>('');
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -537,6 +538,13 @@ export default function DoctorDashboardInteractive() {
       setIsWaitingForVideoService(false);
     }
   }, [isClientReady, isWaitingForVideoService, showToast]);
+
+  useEffect(() => {
+    if (!showPrescriptionForm) return;
+    requestAnimationFrame(() => {
+      prescriptionFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [showPrescriptionForm, selectedPatientId]);
 
   // SSE Connection for real-time updates
   useEffect(() => {
@@ -1011,7 +1019,7 @@ export default function DoctorDashboardInteractive() {
         </div>
 
         {showPrescriptionForm && (
-          <div className="mb-8">
+          <div ref={prescriptionFormRef} className="mb-8">
             <PrescriptionForm
               patientId={selectedPatientId}
               onSubmit={handlePrescriptionSubmit}
