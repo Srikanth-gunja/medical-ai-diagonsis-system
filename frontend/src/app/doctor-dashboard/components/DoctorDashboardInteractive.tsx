@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import AuthenticatedHeader from '@/components/common/AuthenticatedHeader';
@@ -197,7 +197,6 @@ export default function DoctorDashboardInteractive() {
   >('appointments');
   const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState<string>('');
-  const prescriptionFormRef = useRef<HTMLDivElement | null>(null);
   const [showPatientHistory, setShowPatientHistory] = useState(false);
   const [historyPatientId, setHistoryPatientId] = useState<string>('');
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -541,10 +540,17 @@ export default function DoctorDashboardInteractive() {
 
   useEffect(() => {
     if (!showPrescriptionForm) return;
-    requestAnimationFrame(() => {
-      prescriptionFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }, [showPrescriptionForm, selectedPatientId]);
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowPrescriptionForm(false);
+        setSelectedPatientId('');
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [showPrescriptionForm]);
 
   // SSE Connection for real-time updates
   useEffect(() => {
@@ -1018,19 +1024,6 @@ export default function DoctorDashboardInteractive() {
           </div>
         </div>
 
-        {showPrescriptionForm && (
-          <div ref={prescriptionFormRef} className="mb-8">
-            <PrescriptionForm
-              patientId={selectedPatientId}
-              onSubmit={handlePrescriptionSubmit}
-              onCancel={() => {
-                setShowPrescriptionForm(false);
-                setSelectedPatientId('');
-              }}
-            />
-          </div>
-        )}
-
         {showPatientHistory && historyPatientId && (
           <PatientHistoryModal
             patientId={historyPatientId}
@@ -1275,6 +1268,36 @@ export default function DoctorDashboardInteractive() {
           patientName={chatPatient.name}
           patientImage={chatPatient.image}
         />
+      )}
+
+      {/* Prescription Modal */}
+      {showPrescriptionForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
+          <button
+            type="button"
+            aria-label="Close prescription form"
+            onClick={() => {
+              setShowPrescriptionForm(false);
+              setSelectedPatientId('');
+            }}
+            className="absolute inset-0 bg-black/55 backdrop-blur-sm cursor-default"
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Create prescription"
+            className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+          >
+            <PrescriptionForm
+              patientId={selectedPatientId}
+              onSubmit={handlePrescriptionSubmit}
+              onCancel={() => {
+                setShowPrescriptionForm(false);
+                setSelectedPatientId('');
+              }}
+            />
+          </div>
+        </div>
       )}
 
       {/* Consultation Modal */}
