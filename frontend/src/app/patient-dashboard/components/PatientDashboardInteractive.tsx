@@ -2,18 +2,12 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import dynamic from 'next/dynamic';
 import UpcomingAppointmentCard from './UpcomingAppointmentCard';
 import DoctorSearchFilters from './DoctorSearchFilters';
 import DoctorCard from './DoctorCard';
 import QuickAccessPanel from './QuickAccessPanel';
 import RecentActivityFeed from './RecentActivityFeed';
-import AIChatbotWidget from './AIChatbotWidget';
-import AIChatbotModal from './AIChatbotModal';
-import DoctorChatModal from './DoctorChatModal';
-import ReviewDoctorModal from './ReviewDoctorModal';
-import BookingModal from './BookingModal';
-import RescheduleModal from './RescheduleModal';
-import VideoCallModal from '@/components/video/VideoCallModal';
 import Icon from '@/components/ui/AppIcon';
 import Pagination from '@/components/ui/Pagination';
 import { useToast } from '@/components/ui/Toast';
@@ -37,6 +31,17 @@ import {
 } from '@/lib/api';
 import { checkVideoCallWindow } from '@/lib/videoCallWindow';
 import { logger } from '@/lib/logger';
+
+const AIChatbotWidget = dynamic(() => import('./AIChatbotWidget'), { ssr: false });
+const AIChatbotModal = dynamic(() => import('./AIChatbotModal'), { ssr: false });
+const DoctorChatModal = dynamic(() => import('./DoctorChatModal'), { ssr: false });
+const ReviewDoctorModal = dynamic(() => import('./ReviewDoctorModal'), { ssr: false });
+const BookingModal = dynamic(() => import('./BookingModal'), { ssr: false });
+const RescheduleModal = dynamic(() => import('./RescheduleModal'), { ssr: false });
+const VideoCallModal = dynamic(() => import('@/components/video/VideoCallModal'), {
+  loading: () => null,
+  ssr: false,
+});
 
 interface Appointment {
   id: string;
@@ -137,10 +142,10 @@ const PatientDashboardInteractive = () => {
   const [appointmentsPage, setAppointmentsPage] = useState(1);
   const [doctorsPage, setDoctorsPage] = useState(1);
 
-  const handleTabChange = (tab: 'upcoming' | 'pending' | 'completed' | 'rejected') => {
+  const handleTabChange = useCallback((tab: 'upcoming' | 'pending' | 'completed' | 'rejected') => {
     setAppointmentTab(tab);
     setAppointmentsPage(1);
-  };
+  }, []);
 
   // Process React Query data into component state
   const appointments = useMemo(() => {
@@ -368,7 +373,7 @@ const PatientDashboardInteractive = () => {
     },
   ];
 
-  const handleReschedule = (id: string) => {
+  const handleReschedule = useCallback((id: string) => {
     if (isHydrated) {
       const appointment = appointments.find((a) => a.id === id);
       if (appointment) {
@@ -376,9 +381,9 @@ const PatientDashboardInteractive = () => {
         setIsRescheduleModalOpen(true);
       }
     }
-  };
+  }, [isHydrated, appointments]);
 
-  const handleConfirmReschedule = async (id: string, date: string, time: string) => {
+  const handleConfirmReschedule = useCallback(async (id: string, date: string, time: string) => {
     try {
       await rescheduleAppointmentMutation.mutateAsync({ id, data: { date, time } });
       setIsRescheduleModalOpen(false);
@@ -391,12 +396,11 @@ const PatientDashboardInteractive = () => {
         message: 'Failed to reschedule appointment. Please try again.',
       });
     }
-  };
+  }, [rescheduleAppointmentMutation, showToast]);
 
-  const handleJoinAppointment = async (id: string) => {
+  const handleJoinAppointment = useCallback(async (id: string) => {
     if (!isHydrated) return;
 
-    // Check if video client is ready
     if (!isClientReady) {
       showToast({
         type: 'warning',
@@ -424,16 +428,15 @@ const PatientDashboardInteractive = () => {
       }
     }
 
-    // Find the appointment to get doctor details for UI
     const appointment = appointments.find((a) => a.id === id);
     if (!appointment) return;
 
     setVideoCallAppointmentId(id);
     setVideoCallDoctorName(appointment.doctorName);
     setIsVideoCallModalOpen(true);
-  };
+  }, [isHydrated, isClientReady, appointmentsData, appointments, showToast]);
 
-  const handleCancelAppointment = async (id: string) => {
+  const handleCancelAppointment = useCallback(async (id: string) => {
     if (isHydrated) {
       const confirmed = await confirm({
         title: 'Cancel Appointment?',
@@ -460,50 +463,48 @@ const PatientDashboardInteractive = () => {
         }
       }
     }
-  };
+  }, [isHydrated, confirm, revokeAppointmentMutation, showToast]);
 
-  const handleChat = (id: string) => {
+  const handleChat = useCallback((id: string) => {
     const appointment = appointments.find((a) => a.id === id);
     if (appointment) {
       setSelectedAppointment(appointment);
       setIsChatModalOpen(true);
     }
-  };
+  }, [appointments]);
 
-  const handleReview = (id: string) => {
+  const handleReview = useCallback((id: string) => {
     const appointment = appointments.find((a) => a.id === id);
     if (appointment) {
       setSelectedAppointment(appointment);
       setIsReviewModalOpen(true);
     }
-  };
+  }, [appointments]);
 
-  const handleReviewSuccess = () => {
-    // Invalidate appointments query to refetch updated data from server
+  const handleReviewSuccess = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
     setIsReviewModalOpen(false);
-  };
+  }, [queryClient]);
 
-  const handleFilterChange = (newFilters: FilterOptions) => {
+  const handleFilterChange = useCallback((newFilters: FilterOptions) => {
     if (isHydrated) {
-      // Convert "all" to empty string for specialty comparison
       const normalizedFilters = {
         ...newFilters,
         specialty: newFilters.specialty === 'all' ? '' : newFilters.specialty,
       };
       setFilters(normalizedFilters);
     }
-  };
+  }, [isHydrated]);
 
-  const handleBookDoctor = (doctorId: string) => {
+  const handleBookDoctor = useCallback((doctorId: string) => {
     const doctor = doctors.find((d) => d.id === doctorId);
     if (doctor && isHydrated) {
       setSelectedDoctorForBooking({ id: doctorId, name: doctor.name });
       setIsBookingModalOpen(true);
     }
-  };
+  }, [doctors, isHydrated]);
 
-  const handleConfirmBooking = async (date: string, time: string, type: 'video' | 'in-person') => {
+  const handleConfirmBooking = useCallback(async (date: string, time: string, type: 'video' | 'in-person') => {
     if (isHydrated && selectedDoctorForBooking) {
       try {
         await createAppointmentMutation.mutateAsync({
@@ -525,13 +526,13 @@ const PatientDashboardInteractive = () => {
         });
       }
     }
-  };
+  }, [isHydrated, selectedDoctorForBooking, createAppointmentMutation, showToast]);
 
-  const handleOpenAIChat = () => {
+  const handleOpenAIChat = useCallback(() => {
     if (isHydrated) {
       setIsChatbotOpen(true);
     }
-  };
+  }, [isHydrated]);
 
   // Filter doctors based on search and filters - memoized for performance
   const filteredDoctors = useMemo(() => {
@@ -577,39 +578,37 @@ const PatientDashboardInteractive = () => {
     setDoctorsPage((prev) => Math.min(prev, totalDoctorPages));
   }, [totalDoctorPages]);
 
-  // Memoized appointment counts for tabs
-  const appointmentCounts = useMemo(
-    () => ({
-      confirmed: appointments.filter((a) => a.status === 'confirmed' || a.status === 'in_progress')
-        .length,
-      pending: appointments.filter((a) => a.status === 'pending').length,
-      completed: appointments.filter((a) => a.status === 'completed' || a.status === 'no_show')
-        .length,
-      rejected: appointments.filter((a) => a.status === 'rejected').length,
-    }),
-    [appointments]
-  );
+  // Combined array iteration - single pass grouping instead of multiple filters
+  const { confirmedAppointments, pendingAppointmentsList, completedAppointmentsList, rejectedAppointmentsList, appointmentCounts } = useMemo(() => {
+    const grouped = appointments.reduce((acc, appt) => {
+      if (appt.status === 'confirmed' || appt.status === 'in_progress') {
+        acc.confirmed.push(appt);
+      }
+      if (appt.status === 'pending') {
+        acc.pending.push(appt);
+      }
+      if (appt.status === 'completed' || appt.status === 'no_show') {
+        acc.completed.push(appt);
+      }
+      if (appt.status === 'rejected') {
+        acc.rejected.push(appt);
+      }
+      return acc;
+    }, { confirmed: [] as typeof appointments, pending: [] as typeof appointments, completed: [] as typeof appointments, rejected: [] as typeof appointments });
 
-  // Memoized filtered appointments for each tab
-  const confirmedAppointments = useMemo(
-    () => appointments.filter((a) => a.status === 'confirmed' || a.status === 'in_progress'),
-    [appointments]
-  );
-
-  const pendingAppointmentsList = useMemo(
-    () => appointments.filter((a) => a.status === 'pending'),
-    [appointments]
-  );
-
-  const completedAppointmentsList = useMemo(
-    () => appointments.filter((a) => a.status === 'completed' || a.status === 'no_show'),
-    [appointments]
-  );
-
-  const rejectedAppointmentsList = useMemo(
-    () => appointments.filter((a) => a.status === 'rejected'),
-    [appointments]
-  );
+    return {
+      confirmedAppointments: grouped.confirmed,
+      pendingAppointmentsList: grouped.pending,
+      completedAppointmentsList: grouped.completed,
+      rejectedAppointmentsList: grouped.rejected,
+      appointmentCounts: {
+        confirmed: grouped.confirmed.length,
+        pending: grouped.pending.length,
+        completed: grouped.completed.length,
+        rejected: grouped.rejected.length,
+      },
+    };
+  }, [appointments]);
 
   const activeAppointmentsList = useMemo(() => {
     if (appointmentTab === 'pending') return pendingAppointmentsList;
@@ -696,13 +695,13 @@ const PatientDashboardInteractive = () => {
                       }`}
                   >
                     Upcoming
-                    {appointmentCounts.confirmed > 0 && (
+                    {appointmentCounts.confirmed > 0 ? (
                       <span
                         className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${appointmentTab === 'upcoming' ? 'bg-primary-foreground/20 text-white' : 'bg-success/10 text-success'}`}
                       >
                         {appointmentCounts.confirmed}
                       </span>
-                    )}
+                    ) : null}
                   </button>
                   <button
                     onClick={() => handleTabChange('pending')}
@@ -712,13 +711,13 @@ const PatientDashboardInteractive = () => {
                       }`}
                   >
                     Pending
-                    {appointmentCounts.pending > 0 && (
+                    {appointmentCounts.pending > 0 ? (
                       <span
                         className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${appointmentTab === 'pending' ? 'bg-primary-foreground/20 text-white' : 'bg-warning/10 text-warning'}`}
                       >
                         {appointmentCounts.pending}
                       </span>
-                    )}
+                    ) : null}
                   </button>
                   <button
                     onClick={() => handleTabChange('completed')}
@@ -728,13 +727,13 @@ const PatientDashboardInteractive = () => {
                       }`}
                   >
                     Completed
-                    {appointmentCounts.completed > 0 && (
+                    {appointmentCounts.completed > 0 ? (
                       <span
                         className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${appointmentTab === 'completed' ? 'bg-primary-foreground/20 text-white' : 'bg-primary/20 text-primary'}`}
                       >
                         {appointmentCounts.completed}
                       </span>
-                    )}
+                    ) : null}
                   </button>
                   <button
                     onClick={() => handleTabChange('rejected')}
@@ -744,13 +743,13 @@ const PatientDashboardInteractive = () => {
                       }`}
                   >
                     Rejected
-                    {appointmentCounts.rejected > 0 && (
+                    {appointmentCounts.rejected > 0 ? (
                       <span
                         className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${appointmentTab === 'rejected' ? 'bg-primary-foreground/20 text-white' : 'bg-error/10 text-error'}`}
                       >
                         {appointmentCounts.rejected}
                       </span>
-                    )}
+                    ) : null}
                   </button>
                 </div>
 

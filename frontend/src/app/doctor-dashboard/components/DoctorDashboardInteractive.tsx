@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import dynamic from 'next/dynamic';
 import AuthenticatedHeader from '@/components/common/AuthenticatedHeader';
 import NavigationBreadcrumbs from '@/components/common/NavigationBreadcrumbs';
 import StatusIndicatorBar from '@/components/common/StatusIndicatorBar';
@@ -15,12 +16,10 @@ import PatientHistoryModal from './PatientHistoryModal';
 import ScheduleManageModal from './ScheduleManageModal';
 import AppointmentRequestCard from './AppointmentRequestCard';
 import RevenueChart from './RevenueChart';
-import PatientChatModal from './PatientChatModal';
 import ChatPanel from './ChatPanel';
 import ReviewsSection from './ReviewsSection';
 import ConsultationModal, { type ConsultationData } from './ConsultationModal';
 import RejectReasonModal from './RejectReasonModal';
-import VideoCallModal from '@/components/video/VideoCallModal';
 import Icon from '@/components/ui/AppIcon';
 import { useVideoCall } from '@/contexts/VideoCallContext';
 import { useToast } from '@/components/ui/Toast';
@@ -52,6 +51,12 @@ import {
 } from '@/lib/api';
 import { checkVideoCallWindow } from '@/lib/videoCallWindow';
 import { logger } from '@/lib/logger';
+
+const PatientChatModal = dynamic(() => import('./PatientChatModal'), { ssr: false });
+const VideoCallModal = dynamic(() => import('@/components/video/VideoCallModal'), {
+  loading: () => null,
+  ssr: false,
+});
 
 interface Appointment {
   id: string;
@@ -675,45 +680,45 @@ export default function DoctorDashboardInteractive() {
     };
   }, [isHydrated]);
 
-  const handleConfirmAppointment = async (id: string) => {
+  const handleConfirmAppointment = useCallback(async (id: string) => {
     if (!isHydrated) return;
     try {
       await updateAppointmentStatusMutation.mutateAsync({ id, status: 'confirmed' });
     } catch (err) {
       logger.error('Failed to confirm appointment:', err);
     }
-  };
+  }, [isHydrated, updateAppointmentStatusMutation]);
 
-  const handleMarkNoShow = async (id: string) => {
+  const handleMarkNoShow = useCallback(async (id: string) => {
     if (!isHydrated) return;
     try {
       await updateAppointmentStatusMutation.mutateAsync({ id, status: 'no_show' });
     } catch (err) {
       logger.error('Failed to mark no-show:', err);
     }
-  };
+  }, [isHydrated, updateAppointmentStatusMutation]);
 
-  const handleRescheduleAppointment = (id: string) => {
+  const handleRescheduleAppointment = useCallback((id: string) => {
     if (!isHydrated) return;
     logger.log('Rescheduling appointment:', id);
-  };
+  }, [isHydrated]);
 
-  const handleChatWithPatient = (id: string) => {
+  const handleChatWithPatient = useCallback((id: string) => {
     if (!isHydrated) return;
     const appointment = appointments.find((a) => a.id === id);
     if (appointment) {
       setChatAppointment(appointment);
       setShowChatModal(true);
     }
-  };
+  }, [isHydrated, appointments]);
 
-  const handleViewPatientHistory = (patientId: string) => {
+  const handleViewPatientHistory = useCallback((patientId: string) => {
     if (!isHydrated) return;
     setHistoryPatientId(patientId);
     setShowPatientHistory(true);
-  };
+  }, [isHydrated]);
 
-  const handleMessagePatient = (id: string) => {
+  const handleMessagePatient = useCallback((id: string) => {
     if (!isHydrated) return;
     const patient = patients.find((p) => p.id === id);
     if (patient) {
@@ -724,23 +729,23 @@ export default function DoctorDashboardInteractive() {
       });
       setShowChatPanel(true);
     }
-  };
+  }, [isHydrated, patients]);
 
-  const handleManageSchedule = () => {
+  const handleManageSchedule = useCallback(() => {
     if (!isHydrated) return;
     setShowScheduleModal(true);
-  };
+  }, [isHydrated]);
 
-  const handleFinishAppointment = (id: string) => {
+  const handleFinishAppointment = useCallback((id: string) => {
     if (!isHydrated) return;
     const appointment = appointments.find((a) => a.id === id);
     if (appointment) {
       setPendingFinishAppointment({ id, patientName: appointment.patientName });
       setShowConsultationModal(true);
     }
-  };
+  }, [isHydrated, appointments]);
 
-  const handleApproveRequest = async (id: string) => {
+  const handleApproveRequest = useCallback(async (id: string) => {
     if (!isHydrated) return;
     const previousAppointmentLists = queryClient.getQueriesData<PaginatedResponse<ApiAppointment>>({
       queryKey: appointmentKeys.lists(),
@@ -767,19 +772,18 @@ export default function DoctorDashboardInteractive() {
       });
       logger.error('Failed to approve request:', err);
     }
-  };
+  }, [isHydrated, queryClient, updateAppointmentStatusMutation]);
 
-  const handleDeclineRequest = async (id: string) => {
+  const handleDeclineRequest = useCallback((id: string) => {
     if (!isHydrated) return;
-    // Find the request to get patient name
     const request = requests.find((r) => r.id === id);
     if (request) {
       setPendingRejectRequest({ id, patientName: request.patientName });
       setShowRejectModal(true);
     }
-  };
+  }, [isHydrated, requests]);
 
-  const handleConfirmReject = async (id: string, reason: string) => {
+  const handleConfirmReject = useCallback(async (id: string, reason: string) => {
     try {
       await rejectAppointmentMutation.mutateAsync({ id, reason });
       setShowRejectModal(false);
@@ -787,12 +791,11 @@ export default function DoctorDashboardInteractive() {
     } catch (err) {
       logger.error('Failed to reject request:', err);
     }
-  };
+  }, [rejectAppointmentMutation]);
 
-  const handleJoinVideoCall = async (id: string) => {
+  const handleJoinVideoCall = useCallback(async (id: string) => {
     if (!isHydrated) return;
 
-    // Check if video client is ready
     if (!isClientReady) {
       showToast({
         type: 'warning',
@@ -820,19 +823,17 @@ export default function DoctorDashboardInteractive() {
       }
     }
 
-    // Find the appointment to get patient details for UI
     const appointment = appointments.find((a) => a.id === id);
     if (!appointment) return;
 
     setVideoCallAppointmentId(id);
     setVideoCallPatientName(appointment.patientName);
     setIsVideoCallModalOpen(true);
-  };
+  }, [isHydrated, isClientReady, appointmentsData, appointments, showToast]);
 
-  const handleFinishPatientAppointment = async (patientId: string) => {
+  const handleFinishPatientAppointment = useCallback(async (patientId: string) => {
     if (!isHydrated) return;
     try {
-      // Find the patient's latest confirmed appointment
       const appointmentsResponse = await appointmentsApi.getAll();
       const allAppointments = appointmentsResponse.items || [];
       const patientAppointment = allAppointments.find(
@@ -855,9 +856,9 @@ export default function DoctorDashboardInteractive() {
     } catch (err) {
       logger.error('Failed to find patient appointment:', err);
     }
-  };
+  }, [isHydrated, showToast]);
 
-  const handleConsultationSubmit = async (data: ConsultationData) => {
+  const handleConsultationSubmit = useCallback(async (data: ConsultationData) => {
     if (!pendingFinishAppointment) return;
 
     setIsCompletingAppointment(true);
@@ -873,29 +874,28 @@ export default function DoctorDashboardInteractive() {
     } finally {
       setIsCompletingAppointment(false);
     }
-  };
+  }, [pendingFinishAppointment, completeAppointmentMutation]);
 
-  const handleCreatePrescription = (patientId?: string) => {
+  const handleCreatePrescription = useCallback((patientId?: string) => {
     if (!isHydrated) return;
     setSelectedPatientId(patientId || '');
     setShowPrescriptionForm(true);
-  };
+  }, [isHydrated]);
 
-  const handlePrescriptionSubmit = (success: boolean) => {
+  const handlePrescriptionSubmit = useCallback((success: boolean) => {
     if (success) {
-      // Invalidate appointments query to refresh data
       queryClient.invalidateQueries({ queryKey: appointmentKeys.lists() });
       queryClient.invalidateQueries({ queryKey: analyticsKeys.doctor() });
     }
     setShowPrescriptionForm(false);
     setSelectedPatientId('');
-  };
+  }, [queryClient]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     if (!isHydrated) return;
     authApi.logout();
     router.push('/login');
-  };
+  }, [isHydrated, router]);
 
   if (!isHydrated || isLoading) {
     return <DoctorDashboardSkeleton />;
