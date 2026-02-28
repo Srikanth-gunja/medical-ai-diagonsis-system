@@ -40,6 +40,7 @@ const AuthenticatedHeader = ({
   const [hasMoreNotifications, setHasMoreNotifications] = useState(false);
   const [, setTimeTick] = useState(0);
   const notificationsRef = useRef<HTMLDivElement>(null);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   const defaultAvatar =
     user.role === 'doctor'
       ? '/assets/images/doctor_profile.png'
@@ -53,6 +54,9 @@ const AuthenticatedHeader = ({
   const handleClickOutside = useCallback((event: MouseEvent) => {
     if (notificationsRef.current && !notificationsRef.current.contains(event.target as Node)) {
       setIsNotificationsOpen(false);
+    }
+    if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+      setIsProfileMenuOpen(false);
     }
   }, []);
 
@@ -371,7 +375,7 @@ const AuthenticatedHeader = ({
               )}
             </div>
 
-            <div className="relative hidden sm:block">
+            <div className="relative hidden sm:block" ref={profileMenuRef}>
               <button
                 onClick={toggleProfileMenu}
                 className="flex items-center space-x-2 p-1.5 hover:bg-muted rounded-lg transition-base"

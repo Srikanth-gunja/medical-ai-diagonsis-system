@@ -17,26 +17,68 @@ export default function LoginPage() {
   const { showToast } = useToast();
 
   useEffect(() => {
-    const checkSystemStatus = async () => {
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+    let inFlightController: AbortController | null = null;
+
+    const pollStatus = async () => {
+      inFlightController?.abort();
+      const controller = new AbortController();
+      inFlightController = controller;
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5000/api';
         // Remove /api suffix if present to avoid double /api/api
         const baseUrl = apiUrl.replace(/\/api$/, '');
-        const res = await fetch(`${baseUrl}/api/health`);
+        const res = await fetch(`${baseUrl}/api/health`, {
+          cache: 'no-store',
+          signal: controller.signal,
+        });
         if (res.ok) {
           setSystemStatus('operational');
         } else {
           setSystemStatus('issues');
         }
       } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
         setSystemStatus('issues');
       }
     };
 
-    checkSystemStatus();
-    // Poll every 30 seconds
-    const interval = setInterval(checkSystemStatus, 30000);
-    return () => clearInterval(interval);
+    const stopPolling = () => {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+      inFlightController?.abort();
+      inFlightController = null;
+    };
+
+    const startPolling = () => {
+      stopPolling();
+      void pollStatus();
+      intervalId = setInterval(() => {
+        if (!document.hidden) {
+          void pollStatus();
+        }
+      }, 30000);
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        startPolling();
+      }
+    };
+
+    handleVisibility();
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+    };
   }, []);
 
   const handleHelpCenterClick = () => {
@@ -50,11 +92,11 @@ export default function LoginPage() {
   const getStatusColor = () => {
     switch (systemStatus) {
       case 'operational':
-        return 'text-green-500';
+        return 'text-success';
       case 'issues':
-        return 'text-red-500';
+        return 'text-error';
       default:
-        return 'text-yellow-500';
+        return 'text-warning';
     }
   };
 
@@ -125,7 +167,7 @@ export default function LoginPage() {
               </button>
               <div className="flex items-center space-x-2">
                 <span
-                  className={`w-2 h-2 rounded-full ${systemStatus === 'operational' ? 'bg-green-500' : systemStatus === 'issues' ? 'bg-red-500' : 'bg-yellow-500'} animate-pulse`}
+                  className={`w-2 h-2 rounded-full ${systemStatus === 'operational' ? 'bg-success' : systemStatus === 'issues' ? 'bg-error' : 'bg-warning'} animate-pulse`}
                 />
                 <span className={getStatusColor()}>
                   {systemStatus === 'checking'

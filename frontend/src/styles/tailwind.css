@@ -1,8 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -71,6 +66,14 @@
         /*slate-400*/
 
         --radius: 10px;
+
+        /* Z-index scale */
+        --z-dropdown: 40;
+        --z-sticky: 30;
+        --z-header: 35;
+        --z-modal-backdrop: 50;
+        --z-modal: 51;
+        --z-video: 60;
     }
 
     .dark {
@@ -144,7 +147,7 @@
 
     body {
         @apply bg-background text-foreground;
-        font-family: 'Source Sans 3', system-ui, -apple-system, sans-serif;
+        font-family: var(--font-body), system-ui, -apple-system, sans-serif;
         font-size: 16px;
         line-height: 1.6;
     }
@@ -161,7 +164,7 @@
     h4,
     h5,
     h6 {
-        font-family: 'Lexend', system-ui, -apple-system, sans-serif;
+        font-family: var(--font-heading), system-ui, -apple-system, sans-serif;
     }
 
     h1 {
@@ -185,12 +188,12 @@
     }
 
     .caption {
-        font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+        font-family: var(--font-caption), system-ui, -apple-system, sans-serif;
         @apply text-sm leading-relaxed;
     }
 
     .data-text {
-        font-family: 'JetBrains Mono', monospace;
+        font-family: var(--font-data), monospace;
         font-feature-settings: 'tnum' on, 'lnum' on;
     }
 

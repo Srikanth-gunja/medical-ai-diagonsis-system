@@ -675,7 +675,7 @@ const PatientDashboardInteractive = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             <section id="appointments" className="scroll-mt-24">
-              <div className="bg-card/80 backdrop-blur-md border border-white/20 dark:border-border/50 rounded-3xl p-6 sm:p-8 shadow-elevation-1 mb-6">
+              <div className="bg-card/80 backdrop-blur-md border border-border/20 dark:border-border/50 rounded-3xl p-6 sm:p-8 shadow-elevation-1 mb-6">
                 <div className="flex items-center justify-between mb-8">
                   <h2 className="text-2xl font-bold text-text-primary flex items-center space-x-3">
                     <div className="p-2 bg-primary/10 rounded-xl text-primary">
@@ -689,7 +689,7 @@ const PatientDashboardInteractive = () => {
                 <div className="flex flex-wrap items-center gap-2 mb-8 bg-muted/30 p-1.5 rounded-2xl w-fit border border-border/50">
                   <button
                     onClick={() => handleTabChange('upcoming')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${appointmentTab === 'upcoming'
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${appointmentTab === 'upcoming'
                       ? 'bg-primary text-primary-foreground shadow-sm scale-100'
                       : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
                       }`}
@@ -705,7 +705,7 @@ const PatientDashboardInteractive = () => {
                   </button>
                   <button
                     onClick={() => handleTabChange('pending')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${appointmentTab === 'pending'
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${appointmentTab === 'pending'
                       ? 'bg-primary text-primary-foreground shadow-sm scale-100'
                       : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
                       }`}
@@ -721,7 +721,7 @@ const PatientDashboardInteractive = () => {
                   </button>
                   <button
                     onClick={() => handleTabChange('completed')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${appointmentTab === 'completed'
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${appointmentTab === 'completed'
                       ? 'bg-primary text-primary-foreground shadow-sm scale-100'
                       : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
                       }`}
@@ -737,7 +737,7 @@ const PatientDashboardInteractive = () => {
                   </button>
                   <button
                     onClick={() => handleTabChange('rejected')}
-                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${appointmentTab === 'rejected'
+                    className={`px-4 py-2 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${appointmentTab === 'rejected'
                       ? 'bg-primary text-primary-foreground shadow-sm scale-100'
                       : 'text-text-secondary hover:text-text-primary hover:bg-black/5 dark:hover:bg-white/5'
                       }`}
@@ -988,7 +988,7 @@ const PatientDashboardInteractive = () => {
             </section>
           </div>
 
-          <div className="space-y-6 lg:sticky lg:top-8 h-fit lg:h-[calc(100vh-80px)] overflow-y-auto scrollbar-none pb-12 w-full lg:w-auto">
+          <div className="space-y-6 lg:sticky lg:top-20 h-fit lg:h-[calc(100vh-80px)] overflow-y-auto scrollbar-none pb-12 w-full lg:w-auto">
             <AIChatbotWidget onOpen={handleOpenAIChat} />
             <RecentActivityFeed
               activities={

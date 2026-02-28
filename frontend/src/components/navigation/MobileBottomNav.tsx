@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Icon from '@/components/ui/AppIcon';
@@ -19,25 +19,25 @@ interface MobileBottomNavProps {
 export function MobileBottomNav({ items }: MobileBottomNavProps) {
   const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const lastScrollY = useRef(0);
   const [currentHash, setCurrentHash] = useState('');
 
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
 
-      if (currentScrollY > lastScrollY && currentScrollY > 100) {
+      if (currentScrollY > lastScrollY.current && currentScrollY > 100) {
         setIsVisible(false);
       } else {
         setIsVisible(true);
       }
 
-      setLastScrollY(currentScrollY);
+      lastScrollY.current = currentScrollY;
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [lastScrollY]);
+  }, []);
 
   useEffect(() => {
     const syncHash = () => {
@@ -74,10 +74,9 @@ export function MobileBottomNav({ items }: MobileBottomNavProps) {
                 relative flex flex-col items-center justify-center
                 min-w-[64px] py-2 px-3 rounded-lg
                 transition-colors duration-200
-                ${
-                  isActive
-                    ? 'text-primary bg-primary/10'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-muted'
+                ${isActive
+                  ? 'text-primary bg-primary/10'
+                  : 'text-text-secondary hover:text-text-primary hover:bg-muted'
                 }
               `}
             >

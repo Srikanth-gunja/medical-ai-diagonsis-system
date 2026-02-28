@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Icon from '@/components/ui/AppIcon';
 import { chatbotApi } from '@/lib/api';
 import { logger } from '@/lib/logger';
+import { useModalBehavior } from '@/hooks/useModalBehavior';
 
 interface Message {
   id: string;
@@ -191,6 +192,8 @@ const AIChatbotModal = ({ isOpen, onClose }: AIChatbotModalProps) => {
     'What are my health records?',
   ];
 
+  useModalBehavior(isOpen, onClose);
+
   if (!isOpen) return null;
 
   return (
@@ -232,11 +235,10 @@ const AIChatbotModal = ({ isOpen, onClose }: AIChatbotModalProps) => {
               className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-[80%] px-4 py-3 rounded-2xl ${
-                  message.type === 'user'
-                    ? 'bg-primary text-primary-foreground rounded-br-md'
-                    : 'bg-muted text-text-primary rounded-bl-md'
-                }`}
+                className={`max-w-[80%] px-4 py-3 rounded-2xl ${message.type === 'user'
+                  ? 'bg-primary text-primary-foreground rounded-br-md'
+                  : 'bg-muted text-text-primary rounded-bl-md'
+                  }`}
               >
                 <div className="text-sm">
                   {message.type === 'bot' ? renderMarkdown(message.content) : message.content}

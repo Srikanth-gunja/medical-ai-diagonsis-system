@@ -184,7 +184,7 @@ export default function ScheduleCalendar({
 
   if (isLoading) {
     return (
-      <div className="bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm">
+      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-center h-64">
           <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent" />
         </div>
@@ -193,9 +193,9 @@ export default function ScheduleCalendar({
   }
 
   return (
-    <div className="bg-white border border-slate-200/60 rounded-3xl p-6 sm:p-8 shadow-sm">
+    <div className="bg-card border border-border rounded-3xl p-6 sm:p-8 shadow-sm">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-        <h2 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center space-x-3">
+        <h2 className="text-2xl font-bold text-foreground tracking-tight flex items-center space-x-3">
           <div className="p-2 bg-primary/10 rounded-xl text-primary">
             <Icon name="CalendarIcon" size={24} />
           </div>
@@ -203,12 +203,12 @@ export default function ScheduleCalendar({
         </h2>
 
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200 w-full sm:w-auto">
+          <div className="flex bg-muted p-1.5 rounded-xl border border-border w-full sm:w-auto">
             <button
               onClick={() => setViewMode('day')}
               className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${viewMode === 'day'
-                  ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200 scale-100'
-                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'
+                ? 'bg-card text-foreground shadow-sm ring-1 ring-border scale-100'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
                 }`}
             >
               Day
@@ -216,8 +216,8 @@ export default function ScheduleCalendar({
             <button
               onClick={() => setViewMode('week')}
               className={`flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${viewMode === 'week'
-                  ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200 scale-100'
-                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'
+                ? 'bg-card text-foreground shadow-sm ring-1 ring-border scale-100'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/80'
                 }`}
             >
               Week
@@ -225,7 +225,7 @@ export default function ScheduleCalendar({
           </div>
           <button
             onClick={onManageSchedule}
-            className="hidden sm:flex items-center justify-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 hover:text-slate-900 shadow-sm transition-all text-sm font-semibold"
+            className="hidden sm:flex items-center justify-center gap-2 px-4 py-2 bg-card border border-border text-foreground/80 rounded-xl hover:bg-muted hover:text-foreground shadow-sm transition-all text-sm font-semibold"
           >
             <Icon name="Cog6ToothIcon" size={16} />
             <span>Manage</span>
@@ -235,8 +235,8 @@ export default function ScheduleCalendar({
 
       {viewMode === 'week' ? (
         weekDays.length === 0 ? (
-          <div className="p-8 text-center text-slate-500 border border-dashed border-slate-200 rounded-xl bg-slate-50">
-            <Icon name="CalendarIcon" size={32} className="mx-auto mb-2 text-slate-400" />
+          <div className="p-8 text-center text-muted-foreground border border-dashed border-border rounded-xl bg-muted">
+            <Icon name="CalendarIcon" size={32} className="mx-auto mb-2 text-text-muted" />
             <p className="font-medium text-sm">No working days configured</p>
             <button
               onClick={onManageSchedule}
@@ -255,8 +255,8 @@ export default function ScheduleCalendar({
                   setViewMode('day');
                 }}
                 className={`p-4 rounded-2xl border transition-all duration-300 ${day.date === selectedDate
-                    ? 'border-primary bg-primary shadow-md shadow-primary/20 text-white scale-105 z-10'
-                    : 'border-slate-200 bg-white hover:border-primary/50 hover:shadow-sm'
+                  ? 'border-primary bg-primary shadow-md shadow-primary/20 text-white scale-105 z-10'
+                  : 'border-border bg-card hover:border-primary/50 hover:shadow-sm'
                   }`}
               >
                 <p className={`text-sm font-semibold opacity-90`}>{day.day}</p>
@@ -273,17 +273,17 @@ export default function ScheduleCalendar({
       ) : (
         <div className="space-y-2">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-slate-800 tracking-tight">{formatDisplayDate(selectedDate)}</h3>
+            <h3 className="font-semibold text-foreground tracking-tight">{formatDisplayDate(selectedDate)}</h3>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => navigateDay('prev')}
-                className="p-1 hover:bg-slate-100 rounded-md transition-all text-slate-500 hover:text-slate-800"
+                className="p-1 hover:bg-muted rounded-md transition-all text-muted-foreground hover:text-foreground"
               >
                 <Icon name="ChevronLeftIcon" size={20} />
               </button>
               <button
                 onClick={() => navigateDay('next')}
-                className="p-1 hover:bg-slate-100 rounded-md transition-all text-slate-500 hover:text-slate-800"
+                className="p-1 hover:bg-muted rounded-md transition-all text-muted-foreground hover:text-foreground"
               >
                 <Icon name="ChevronRightIcon" size={20} />
               </button>
@@ -291,8 +291,8 @@ export default function ScheduleCalendar({
           </div>
 
           {!selectedDayEnabled ? (
-            <div className="p-8 text-center text-slate-500 border border-dashed border-slate-200 rounded-xl bg-slate-50">
-              <Icon name="XCircleIcon" size={32} className="mx-auto mb-2 text-slate-400" />
+            <div className="p-8 text-center text-muted-foreground border border-dashed border-border rounded-xl bg-muted">
+              <Icon name="XCircleIcon" size={32} className="mx-auto mb-2 text-text-muted" />
               <p className="font-medium text-sm">This day is not a working day</p>
               <button
                 onClick={() => setViewMode('week')}
@@ -304,8 +304,8 @@ export default function ScheduleCalendar({
           ) : (
             <div className="grid gap-2 max-h-96 overflow-y-auto pr-2">
               {timeSlots.length === 0 ? (
-                <div className="p-8 text-center text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                  <Icon name="CalendarIcon" size={32} className="mx-auto mb-2 text-slate-400" />
+                <div className="p-8 text-center text-muted-foreground bg-muted rounded-xl border border-dashed border-border">
+                  <Icon name="CalendarIcon" size={32} className="mx-auto mb-2 text-text-muted" />
                   <p className="font-medium text-sm">No time slots configured for this day</p>
                 </div>
               ) : (
@@ -313,24 +313,24 @@ export default function ScheduleCalendar({
                   <div
                     key={index}
                     className={`p-3.5 rounded-xl border transition-all ${slot.available
-                        ? 'border-emerald-200 hover:border-emerald-300 bg-emerald-50/50'
-                        : 'border-slate-200 bg-slate-50'
+                      ? 'border-emerald-200 hover:border-emerald-300 bg-emerald-50/50 dark:border-emerald-800 dark:hover:border-emerald-700 dark:bg-emerald-950/30'
+                      : 'border-border bg-muted'
                       }`}
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <span className="text-sm font-bold text-slate-800 w-20">{slot.time}</span>
+                        <span className="text-sm font-bold text-foreground w-20">{slot.time}</span>
                         {slot.available ? (
-                          <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 bg-emerald-100/50 px-2 py-0.5 rounded-md">
+                          <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-100/50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">
                             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
                             Available
                           </span>
                         ) : (
-                          <span className="text-sm font-medium text-slate-600">{slot.patientName}</span>
+                          <span className="text-sm font-medium text-muted-foreground">{slot.patientName}</span>
                         )}
                       </div>
                       {!slot.available && (
-                        <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center shadow-sm">
+                        <div className="w-8 h-8 rounded-full bg-card border border-border flex items-center justify-center shadow-sm">
                           <Icon name="VideoCameraIcon" size={14} className="text-primary" />
                         </div>
                       )}

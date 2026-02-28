@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Icon from '@/components/ui/AppIcon';
+import { useModalBehavior } from '@/hooks/useModalBehavior';
 
 interface ConsultationModalProps {
   isOpen: boolean;
@@ -44,6 +45,8 @@ const ConsultationModal = ({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  useModalBehavior(isOpen, onClose);
+
   if (!isOpen) return null;
 
   return (
@@ -52,7 +55,7 @@ const ConsultationModal = ({
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg mx-4 bg-card/95 backdrop-blur-xl border border-white/20 dark:border-border/50 rounded-[2rem] shadow-elevation-3 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-lg mx-4 bg-card/95 backdrop-blur-xl border border-border/50 rounded-[2rem] shadow-elevation-3 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
           <div className="flex items-center gap-4">

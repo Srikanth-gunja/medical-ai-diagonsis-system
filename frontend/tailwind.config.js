@@ -77,10 +77,10 @@ module.exports = {
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        heading: ['Lexend', 'system-ui', '-apple-system', 'sans-serif'],
-        body: ['Source Sans 3', 'system-ui', '-apple-system', 'sans-serif'],
-        caption: ['IBM Plex Sans', 'system-ui', '-apple-system', 'sans-serif'],
-        data: ['JetBrains Mono', 'monospace'],
+        heading: ['var(--font-heading)', 'system-ui', '-apple-system', 'sans-serif'],
+        body: ['var(--font-body)', 'system-ui', '-apple-system', 'sans-serif'],
+        caption: ['var(--font-caption)', 'system-ui', '-apple-system', 'sans-serif'],
+        data: ['var(--font-data)', 'monospace'],
       },
       spacing: {
         18: '4.5rem',

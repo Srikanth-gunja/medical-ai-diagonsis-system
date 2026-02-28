@@ -5,6 +5,7 @@ import Icon from '@/components/ui/AppIcon';
 import { useToast } from '@/components/ui/Toast';
 import { schedulesApi } from '@/lib/api';
 import { logger } from '@/lib/logger';
+import { useModalBehavior } from '@/hooks/useModalBehavior';
 
 interface RescheduleModalProps {
   isOpen: boolean;
@@ -131,6 +132,8 @@ export default function RescheduleModal({
     onCancel();
   };
 
+  useModalBehavior(isOpen, handleClose);
+
   if (!isOpen) return null;
 
   return (
@@ -177,11 +180,10 @@ export default function RescheduleModal({
                     setSelectedDate(date.value);
                     setSelectedTime('');
                   }}
-                  className={`px-3 py-2 text-sm rounded-lg border transition-base ${
-                    selectedDate === date.value
+                  className={`px-3 py-2 text-sm rounded-lg border transition-base ${selectedDate === date.value
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'bg-background text-text-secondary border-border hover:border-primary/50'
-                  }`}
+                    }`}
                 >
                   {date.label}
                 </button>
@@ -213,13 +215,12 @@ export default function RescheduleModal({
                         type="button"
                         onClick={() => slot.available && setSelectedTime(slot.time)}
                         disabled={!slot.available}
-                        className={`px-3 py-2 text-sm rounded-lg border transition-base ${
-                          selectedTime === slot.time
+                        className={`px-3 py-2 text-sm rounded-lg border transition-base ${selectedTime === slot.time
                             ? 'bg-primary text-primary-foreground border-primary'
                             : slot.available
                               ? 'bg-background text-text-secondary border-border hover:border-primary/50'
                               : 'bg-muted text-text-tertiary border-border cursor-not-allowed opacity-50'
-                        }`}
+                          }`}
                       >
                         {slot.time}
                       </button>

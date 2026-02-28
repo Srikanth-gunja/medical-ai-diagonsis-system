@@ -12,14 +12,11 @@ import AnalyticsCard from './AnalyticsCard';
 import ScheduleCalendar from './ScheduleCalendar';
 import PatientListItem from './PatientListItem';
 import PrescriptionForm from './PrescriptionForm';
-import PatientHistoryModal from './PatientHistoryModal';
-import ScheduleManageModal from './ScheduleManageModal';
 import AppointmentRequestCard from './AppointmentRequestCard';
 import RevenueChart from './RevenueChart';
 import ChatPanel from './ChatPanel';
 import ReviewsSection from './ReviewsSection';
-import ConsultationModal, { type ConsultationData } from './ConsultationModal';
-import RejectReasonModal from './RejectReasonModal';
+import type { ConsultationData } from './ConsultationModal';
 import Icon from '@/components/ui/AppIcon';
 import { useVideoCall } from '@/contexts/VideoCallContext';
 import { useToast } from '@/components/ui/Toast';
@@ -53,6 +50,22 @@ import { checkVideoCallWindow } from '@/lib/videoCallWindow';
 import { logger } from '@/lib/logger';
 
 const PatientChatModal = dynamic(() => import('./PatientChatModal'), { ssr: false });
+const PatientHistoryModal = dynamic(() => import('./PatientHistoryModal'), {
+  loading: () => null,
+  ssr: false,
+});
+const ScheduleManageModal = dynamic(() => import('./ScheduleManageModal'), {
+  loading: () => null,
+  ssr: false,
+});
+const ConsultationModal = dynamic(() => import('./ConsultationModal'), {
+  loading: () => null,
+  ssr: false,
+});
+const RejectReasonModal = dynamic(() => import('./RejectReasonModal'), {
+  loading: () => null,
+  ssr: false,
+});
 const VideoCallModal = dynamic(() => import('@/components/video/VideoCallModal'), {
   loading: () => null,
   ssr: false,

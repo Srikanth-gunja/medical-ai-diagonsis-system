@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Icon from '@/components/ui/AppIcon';
 import { schedulesApi, type Schedule } from '@/lib/api';
+import { useModalBehavior } from '@/hooks/useModalBehavior';
 
 interface ScheduleManageModalProps {
   onClose: () => void;
@@ -116,6 +117,8 @@ export default function ScheduleManageModal({ onClose }: ScheduleManageModalProp
     }
   };
 
+  useModalBehavior(true, onClose);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-card border border-border rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -133,11 +136,10 @@ export default function ScheduleManageModal({ onClose }: ScheduleManageModalProp
         <div className="flex items-center gap-4 px-6 border-b border-border">
           <button
             onClick={() => setActiveTab('weekly')}
-            className={`py-4 font-medium relative ${
-              activeTab === 'weekly'
+            className={`py-4 font-medium relative ${activeTab === 'weekly'
                 ? 'text-primary'
                 : 'text-text-secondary hover:text-text-primary'
-            }`}
+              }`}
           >
             Weekly Hours
             {activeTab === 'weekly' && (
@@ -146,11 +148,10 @@ export default function ScheduleManageModal({ onClose }: ScheduleManageModalProp
           </button>
           <button
             onClick={() => setActiveTab('blocked')}
-            className={`py-4 font-medium relative ${
-              activeTab === 'blocked'
+            className={`py-4 font-medium relative ${activeTab === 'blocked'
                 ? 'text-primary'
                 : 'text-text-secondary hover:text-text-primary'
-            }`}
+              }`}
           >
             Blocked Dates
             {activeTab === 'blocked' && (

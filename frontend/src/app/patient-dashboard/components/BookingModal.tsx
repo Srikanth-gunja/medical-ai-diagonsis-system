@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Icon from '@/components/ui/AppIcon';
 import { schedulesApi } from '@/lib/api';
+import { useModalBehavior } from '@/hooks/useModalBehavior';
 
 interface TimeSlot {
   time: string;
@@ -76,6 +77,8 @@ const BookingModal = ({ isOpen, doctorId, doctorName, onClose, onConfirm }: Book
     }
   };
 
+  useModalBehavior(isOpen, onClose);
+
   if (!isOpen) return null;
 
   return (
@@ -107,22 +110,20 @@ const BookingModal = ({ isOpen, doctorId, doctorName, onClose, onConfirm }: Book
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setConsultationType('video')}
-                className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-lg border-2 transition-base ${
-                  consultationType === 'video'
+                className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-lg border-2 transition-base ${consultationType === 'video'
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-border bg-background text-text-secondary hover:border-primary/50'
-                }`}
+                  }`}
               >
                 <Icon name="VideoCameraIcon" size={20} />
                 <span className="font-medium">Video Call</span>
               </button>
               <button
                 onClick={() => setConsultationType('in-person')}
-                className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-lg border-2 transition-base ${
-                  consultationType === 'in-person'
+                className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-lg border-2 transition-base ${consultationType === 'in-person'
                     ? 'border-primary bg-primary/10 text-primary'
                     : 'border-border bg-background text-text-secondary hover:border-primary/50'
-                }`}
+                  }`}
               >
                 <Icon name="BuildingOfficeIcon" size={20} />
                 <span className="font-medium">In-Person</span>
@@ -171,13 +172,12 @@ const BookingModal = ({ isOpen, doctorId, doctorName, onClose, onConfirm }: Book
                     key={slot.time}
                     onClick={() => slot.available && setSelectedTime(slot.time)}
                     disabled={!slot.available}
-                    className={`px-4 py-3 rounded-lg border-2 transition-base font-medium ${
-                      selectedTime === slot.time
+                    className={`px-4 py-3 rounded-lg border-2 transition-base font-medium ${selectedTime === slot.time
                         ? 'border-primary bg-primary/10 text-primary'
                         : slot.available
                           ? 'border-border bg-background text-text-primary hover:border-primary/50'
                           : 'border-border bg-muted text-muted-foreground cursor-not-allowed'
-                    }`}
+                      }`}
                   >
                     {slot.time}
                   </button>

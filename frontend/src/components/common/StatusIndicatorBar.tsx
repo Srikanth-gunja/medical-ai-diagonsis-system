@@ -133,7 +133,7 @@ const StatusIndicatorBar = ({
             </div>
 
             {chatAvailable && (
-              <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-white bg-opacity-20 rounded-full">
+              <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-primary-foreground/20 rounded-full">
                 <div className="w-2 h-2 bg-success rounded-full animate-pulse-subtle" />
                 <span className="text-sm font-medium">Chat Available</span>
               </div>
@@ -142,7 +142,7 @@ const StatusIndicatorBar = ({
 
           <button
             onClick={handleDismiss}
-            className="ml-4 p-1.5 hover:bg-white hover:bg-opacity-20 rounded-lg transition-base flex-shrink-0"
+            className="ml-4 p-1.5 hover:bg-primary-foreground/20 rounded-lg transition-base flex-shrink-0"
             aria-label="Dismiss notification"
           >
             <Icon name="XMarkIcon" size={20} />

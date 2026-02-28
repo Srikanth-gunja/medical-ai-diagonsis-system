@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Icon from '@/components/ui/AppIcon';
+import { useModalBehavior } from '@/hooks/useModalBehavior';
 
 interface RejectReasonModalProps {
   isOpen: boolean;
@@ -51,6 +52,8 @@ export default function RejectReasonModal({
     onCancel();
   };
 
+  useModalBehavior(isOpen, handleClose);
+
   if (!isOpen) return null;
 
   return (
@@ -93,11 +96,10 @@ export default function RejectReasonModal({
                   key={index}
                   type="button"
                   onClick={() => handleSelectQuickReason(quickReason)}
-                  className={`px-3 py-1.5 text-xs rounded-full border transition-base ${
-                    reason === quickReason
+                  className={`px-3 py-1.5 text-xs rounded-full border transition-base ${reason === quickReason
                       ? 'bg-primary text-primary-foreground border-primary'
                       : 'bg-muted text-text-secondary border-border hover:border-primary/50'
-                  }`}
+                    }`}
                 >
                   {quickReason}
                 </button>

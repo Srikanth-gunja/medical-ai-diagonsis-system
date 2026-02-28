@@ -18,11 +18,11 @@ export default function AnalyticsCard({
   const getColorClasses = () => {
     switch (color) {
       case 'success':
-        return 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/20';
+        return 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/20 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-500/20';
       case 'warning':
-        return 'bg-amber-50 text-amber-600 ring-1 ring-amber-500/20';
+        return 'bg-amber-50 text-amber-600 ring-1 ring-amber-500/20 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-500/20';
       case 'accent':
-        return 'bg-indigo-50 text-indigo-600 ring-1 ring-indigo-500/20';
+        return 'bg-indigo-50 text-indigo-600 ring-1 ring-indigo-500/20 dark:bg-indigo-950/40 dark:text-indigo-400 dark:ring-indigo-500/20';
       default:
         return 'bg-primary/10 text-primary ring-1 ring-primary/20';
     }
@@ -31,11 +31,11 @@ export default function AnalyticsCard({
   const getTrendColor = () => {
     switch (trend) {
       case 'up':
-        return 'text-emerald-700';
+        return 'text-emerald-700 dark:text-emerald-400';
       case 'down':
-        return 'text-rose-700';
+        return 'text-rose-700 dark:text-rose-400';
       default:
-        return 'text-slate-500';
+        return 'text-muted-foreground';
     }
   };
 
@@ -54,7 +54,7 @@ export default function AnalyticsCard({
 
   return (
     <div
-      className="relative group bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+      className="relative group bg-card border border-border rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 overflow-hidden"
     >
       <div
         className={`absolute inset-0 bg-gradient-to-br ${getGradientClasses()} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}
@@ -62,18 +62,18 @@ export default function AnalyticsCard({
 
       <div className="relative z-10 flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-sm text-slate-500 font-bold uppercase tracking-wider">{title}</p>
-          <p className="text-3xl font-extrabold text-slate-900 mt-2 tracking-tight group-hover:text-primary transition-colors duration-300">
+          <p className="text-sm text-muted-foreground font-bold uppercase tracking-wider">{title}</p>
+          <p className="text-3xl font-extrabold text-foreground mt-2 tracking-tight group-hover:text-primary transition-colors duration-300">
             {value}
           </p>
           {change && (
             <div className="flex items-center gap-1.5 mt-2.5">
               <span
-                className={`text-xs font-bold px-2 py-0.5 rounded-md ${trend === 'up' ? 'bg-emerald-100' : trend === 'down' ? 'bg-rose-100' : 'bg-slate-100'} ${getTrendColor()}`}
+                className={`text-xs font-bold px-2 py-0.5 rounded-md ${trend === 'up' ? 'bg-emerald-100 dark:bg-emerald-950/50' : trend === 'down' ? 'bg-rose-100 dark:bg-rose-950/50' : 'bg-muted'} ${getTrendColor()}`}
               >
                 {change}
               </span>
-              <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">
+              <span className="text-[10px] text-text-muted font-bold uppercase tracking-wide">
                 vs last month
               </span>
             </div>

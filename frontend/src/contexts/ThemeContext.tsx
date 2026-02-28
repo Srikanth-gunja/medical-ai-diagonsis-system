@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 type Theme = 'light' | 'dark';
 
@@ -21,30 +21,60 @@ const getSystemTheme = (): Theme => {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('light');
+  const [isReady, setIsReady] = useState(false);
+  const transitionTimeout = useRef<number | null>(null);
+  const hasAppliedTheme = useRef(false);
 
+  // Sync React state with localStorage on mount (inline script in layout.tsx prevents visual flash)
   useEffect(() => {
     const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY) as Theme | null;
     const initialTheme = storedTheme ?? getSystemTheme();
     setThemeState(initialTheme);
+    setIsReady(true);
   }, []);
 
   useEffect(() => {
-    if (typeof document === 'undefined') return;
+    if (typeof document === 'undefined' || !isReady) return;
     const root = document.documentElement;
-    root.classList.add('theme-transition');
+
+    // Clear any pending transition timeout to prevent stacking on rapid toggles
+    if (transitionTimeout.current !== null) {
+      window.clearTimeout(transitionTimeout.current);
+      transitionTimeout.current = null;
+    }
+
+    // Skip transition on first theme application after hydration
+    if (hasAppliedTheme.current) {
+      root.classList.add('theme-transition');
+    } else {
+      root.classList.remove('theme-transition');
+    }
+
     if (theme === 'dark') {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
     }
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    if (window.localStorage.getItem(THEME_STORAGE_KEY) !== theme) {
+      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+    }
 
-    const timeout = window.setTimeout(() => {
-      root.classList.remove('theme-transition');
-    }, 250);
+    if (hasAppliedTheme.current) {
+      transitionTimeout.current = window.setTimeout(() => {
+        root.classList.remove('theme-transition');
+        transitionTimeout.current = null;
+      }, 250);
+    }
 
-    return () => window.clearTimeout(timeout);
-  }, [theme]);
+    hasAppliedTheme.current = true;
+
+    return () => {
+      if (transitionTimeout.current !== null) {
+        window.clearTimeout(transitionTimeout.current);
+        transitionTimeout.current = null;
+      }
+    };
+  }, [theme, isReady]);
 
   const setTheme = (nextTheme: Theme) => {
     setThemeState(nextTheme);

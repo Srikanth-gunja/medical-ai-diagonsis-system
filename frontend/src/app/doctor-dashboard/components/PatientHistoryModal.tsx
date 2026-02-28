@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Icon from '@/components/ui/AppIcon';
 import { patientsApi, type PatientHistory, type Patient } from '@/lib/api';
+import { useModalBehavior } from '@/hooks/useModalBehavior';
 
 interface PatientHistoryModalProps {
   patientId: string;
@@ -130,6 +131,8 @@ export default function PatientHistoryModal({ patientId, onClose }: PatientHisto
     return '';
   };
 
+  useModalBehavior(true, onClose);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="bg-card border border-border rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -212,11 +215,10 @@ export default function PatientHistoryModal({ patientId, onClose }: PatientHisto
               <div className="flex gap-4 mb-6 border-b border-border">
                 <button
                   onClick={() => setActiveTab('medical')}
-                  className={`pb-3 px-2 font-medium transition-base relative ${
-                    activeTab === 'medical'
+                  className={`pb-3 px-2 font-medium transition-base relative ${activeTab === 'medical'
                       ? 'text-primary'
                       : 'text-text-secondary hover:text-text-primary'
-                  }`}
+                    }`}
                 >
                   Medical Records ({history.medicalRecords.length})
                   {activeTab === 'medical' && (
@@ -225,11 +227,10 @@ export default function PatientHistoryModal({ patientId, onClose }: PatientHisto
                 </button>
                 <button
                   onClick={() => setActiveTab('appointments')}
-                  className={`pb-3 px-2 font-medium transition-base relative ${
-                    activeTab === 'appointments'
+                  className={`pb-3 px-2 font-medium transition-base relative ${activeTab === 'appointments'
                       ? 'text-primary'
                       : 'text-text-secondary hover:text-text-primary'
-                  }`}
+                    }`}
                 >
                   Appointments ({history.appointments.length})
                   {activeTab === 'appointments' && (
@@ -238,11 +239,10 @@ export default function PatientHistoryModal({ patientId, onClose }: PatientHisto
                 </button>
                 <button
                   onClick={() => setActiveTab('prescriptions')}
-                  className={`pb-3 px-2 font-medium transition-base relative ${
-                    activeTab === 'prescriptions'
+                  className={`pb-3 px-2 font-medium transition-base relative ${activeTab === 'prescriptions'
                       ? 'text-primary'
                       : 'text-text-secondary hover:text-text-primary'
-                  }`}
+                    }`}
                 >
                   Prescriptions ({history.prescriptions.length})
                   {activeTab === 'prescriptions' && (
@@ -306,15 +306,14 @@ export default function PatientHistoryModal({ patientId, onClose }: PatientHisto
                               </p>
                             </div>
                             <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                derivedStatus === 'completed'
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${derivedStatus === 'completed'
                                   ? 'bg-success/10 text-success'
                                   : derivedStatus === 'confirmed'
                                     ? 'bg-primary/10 text-primary'
                                     : derivedStatus === 'cancelled'
                                       ? 'bg-error/10 text-error'
                                       : 'bg-warning/10 text-warning'
-                              }`}
+                                }`}
                             >
                               {formatStatus(derivedStatus)}
                             </span>

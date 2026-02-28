@@ -50,9 +50,9 @@ export default function RevenueChart({ className = '', chartData }: RevenueChart
   return (
     <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 ${className}`}>
       {/* Appointments Line Chart */}
-      <div className="bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm">
+      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
         <div className="mb-4">
-          <h2 className="text-lg font-bold text-slate-900 tracking-tight">Appointments (last 7 days)</h2>
+          <h2 className="text-lg font-bold text-foreground tracking-tight">Appointments (last 7 days)</h2>
         </div>
 
         <div className="w-full h-64" aria-label="Weekly Appointments Line Chart">
@@ -99,9 +99,9 @@ export default function RevenueChart({ className = '', chartData }: RevenueChart
       </div>
 
       {/* Status Breakdown Donut Chart */}
-      <div className="bg-white border border-slate-200/60 rounded-2xl p-6 shadow-sm">
+      <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
         <div className="mb-4">
-          <h2 className="text-lg font-bold text-slate-900 tracking-tight">Status Breakdown</h2>
+          <h2 className="text-lg font-bold text-foreground tracking-tight">Status Breakdown</h2>
         </div>
 
         <div
@@ -123,7 +123,7 @@ export default function RevenueChart({ className = '', chartData }: RevenueChart
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-sm font-medium text-slate-400 text-center px-4">No data</span>
+                  <span className="text-sm font-medium text-text-muted text-center px-4">No data</span>
                 </div>
               </div>
               <div className="flex gap-4 mt-4">
@@ -133,7 +133,7 @@ export default function RevenueChart({ className = '', chartData }: RevenueChart
                       className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: entry.color }}
                     />
-                    <span className="text-sm font-medium text-slate-600">{entry.name}</span>
+                    <span className="text-sm font-medium text-muted-foreground">{entry.name}</span>
                   </div>
                 ))}
               </div>

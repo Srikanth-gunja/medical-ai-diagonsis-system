@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Icon from '@/components/ui/AppIcon';
 import { messagesApi } from '@/lib/api';
 import { useUser } from '../ClientLayout';
+import { useModalBehavior } from '@/hooks/useModalBehavior';
 
 interface Message {
   id: string;
@@ -150,6 +151,8 @@ const DoctorChatModal = ({ isOpen, onClose, appointment }: DoctorChatModalProps)
     return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  useModalBehavior(isOpen, onClose);
+
   if (!isOpen) return null;
 
   return (
@@ -162,7 +165,7 @@ const DoctorChatModal = ({ isOpen, onClose, appointment }: DoctorChatModalProps)
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center overflow-hidden border-2 border-card shadow-sm">
               {appointment.doctorImage ? (
                 <img
                   src={appointment.doctorImage}
@@ -245,11 +248,10 @@ const DoctorChatModal = ({ isOpen, onClose, appointment }: DoctorChatModalProps)
               return (
                 <div key={message.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
                   <div
-                    className={`max-w-[80%] px-4 py-2.5 rounded-2xl shadow-sm ${
-                      isMe
+                    className={`max-w-[80%] px-4 py-2.5 rounded-2xl shadow-sm ${isMe
                         ? 'bg-primary text-primary-foreground rounded-br-md'
                         : 'bg-card border border-border text-text-primary rounded-bl-md'
-                    } ${isTemp ? 'opacity-70' : ''}`}
+                      } ${isTemp ? 'opacity-70' : ''}`}
                   >
                     <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
                     <div

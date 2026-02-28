@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Icon from '@/components/ui/AppIcon';
 import { ratingsApi, type Appointment } from '@/lib/api';
+import { useModalBehavior } from '@/hooks/useModalBehavior';
 
 interface ReviewDoctorModalProps {
   isOpen: boolean;
@@ -40,6 +41,8 @@ const ReviewDoctorModal = ({ isOpen, onClose, appointment, onSuccess }: ReviewDo
     }
   };
 
+  useModalBehavior(isOpen, onClose);
+
   if (!isOpen) return null;
 
   return (
@@ -51,7 +54,7 @@ const ReviewDoctorModal = ({ isOpen, onClose, appointment, onSuccess }: ReviewDo
       <div className="relative w-full max-w-md mx-4 bg-card border border-border rounded-2xl shadow-elevation-3 overflow-hidden animate-in fade-in zoom-in duration-300">
         {/* Header */}
         <div className="bg-primary/5 p-6 border-b border-border text-center">
-          <div className="w-20 h-20 bg-card rounded-full mx-auto mb-4 border-4 border-white shadow-sm overflow-hidden p-0.5">
+          <div className="w-20 h-20 bg-card rounded-full mx-auto mb-4 border-4 border-border shadow-sm overflow-hidden p-0.5">
             <img
               src={appointment.doctorImage || '/assets/images/doctor_profile.png'}
               alt={appointment.doctorName}

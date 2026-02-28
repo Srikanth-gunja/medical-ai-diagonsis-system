@@ -118,16 +118,15 @@ const DoctorSearchFilters = ({ onFilterChange }: DoctorSearchFiltersProps) => {
             <label className="block text-sm font-medium text-text-primary mb-2">
               Minimum Rating
             </label>
-            <div className="flex items-center justify-between bg-slate-50 border border-slate-100 dark:bg-slate-800/30 dark:border-slate-800 rounded-xl py-1.5 px-2 overflow-hidden">
+            <div className="flex items-center justify-between bg-muted border border-border/50 rounded-xl py-1.5 px-2 overflow-hidden">
               {[1, 2, 3, 4, 5].map((rating) => (
                 <button
                   key={rating}
                   onClick={() => handleFilterChange('minRating', rating)}
-                  className={`p-1 rounded-lg transition-all duration-200 ease-spring hover:scale-110 active:scale-95 flex-shrink-0 ${
-                    filters.minRating >= rating
+                  className={`p-1 rounded-lg transition-all duration-200 ease-spring hover:scale-110 active:scale-95 flex-shrink-0 ${filters.minRating >= rating
                       ? 'text-warning drop-shadow-sm'
                       : 'text-text-muted hover:text-warning/70'
-                  }`}
+                    }`}
                   aria-label={`${rating} stars`}
                   title={`${rating} Stars & Up`}
                 >
@@ -146,18 +145,17 @@ const DoctorSearchFilters = ({ onFilterChange }: DoctorSearchFiltersProps) => {
             <label className="block text-sm font-medium text-text-primary mb-2">
               Consultation Type
             </label>
-            <div className="flex bg-slate-100 dark:bg-slate-800/60 p-1 rounded-xl overflow-hidden">
+            <div className="flex bg-muted p-1 rounded-xl overflow-hidden">
               {['all', 'video', 'in-person'].map((type) => {
                 const isActive = filters.consultationType === type;
                 return (
                   <button
                     key={type}
                     onClick={() => handleFilterChange('consultationType', type)}
-                    className={`flex-1 px-1 py-1.5 text-[11px] font-medium rounded-lg transition-all duration-300 ease-in-out whitespace-nowrap text-ellipsis overflow-hidden ${
-                      isActive
-                        ? 'bg-white dark:bg-slate-700 text-primary shadow-sm ring-1 ring-border/5'
-                        : 'text-text-secondary hover:text-text-primary hover:bg-white/50 dark:hover:bg-slate-700/50'
-                    }`}
+                    className={`flex-1 px-1 py-1.5 text-[11px] font-medium rounded-lg transition-all duration-300 ease-in-out whitespace-nowrap text-ellipsis overflow-hidden ${isActive
+                        ? 'bg-card text-primary shadow-sm ring-1 ring-border/5'
+                        : 'text-text-secondary hover:text-text-primary hover:bg-card/50'
+                      }`}
                   >
                     {type === 'all' ? 'All' : type === 'video' ? 'Video' : 'In-Person'}
                   </button>
@@ -185,7 +183,7 @@ const DoctorSearchFilters = ({ onFilterChange }: DoctorSearchFiltersProps) => {
                   checked={filters.availableToday}
                   onChange={(e) => handleFilterChange('availableToday', e.target.checked)}
                 />
-                <div className="w-10 h-[22px] bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/10 rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-[18px] after:w-[18px] after:transition-all dark:border-slate-600 peer-checked:bg-primary duration-300 ease-spring"></div>
+                <div className="w-10 h-[22px] bg-muted-foreground/20 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 dark:peer-focus:ring-primary/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-primary-foreground after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-[18px] after:w-[18px] after:transition-all peer-checked:bg-primary duration-300 ease-spring"></div>
               </div>
             </label>
           </div>

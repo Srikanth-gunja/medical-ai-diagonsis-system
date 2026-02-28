@@ -51,7 +51,7 @@ const AIChatbotWidget = ({ onOpen }: AIChatbotWidgetProps) => {
 
         <button
           onClick={onOpen}
-          className="w-full px-6 py-3 bg-white text-primary rounded-lg hover:shadow-elevation-3 active:scale-[0.97] transition-base font-medium flex items-center justify-center space-x-2"
+          className="w-full px-6 py-3 bg-white dark:bg-white/95 text-primary rounded-lg hover:shadow-elevation-3 active:scale-[0.97] transition-base font-medium flex items-center justify-center space-x-2"
         >
           <Icon name="ChatBubbleLeftRightIcon" size={20} />
           <span>Start Consultation</span>
