@@ -213,6 +213,7 @@ export default function DoctorDashboardInteractive() {
   const [activeTab, setActiveTab] = useState<
     'appointments' | 'patients' | 'requests' | 'completed'
   >('appointments');
+  const [completedPage, setCompletedPage] = useState(1);
   const [showPrescriptionForm, setShowPrescriptionForm] = useState(false);
   const [selectedPatientId, setSelectedPatientId] = useState<string>('');
   const [showPatientHistory, setShowPatientHistory] = useState(false);
@@ -515,6 +516,17 @@ export default function DoctorDashboardInteractive() {
   const visiblePatients = useMemo(
     () => patients.slice(0, visiblePatientsCount),
     [patients, visiblePatientsCount]
+  );
+
+  const ITEMS_PER_PAGE = 5;
+  const totalCompletedPages = Math.ceil(completedAppointments.length / ITEMS_PER_PAGE);
+  const paginatedCompletedAppointments = useMemo(
+    () =>
+      completedAppointments.slice(
+        (completedPage - 1) * ITEMS_PER_PAGE,
+        completedPage * ITEMS_PER_PAGE
+      ),
+    [completedAppointments, completedPage]
   );
 
   useEffect(() => {
@@ -954,9 +966,10 @@ export default function DoctorDashboardInteractive() {
           <AnalyticsCard
             title="Today's Appointments"
             value={analytics?.todayAppointments ?? appointments.length}
-            change={`${analytics?.thisMonthAppointments ?? 0} this month`}
+            change={`${analytics?.thisMonthAppointments ?? 0} total`}
+            changeLabel="this month"
             trend="up"
-            icon="📅"
+            icon="CalendarDaysIcon"
             color="primary"
           />
 
@@ -964,8 +977,9 @@ export default function DoctorDashboardInteractive() {
             title="Active Patients"
             value={analytics?.uniquePatients ?? patients.length}
             change={`${analytics?.appointmentsByStatus?.pending ?? 0} pending`}
+            changeLabel="currently"
             trend="up"
-            icon="👥"
+            icon="UserGroupIcon"
             color="success"
           />
 
@@ -973,8 +987,9 @@ export default function DoctorDashboardInteractive() {
             title="Pending Requests"
             value={requests.length}
             change={requests.length > 0 ? `${requests.length} to review` : 'All clear'}
+            changeLabel="waiting"
             trend="neutral"
-            icon="⏳"
+            icon="ClockIcon"
             color="warning"
           />
 
@@ -982,8 +997,9 @@ export default function DoctorDashboardInteractive() {
             title="Rating"
             value={analytics?.rating ? analytics.rating.toFixed(1) : 'N/A'}
             change={`${analytics?.ratingCount ?? 0} reviews`}
+            changeLabel="total"
             trend="up"
-            icon="⭐"
+            icon="StarIcon"
             color="accent"
           />
         </div>
@@ -1105,7 +1121,10 @@ export default function DoctorDashboardInteractive() {
               )}
             </button>
             <button
-              onClick={() => setActiveTab('completed')}
+              onClick={() => {
+                setActiveTab('completed');
+                setCompletedPage(1);
+              }}
               className={`pb-4 px-2 font-medium transition-base relative ${activeTab === 'completed' ? 'text-primary' : 'text-text-secondary hover:text-text-primary'}`}
             >
               Completed
@@ -1218,42 +1237,68 @@ export default function DoctorDashboardInteractive() {
           )}
           {activeTab === 'completed' && (
             <div className="space-y-4">
-              {completedAppointments.length > 0 ? (
-                completedAppointments.map((appointment) => (
-                  <div
-                    key={appointment.id}
-                    className="bg-card border border-border rounded-lg p-4 hover:shadow-elevation-2 transition-base"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
-                        <img
-                          src={appointment.patientImage}
-                          alt={appointment.patientName}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-text-primary">
-                          {appointment.patientName}
-                        </h3>
-                        <div className="flex items-center gap-2 mt-1 text-sm text-text-secondary">
-                          <Icon name="CalendarIcon" size={14} />
-                          <span>{appointment.date}</span>
-                          <span>•</span>
-                          <span>{appointment.time}</span>
+              {paginatedCompletedAppointments.length > 0 ? (
+                <>
+                  {paginatedCompletedAppointments.map((appointment) => (
+                    <div
+                      key={appointment.id}
+                      className="bg-card border border-border rounded-lg p-4 hover:shadow-elevation-2 transition-base"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full overflow-hidden bg-muted flex-shrink-0">
+                          <img
+                            src={appointment.patientImage}
+                            alt={appointment.patientName}
+                            className="w-full h-full object-cover"
+                          />
                         </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-text-primary">
+                            {appointment.patientName}
+                          </h3>
+                          <div className="flex items-center gap-2 mt-1 text-sm text-text-secondary">
+                            <Icon name="CalendarIcon" size={14} />
+                            <span>{appointment.date}</span>
+                            <span>•</span>
+                            <span>{appointment.time}</span>
+                          </div>
+                        </div>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium border ${appointment.status === 'No Show'
+                              ? 'bg-warning/10 text-warning border-warning/20'
+                              : 'bg-primary/10 text-primary border-primary/20'
+                            }`}
+                        >
+                          {appointment.status}
+                        </span>
                       </div>
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium border ${appointment.status === 'No Show'
-                          ? 'bg-warning/10 text-warning border-warning/20'
-                          : 'bg-primary/10 text-primary border-primary/20'
-                          }`}
-                      >
-                        {appointment.status}
-                      </span>
                     </div>
-                  </div>
-                ))
+                  ))}
+
+                  {totalCompletedPages > 1 && (
+                    <div className="flex items-center justify-between pt-6 mt-4 border-t border-border">
+                      <button
+                        onClick={() => setCompletedPage((p) => Math.max(1, p - 1))}
+                        disabled={completedPage === 1}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border rounded-lg text-text-primary hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        <Icon name="ChevronLeftIcon" size={16} />
+                        Previous
+                      </button>
+                      <span className="text-sm text-text-secondary font-medium">
+                        Page {completedPage} of {totalCompletedPages}
+                      </span>
+                      <button
+                        onClick={() => setCompletedPage((p) => Math.min(totalCompletedPages, p + 1))}
+                        disabled={completedPage === totalCompletedPages}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium border border-border rounded-lg text-text-primary hover:bg-muted disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Next
+                        <Icon name="ChevronRightIcon" size={16} />
+                      </button>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="text-center py-12">
                   <Icon

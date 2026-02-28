@@ -1,7 +1,10 @@
+import Icon from '@/components/ui/AppIcon';
+
 interface AnalyticsCardProps {
   title: string;
   value: string | number;
   change?: string;
+  changeLabel?: string;
   trend?: 'up' | 'down' | 'neutral';
   icon: string;
   color?: 'primary' | 'success' | 'warning' | 'accent';
@@ -11,6 +14,7 @@ export default function AnalyticsCard({
   title,
   value,
   change,
+  changeLabel = 'vs last month',
   trend = 'neutral',
   icon,
   color = 'primary',
@@ -18,13 +22,13 @@ export default function AnalyticsCard({
   const getColorClasses = () => {
     switch (color) {
       case 'success':
-        return 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-500/20 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-500/20';
+        return 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-emerald-500/30';
       case 'warning':
-        return 'bg-amber-50 text-amber-600 ring-1 ring-amber-500/20 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-500/20';
+        return 'bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-amber-500/30';
       case 'accent':
-        return 'bg-indigo-50 text-indigo-600 ring-1 ring-indigo-500/20 dark:bg-indigo-950/40 dark:text-indigo-400 dark:ring-indigo-500/20';
+        return 'bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-indigo-500/30';
       default:
-        return 'bg-primary/10 text-primary ring-1 ring-primary/20';
+        return 'bg-gradient-to-br from-primary to-primary-focus text-white shadow-primary/30';
     }
   };
 
@@ -54,35 +58,37 @@ export default function AnalyticsCard({
 
   return (
     <div
-      className="relative group bg-card border border-border rounded-2xl p-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+      className="relative group bg-card border border-border/50 rounded-2xl p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all duration-300 overflow-hidden dark:shadow-none dark:hover:shadow-primary/5 dark:bg-background-elevated"
     >
       <div
-        className={`absolute inset-0 bg-gradient-to-br ${getGradientClasses()} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}
+        className={`absolute -right-8 -top-8 w-32 h-32 rounded-full blur-[40px] opacity-20 bg-gradient-to-br ${getGradientClasses()} transition-opacity duration-500 group-hover:opacity-40`}
       />
 
       <div className="relative z-10 flex items-start justify-between">
         <div className="flex-1">
-          <p className="text-sm text-muted-foreground font-bold uppercase tracking-wider">{title}</p>
-          <p className="text-3xl font-extrabold text-foreground mt-2 tracking-tight group-hover:text-primary transition-colors duration-300">
+          <p className="text-sm text-text-muted font-bold tracking-wider">{title}</p>
+          <p className="text-3xl font-extrabold text-text-primary mt-2 tracking-tight group-hover:text-primary transition-colors duration-300">
             {value}
           </p>
           {change && (
-            <div className="flex items-center gap-1.5 mt-2.5">
+            <div className="flex items-center gap-2 mt-3">
               <span
-                className={`text-xs font-bold px-2 py-0.5 rounded-md ${trend === 'up' ? 'bg-emerald-100 dark:bg-emerald-950/50' : trend === 'down' ? 'bg-rose-100 dark:bg-rose-950/50' : 'bg-muted'} ${getTrendColor()}`}
+                className={`text-xs font-bold px-2 py-0.5 rounded-md ${trend === 'up' ? 'bg-emerald-100/80 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : trend === 'down' ? 'bg-rose-100/80 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400' : 'bg-muted/80 text-text-secondary dark:bg-muted/20'}`}
               >
                 {change}
               </span>
-              <span className="text-[10px] text-text-muted font-bold uppercase tracking-wide">
-                vs last month
-              </span>
+              {changeLabel && (
+                <span className="text-[11px] text-text-muted font-semibold tracking-wide flex-1 truncate">
+                  {changeLabel}
+                </span>
+              )}
             </div>
           )}
         </div>
         <div
-          className={`w-14 h-14 rounded-xl flex items-center justify-center shadow-sm group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300 ${getColorClasses()}`}
+          className={`w-[52px] h-[52px] rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300 ${getColorClasses()}`}
         >
-          <span className="text-[28px] leading-none">{icon}</span>
+          <Icon name={icon} size={28} className="text-white" />
         </div>
       </div>
     </div>
