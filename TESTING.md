@@ -1,94 +1,105 @@
-# Testing Guide for Medical AI Diagnosis System
+# Testing Guide
 
-This repository contains a comprehensive testing suite comprising Backend Unit/Integration tests, Frontend Component tests, and End-to-End (E2E) system tests.
+This repository includes backend API tests, frontend component tests, and Cypress end-to-end test support.
 
-## 1. Backend Testing
+## Backend testing
 
-The backend is tested using **Pytest**. Tests cover models, API routes, services (including AI mocks), security, and performance.
-
-### Prerequisites
-- Python 3.x
-- Virtual environment with test dependencies (`pytest`, `httpx`, `mongomock`, etc.)
-
-### Setup & Execution
-1. **Navigate to the backend directory:**
-   ```bash
-   cd backend
-   ```
-
-2. **Activate the Test Virtual Environment:**
-   *Note: We utilize a specific virtual environment for testing to ensure all dev-dependencies are present.*
-   ```bash
-   source venv_test/bin/activate
-   ```
-
-3. **Run Tests:**
-   ```bash
-   # Run the entire test suite
-   pytest
-
-   # Run with verbose output
-   pytest -v
-
-   # Run specific test categories
-   pytest tests/test_models.py       # Unit Tests (Models)
-   pytest tests/test_routes.py       # Integration Tests (API Endpoints)
-   pytest tests/test_ai_safety.py    # AI Safety & Disclaimer Checks
-   pytest tests/test_security.py     # Security (RBAC) & Performance Checks
-   ```
-
-## 2. Frontend Testing
-
-The frontend is tested using **Jest** and **React Testing Library**. Tests focus on component rendering, user interactions, and state management.
-
-### Execution
-1. **Navigate to the frontend directory:**
-   ```bash
-   cd frontend
-   ```
-
-2. **Run Tests:**
-   ```bash
-   # Run all tests
-   npm test
-
-   # Run in watch mode (interactive)
-   npm run test:watch
-   ```
-
-## 3. End-to-Ene (E2E) Testing
-
-End-to-End tests are performed using **Cypress**. These tests verify the full application flow (e.g., Login -> Book Appointment).
+The backend test suite uses `pytest` with `mongomock` for isolated database behavior.
 
 ### Prerequisites
-**Critical:** The application servers MUST be running for E2E tests to work.
 
-1. **Start Backend Server** (Terminal 1):
-   ```bash
-   cd backend
-   source .venv/bin/activate
-   python app.py
-   ```
-   *Ensure it runs on port 5000.*
+- Python 3.12+
+- Backend dependencies installed in `backend/.venv`
 
-2. **Start Frontend Server** (Terminal 2):
-   ```bash
-   cd frontend
-   npm run dev
-   ```
-   *Ensure it runs on port 3000.*
+### Run backend tests
 
-### Execution
-1. **Navigate to the frontend directory** (Terminal 3):
-   ```bash
-   cd frontend
-   ```
+```bash
+cd backend
+source .venv/bin/activate
+pytest
+```
 
-2. **Run Cypress:**
-   ```bash
-   # Headless Mode (Command Line only - Best for CI)
-   npm run test:e2e
+Useful variants:
 
-   # Interactive Mode (Opens Cypress App - Best for Debugging)
-   npm run test:e2e:open
-   ```
+```bash
+pytest -v
+pytest tests/test_routes.py
+pytest tests/test_security.py
+pytest tests/test_ai_safety.py
+pytest tests/test_video_calls.py
+```
+
+Notes:
+
+- Pytest configuration lives in `backend/pytest.ini`.
+- Most automated tests run against mocked MongoDB behavior through `mongomock`.
+- Some files in `backend/tests` are diagnostic scripts rather than normal pytest suites.
+
+## Frontend testing
+
+The frontend uses Jest and React Testing Library for component and context tests.
+
+### Run frontend tests
+
+```bash
+cd frontend
+npm test
+```
+
+Useful variants:
+
+```bash
+npm run test:watch
+npm run type-check
+npm run lint
+```
+
+## E2E testing
+
+The project includes Cypress configuration for browser-level testing.
+
+### Prerequisites
+
+Start both applications before running Cypress.
+
+### Terminal 1: backend
+
+```bash
+cd backend
+source .venv/bin/activate
+python app.py
+```
+
+Backend URL:
+
+- `http://localhost:5000`
+
+### Terminal 2: frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+Frontend URL:
+
+- `http://localhost:4028`
+
+### Terminal 3: Cypress
+
+```bash
+cd frontend
+npm run test:e2e
+```
+
+Or open the interactive runner:
+
+```bash
+cd frontend
+npm run test:e2e:open
+```
+
+Notes:
+
+- Cypress is configured with `http://localhost:4028` as the base URL.
+- If you change the frontend dev port, update `frontend/cypress.config.ts` to match.

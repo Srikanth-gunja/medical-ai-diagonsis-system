@@ -1,237 +1,331 @@
-# 🏥 AI-Enhanced Medical Diagnosis & Patient Communication System
+# MediCare
 
-A full-stack medical application featuring patient registration, doctor browsing, appointment booking, AI triage, and real-time chat between doctors and patients.
+Full-stack healthcare platform for patient onboarding, doctor onboarding, appointment booking, AI-assisted symptom guidance, real-time updates, secure messaging, prescriptions, reports, and video consultations.
 
-## 📋 Table of Contents
+This project is split into:
 
-- [Tech Stack](#-tech-stack)
-- [Prerequisites](#-prerequisites)
-- [Project Structure](#-project-structure)
-- [Installation & Setup](#-installation--setup)
-  - [Backend Setup](#backend-setup)
-  - [Frontend Setup](#frontend-setup)
-- [Running the Application](#-running-the-application)
-- [API Documentation](#-api-documentation)
+- `frontend/`: Next.js application for patients, doctors, and admins
+- `backend/`: Flask API backed by MongoDB
 
----
+## What the project does
 
-## 🛠 Tech Stack
+### Patient experience
+- Register and manage a patient profile
+- Browse doctors and check available slots
+- Book, reschedule, cancel, and review appointments
+- Access prescriptions, lab reports, and medical history
+- Chat with doctors
+- Use an AI chatbot for symptom guidance
+- Join video consultations
 
-### Backend
-- **Python 3.x** - Programming language
-- **Flask** - Web framework
-- **MongoDB** - Database
-- **Flask-JWT-Extended** - Authentication
-- **Flask-CORS** - Cross-origin resource sharing
+### Doctor experience
+- Register for doctor onboarding and verification
+- Manage appointment requests and schedules
+- Review patient history
+- Chat with patients
+- Create prescriptions
+- Track dashboard analytics
+- Start and end video consultations
+
+### Admin experience
+- Review doctor verification requests
+- View platform-level stats
+- Manage users and profile update approvals
+
+## Tech stack
 
 ### Frontend
-- **Next.js 16** - React framework
-- **React 19** - UI library
-- **TypeScript** - Type safety
-- **Tailwind CSS 4** - Styling
-- **Lucide React** - Icons
+- Next.js 15
+- React 19
+- TypeScript
+- Tailwind CSS
+- TanStack Query
+- GetStream Video SDK
+- Jest + React Testing Library
+- Cypress
 
----
+### Backend
+- Python 3.12
+- Flask
+- PyMongo + MongoDB
+- Flask-JWT-Extended
+- LangChain + Google Gemini
+- ReportLab
+- Pytest + mongomock
 
-## 📦 Prerequisites
+## Architecture
 
-Before you begin, ensure you have the following installed:
+### Frontend
+- App Router application in `frontend/src/app`
+- Role-based flows for patient, doctor, and admin dashboards
+- Shared providers for auth, theme, React Query, toast notifications, and video calls
+- API client in `frontend/src/lib/api.ts`
 
-- **Python 3.8+** - [Download Python](https://www.python.org/downloads/)
-- **Node.js 18+** - [Download Node.js](https://nodejs.org/)
-- **MongoDB** - [Download MongoDB](https://www.mongodb.com/try/download/community) or use MongoDB Atlas
-- **npm** or **yarn** - Package manager (comes with Node.js)
+### Backend
+- Flask app factory in `backend/src/__init__.py`
+- Entry point in `backend/app.py`
+- Modular route groups under `backend/src/routes`
+- MongoDB collections and indexes initialized in `backend/src/database.py`
+- Realtime updates delivered with server-sent events under `/api/events`
 
----
+## Project structure
 
-## 📁 Project Structure
-
-```
-Medical_project_v1/
-├── backend/               # Flask API server
-│   ├── app/              # Application source code
-│   ├── requirements.txt  # Python dependencies
-│   ├── run.py           # Entry point
-│   └── seed_data.py     # Database seeding script
-├── frontend/             # Next.js frontend
-│   ├── src/             # Source files
-│   ├── package.json     # Node dependencies
-│   └── ...
-└── README.md            # This file
-```
-
----
-
-## 🚀 Installation & Setup
-
-### Backend Setup
-
-1. **Navigate to the backend directory:**
-   ```bash
-   cd backend
-   ```
-
-2. **Install dependencies with uv:**
-   This project uses `uv` for fast package management.
-   ```bash
-   # Install dependencies and create virtual environment
-   uv sync
-   ```
-
-3. **Activate the virtual environment:**
-   ```bash
-   source .venv/bin/activate
-   ```
-
-4. **Set up environment variables:**
-   Create a `.env` file in the `backend/` directory:
-   ```env
-   MONGO_URI=mongodb://localhost:27017/medical_db
-   GOOGLE_API_KEY=your_google_api_key_here
-   ```
-   **Note**: `GOOGLE_API_KEY` is required for AI features.
-
-5. **Seed the database (Optional):**
-   Populate the database with sample data.
-   ```bash
-   python seed_data.py
-   ```
-
-6. **Run the Backend Server:**
-   ```bash
-   python run.py
-   ```
-   The backend API will be running at **http://localhost:5000**.
-
----
-
-### Frontend Setup
-
-1. **Navigate to the frontend directory:**
-   ```bash
-   cd ../frontend
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Run the Development Server:**
-   ```bash
-   npm run dev
-   ```
-   The frontend will be available at **http://localhost:3000**.
-
----
-
-## ▶️ Running the Application
-
-### Start MongoDB
-
-Make sure MongoDB is running on your system:
-
-```bash
-# Linux (systemd)
-sudo systemctl start mongod
-
-# macOS (Homebrew)
-brew services start mongodb-community
-
-# Or run MongoDB directly
-mongod --dbpath /path/to/data/directory
+```text
+medical-ai-diagonsis-system/
+├── README.md
+├── TESTING.md
+├── render.yaml
+├── backend/
+│   ├── app.py
+│   ├── seed_data.py
+│   ├── requirements.txt
+│   ├── pyproject.toml
+│   ├── pytest.ini
+│   ├── src/
+│   │   ├── config.py
+│   │   ├── database.py
+│   │   ├── realtime.py
+│   │   ├── models/
+│   │   ├── routes/
+│   │   ├── services/
+│   │   └── utils/
+│   └── tests/
+└── frontend/
+    ├── package.json
+    ├── next.config.mjs
+    ├── cypress.config.ts
+    └── src/
+        ├── app/
+        ├── components/
+        ├── contexts/
+        ├── hooks/
+        ├── lib/
+        ├── providers/
+        └── styles/
 ```
 
----
+## Core API modules
 
-### Start the Backend Server
+The Flask backend exposes these main route groups:
 
-1. **Activate the virtual environment (if not already active):**
-   ```bash
-   source venv/bin/activate  # Linux/macOS
-   # or
-   venv\Scripts\activate     # Windows
-   ```
+- `/api/auth`
+- `/api/doctors`
+- `/api/appointments`
+- `/api/patients`
+- `/api/messages`
+- `/api/chatbot`
+- `/api/ratings`
+- `/api/prescriptions`
+- `/api/schedules`
+- `/api/analytics`
+- `/api/reports`
+- `/api/activities`
+- `/api/notifications`
+- `/api/admin`
+- `/api/video-calls`
+- `/api/events`
+- `/api/health`
 
-2. **Run the Flask server:**
-   ```bash
-   cd backend
-   python run.py
-   ```
+Additional documentation:
 
-   The backend API will be available at: **http://localhost:5000**
+- Backend setup and API service notes: `backend/README.md`
+- Test workflow: `TESTING.md`
 
----
+## Prerequisites
 
-### Start the Frontend Development Server
+- Python 3.12+
+- Node.js 18+
+- MongoDB
+- `npm`
+- `uv` recommended for backend dependency management
 
-1. **Open a new terminal and navigate to the frontend directory:**
-   ```bash
-   cd frontend
-   ```
+## Environment variables
 
-2. **Run the Next.js development server:**
-   ```bash
-   npm run dev
-   ```
-   
-   Or if using yarn:
-   ```bash
-   yarn dev
-   ```
+### Backend
 
-   The frontend will be available at: **http://localhost:3000**
+Create `backend/.env` with at least, or start from `backend/.env.example`:
 
----
+```env
+SECRET_KEY=replace-this
+JWT_SECRET_KEY=replace-this-too
+MONGO_URI=mongodb://127.0.0.1:27017/
+MONGO_DB_NAME=medical_project
+CORS_ORIGINS=http://localhost:4028
+APPOINTMENT_TIMEZONE=Asia/Kolkata
+```
 
-## 🔗 Quick Start (TL;DR)
+Optional backend variables:
 
-**Terminal 1 - Backend:**
+```env
+GOOGLE_API_KEY=your_google_gemini_key
+GETSTREAM_API_KEY=your_stream_key
+GETSTREAM_API_SECRET=your_stream_secret
+FLASK_DEBUG=true
+```
+
+Notes:
+
+- `SECRET_KEY` and `JWT_SECRET_KEY` are required. The backend will not start without them.
+- `GOOGLE_API_KEY` is required for chatbot and AI-generated report features.
+- `GETSTREAM_API_KEY` and `GETSTREAM_API_SECRET` are required for video calling.
+
+### Frontend
+
+Create `frontend/.env.local` with:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
+NEXT_PUBLIC_GETSTREAM_API_KEY=your_stream_key
+```
+
+Notes:
+
+- `NEXT_PUBLIC_API_URL` should point to the Flask backend for local development.
+- `NEXT_PUBLIC_GETSTREAM_API_KEY` is only needed if you want video calls enabled in the UI.
+
+## Installation
+
+### 1. Backend setup
+
 ```bash
 cd backend
 uv sync
 source .venv/bin/activate
-python run.py
 ```
 
-**Terminal 2 - Frontend:**
+If you do not want to use `uv`, install from `requirements.txt` instead.
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 2. Frontend setup
+
+```bash
+cd frontend
+npm install
+```
+
+## Running locally
+
+### Backend
+
+```bash
+cd backend
+source .venv/bin/activate
+python app.py
+```
+
+Backend runs on:
+
+- `http://localhost:5000`
+
+Health check:
+
+- `http://localhost:5000/api/health`
+
+### Frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+Frontend runs on:
+
+- `http://localhost:4028`
+
+The root route redirects to:
+
+- `http://localhost:4028/homepage`
+
+## Optional seed data
+
+To populate MongoDB with sample data:
+
+```bash
+cd backend
+source .venv/bin/activate
+python seed_data.py
+```
+
+## Quick start
+
+### Terminal 1
+
+```bash
+cd backend
+uv sync
+source .venv/bin/activate
+python app.py
+```
+
+### Terminal 2
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
----
+## Testing
 
-## 📚 API Documentation
+### Backend tests
 
-The backend API runs on `http://localhost:5000`. Key endpoints include:
+```bash
+cd backend
+source .venv/bin/activate
+pytest
+```
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/register` | Register a new user |
-| POST | `/api/auth/login` | User login |
-| GET | `/api/doctors` | Get list of doctors |
-| POST | `/api/appointments` | Book an appointment |
-| GET | `/api/patients/profile` | Get patient profile |
-| GET | `/api/chat/messages` | Get chat messages |
+Backend tests cover:
 
----
+- authentication flows
+- booking flow
+- RBAC and security behavior
+- chatbot service behavior
+- AI safety checks
+- video call metadata handling
 
-## 🤝 Contributing
+### Frontend tests
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+```bash
+cd frontend
+npm test
+npm run type-check
+npm run lint
+```
 
----
+### E2E tests
 
-## 📄 License
+```bash
+cd frontend
+npm run test:e2e
+```
 
-This project is licensed under the MIT License.
+The Cypress base URL is configured for:
 
----
+- `http://localhost:4028`
 
-**Made with ❤️ for better healthcare**
+## Realtime and video
+
+- Realtime dashboard updates use server-sent events through `/api/events`
+- Appointment and message activity can publish live events to subscribed users
+- Video calls are built on GetStream
+
+## Deployment
+
+The repository includes `render.yaml` for backend deployment on Render.
+
+Configured backend deployment:
+
+- root directory: `backend`
+- build command: `pip install -r requirements.txt`
+- start command: `python -m gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --worker-class gthread --threads 8`
+
+## Important note
+
+The AI chatbot in this project is an assistive feature. It should be treated as informational support, not as a replacement for professional medical advice, diagnosis, or treatment.
