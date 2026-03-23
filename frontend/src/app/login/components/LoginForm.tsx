@@ -31,7 +31,7 @@ const LoginForm = ({ onSubmit }: LoginFormProps) => {
     useFormValidation({
       rules: {
         email: { required: true, email: true },
-        password: { required: true, minLength: 6 },
+        password: { required: true, requiredMessage: 'Password is required', minLength: 6 },
       },
       validateOnChange: true,
       validateOnBlur: true,

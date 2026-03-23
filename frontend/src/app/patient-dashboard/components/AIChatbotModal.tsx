@@ -16,6 +16,7 @@ interface Message {
 interface AIChatbotModalProps {
   isOpen: boolean;
   onClose: () => void;
+  userFirstName?: string;
 }
 
 // Safe markdown renderer - NO dangerouslySetInnerHTML
@@ -25,36 +26,28 @@ const renderMarkdown = (text: string): React.ReactNode[] => {
   let listItems: React.ReactNode[] = [];
   let inList = false;
 
-  // Escape HTML to prevent XSS
-  const escapeHtml = (unsafe: string): string => {
-    return unsafe
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-  };
-
   // Process inline formatting safely - returns React nodes, not HTML
   const processLine = (line: string, index: number): React.ReactNode => {
-    // First escape HTML
-    const processed = escapeHtml(line);
-
-    // Split by markers and create React elements
+    const processed = line;
     const parts: React.ReactNode[] = [];
-    const remaining = processed;
     let key = 0;
-
-    // Process bold: **text**
-    const boldRegex = /\*\*(.+?)\*\*/g;
-    let match;
     let lastIndex = 0;
 
-    while ((match = boldRegex.exec(processed)) !== null) {
+    // Support both **bold** and *italic* markers.
+    const inlineRegex = /\*\*(.+?)\*\*|\*(.+?)\*/g;
+    let match: RegExpExecArray | null;
+
+    while ((match = inlineRegex.exec(processed)) !== null) {
       if (match.index > lastIndex) {
         parts.push(<span key={key++}>{processed.slice(lastIndex, match.index)}</span>);
       }
-      parts.push(<strong key={key++}>{match[1]}</strong>);
+
+      if (match[1]) {
+        parts.push(<strong key={key++}>{match[1]}</strong>);
+      } else if (match[2]) {
+        parts.push(<em key={key++}>{match[2]}</em>);
+      }
+
       lastIndex = match.index + match[0].length;
     }
 
@@ -62,7 +55,6 @@ const renderMarkdown = (text: string): React.ReactNode[] => {
       parts.push(<span key={key++}>{processed.slice(lastIndex)}</span>);
     }
 
-    // If no bold found, return as is
     if (parts.length === 0) {
       return <span key={index}>{processed}</span>;
     }
@@ -116,19 +108,40 @@ const renderMarkdown = (text: string): React.ReactNode[] => {
   return elements;
 };
 
-const AIChatbotModal = ({ isOpen, onClose }: AIChatbotModalProps) => {
+const AIChatbotModal = ({ isOpen, onClose, userFirstName }: AIChatbotModalProps) => {
+  const firstName = (userFirstName || '').trim();
+  const welcomeMessage = firstName
+    ? `Hello ${firstName}! I'm your AI Health Assistant. How can I help you today? You can ask me about symptoms, health concerns, or get personalized doctor recommendations.`
+    : "Hello! I'm your AI Health Assistant. How can I help you today? You can ask me about symptoms, health concerns, or get personalized doctor recommendations.";
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       type: 'bot',
-      content:
-        "Hello! I'm your AI Health Assistant. How can I help you today? You can ask me about symptoms, health concerns, or get personalized doctor recommendations.",
+      content: welcomeMessage,
       timestamp: new Date(),
     },
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    setMessages((prev) => {
+      if (prev.length === 1 && prev[0]?.id === '1' && prev[0]?.type === 'bot') {
+        return [
+          {
+            ...prev[0],
+            content: welcomeMessage,
+            timestamp: new Date(),
+          },
+        ];
+      }
+      return prev;
+    });
+  }, [isOpen, welcomeMessage]);
 
   useEffect(() => {
     scrollToBottom();
