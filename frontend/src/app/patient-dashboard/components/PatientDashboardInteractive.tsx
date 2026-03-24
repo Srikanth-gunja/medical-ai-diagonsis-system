@@ -660,8 +660,11 @@ const PatientDashboardInteractive = () => {
         )}
 
         <div className="mb-10 text-center sm:text-left">
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent mb-3 tracking-tight">
-            Welcome back, {user?.firstName || 'there'}! 👋
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-extrabold mb-3 tracking-tight">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">
+              Welcome back, {user?.firstName || 'there'}!
+            </span>{' '}
+            <span className="text-current">👋</span>
           </h1>
           <p className="text-base sm:text-lg text-text-secondary font-medium max-w-2xl mx-auto sm:mx-0">
             Manage your appointments and find the right doctor for your needs
@@ -1019,7 +1022,11 @@ const PatientDashboardInteractive = () => {
         onConfirm={handleConfirmBooking}
       />
 
-      <AIChatbotModal isOpen={isChatbotOpen} onClose={() => setIsChatbotOpen(false)} />
+      <AIChatbotModal
+        isOpen={isChatbotOpen}
+        onClose={() => setIsChatbotOpen(false)}
+        userFirstName={user?.firstName}
+      />
 
       {selectedAppointment && (
         <>

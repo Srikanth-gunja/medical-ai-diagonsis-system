@@ -26,15 +26,18 @@ const AccountSetupSection = ({ formData, errors, onChange }: AccountSetupSection
   ): { strength: string; color: string; width: string } => {
     if (!password) return { strength: '', color: '', width: '0%' };
 
-    let score = 0;
-    if (password.length >= 8) score++;
-    if (password.length >= 12) score++;
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
-    if (/\d/.test(password)) score++;
-    if (/[^a-zA-Z0-9]/.test(password)) score++;
+    const hasMinLength = password.length >= 8;
+    const hasUpper = /[A-Z]/.test(password);
+    const hasLower = /[a-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecial = /[^a-zA-Z0-9]/.test(password);
 
-    if (score <= 2) return { strength: 'Weak', color: 'bg-error', width: '33%' };
-    if (score <= 3) return { strength: 'Medium', color: 'bg-warning', width: '66%' };
+    const metCount = [hasMinLength, hasUpper, hasLower, hasNumber, hasSpecial].filter(
+      Boolean
+    ).length;
+
+    if (metCount <= 2) return { strength: 'Weak', color: 'bg-error', width: '40%' };
+    if (metCount <= 4) return { strength: 'Medium', color: 'bg-warning', width: '75%' };
     return { strength: 'Strong', color: 'bg-success', width: '100%' };
   };
 

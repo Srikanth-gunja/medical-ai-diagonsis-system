@@ -4,12 +4,14 @@ import { useState, useCallback } from 'react';
 
 interface ValidationRule {
   required?: boolean;
+  requiredMessage?: string;
   minLength?: number;
   maxLength?: number;
   pattern?: RegExp;
   email?: boolean;
   match?: string;
   custom?: (value: string) => boolean;
+  customMessage?: string;
 }
 
 interface ValidationRules {
@@ -57,7 +59,7 @@ export function useFormValidation({
 
       // Required check
       if (rule.required && (!value || value.trim() === '')) {
-        return defaultMessages.required;
+        return rule.requiredMessage || defaultMessages.required;
       }
 
       // Skip other validations if empty and not required
@@ -97,7 +99,7 @@ export function useFormValidation({
 
       // Custom validation
       if (rule.custom && !rule.custom(value)) {
-        return defaultMessages.custom;
+        return rule.customMessage || defaultMessages.custom;
       }
 
       return '';

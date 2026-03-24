@@ -96,7 +96,8 @@ const RegistrationInteractive = () => {
         address: { required: true, minLength: 5 },
         city: { required: true, minLength: 2 },
         state: { required: true, minLength: 2 },
-        zipCode: { required: true, pattern: /^\d{5}(-\d{4})?$/ },
+        // Accept US ZIP (12345 or 12345-6789) and India PIN (123456)
+        zipCode: { required: true, pattern: /^(\d{5}(-\d{4})?|\d{6})$/ },
       };
     }
 
@@ -112,6 +113,8 @@ const RegistrationInteractive = () => {
             const hasSpecial = /[^A-Za-z0-9]/.test(value);
             return hasUpper && hasLower && hasNumber && hasSpecial;
           },
+          customMessage:
+            'Password must include uppercase, lowercase, number, and special character',
         },
         confirmPassword: { required: true, match: 'password' },
       };
